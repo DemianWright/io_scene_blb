@@ -1,0 +1,9 @@
+[MASTER]
+# Does not work.
+#init-hook='import sys; sys.path.append("C:\Program Files\Blender 2.76b\2.76\scripts\addons\io_scene_blb"); sys.path.append("C:\Program Files\Blender 2.76b\doc\python_api\pypredef")'
+
+[MESSAGES CONTROL]
+disable=no-absolute-import,delslice-method,zip-builtin-not-iterating,xrange-builtin,input-builtin,next-method-called,old-ne-operator,getslice-method,file-builtin,range-builtin-not-iterating,raw_input-builtin,oct-method,long-builtin,old-division,parameter-unpacking,cmp-builtin,basestring-builtin,dict-iter-method,unicode-builtin,long-suffix,reduce-builtin,old-octal-literal,raising-string,intern-builtin,buffer-builtin,setslice-method,cmp-method,hex-method,round-builtin,unichr-builtin,unpacking-in-except,reload-builtin,backtick,metaclass-assignment,useless-suppression,indexing-exception,nonzero-method,standarderror-builtin,coerce-method,dict-view-method,filter-builtin-not-iterating,using-cmp-argument,apply-builtin,map-builtin-not-iterating,coerce-builtin,import-star-module-level,execfile-builtin,old-raise-syntax,suppressed-message,print-statement,import-error,line-too-long,wrong-import-position,too-few-public-methods
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,bl_info

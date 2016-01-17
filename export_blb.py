@@ -1,92 +1,170 @@
-def write_vec(fd, vec):
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
+from mathutils import Vector
+from math import ceil
+
+def write_vector(file, vec, new_line=True):
+    """
+    Writes the values of the given vector separated with spaces into the given file.
+    An optional new line character is printed at the end of the line by default.
+    """
+
     for i, dim in enumerate(vec):
         if i:
-            fd.write(" ")
+            file.write(" ")
         if dim == 0:
-            fd.write("0")
+            file.write("0")
         elif dim == int(dim):
-            fd.write(str(int(dim)))
+            file.write(str(int(dim)))
         else:
-            fd.write(str(dim))
+            file.write(str(dim))
+    if new_line:
+        file.write("\n")
 
 def calc_quad_section(quad, bounds_min, bounds_max):
-    if all(map(lambda q: q[2] == bounds_max[2], quad[0])): return "top"
-    if all(map(lambda q: q[2] == bounds_min[2], quad[0])): return "bottom"
-    if all(map(lambda q: q[1] == bounds_max[1], quad[0])): return "north"
-    if all(map(lambda q: q[1] == bounds_min[1], quad[0])): return "south"
-    if all(map(lambda q: q[0] == bounds_max[0], quad[0])): return "east"
-    if all(map(lambda q: q[0] == bounds_min[0], quad[0])): return "west"
+    if all(map(lambda q: q[2] == bounds_max[2], quad[0])):
+        return "top"
+    if all(map(lambda q: q[2] == bounds_min[2], quad[0])):
+        return "bottom"
+    if all(map(lambda q: q[1] == bounds_max[1], quad[0])):
+        return "north"
+    if all(map(lambda q: q[1] == bounds_min[1], quad[0])):
+        return "south"
+    if all(map(lambda q: q[0] == bounds_max[0], quad[0])):
+        return "east"
+    if all(map(lambda q: q[0] == bounds_min[0], quad[0])):
+        return "west"
 
     return "omni"
 
-def update_min_max(vec_min, vec_max, ob):
-    for vert in ob.data.vertices:
-        co = ob.matrix_world * vert.co
-        vec_min[0] = min(vec_min[0], co[0])
-        vec_min[1] = min(vec_min[1], co[1])
-        vec_min[2] = min(vec_min[2], co[2])
-        vec_max[0] = max(vec_max[0], co[0])
-        vec_max[1] = max(vec_max[1], co[1])
-        vec_max[2] = max(vec_max[2], co[2])
+def set_min_max(vec_min, vec_max, obj):
+    """Updates the given vectors assigning the minimum vertex coordinate of the given object to the
+    minimum and maximum vertex coordinate to the maximum vector respectively."""
 
-def save(operator, context, filepath="",
-         use_selection=True
-         ):
-    print("Exporting scene to BLB")
+    for vert in obj.data.vertices:
+        coord = obj.matrix_world * vert.co
+        vec_min[0] = min(vec_min[0], coord[0])
+        vec_min[1] = min(vec_min[1], coord[1])
+        vec_min[2] = min(vec_min[2], coord[2])
+        vec_max[0] = max(vec_max[0], coord[0])
+        vec_max[1] = max(vec_max[1], coord[1])
+        vec_max[2] = max(vec_max[2], coord[2])
 
-    if use_selection:
-        objects = context.selection
-    else:
-        objects = context.scene.objects
+def write(context, filepath="", logpath="", use_selection=True):
+    """Write a BLB file."""
 
-    bounds_min = Vector((0, 0, 0))
-    bounds_max = Vector((0, 0, 0))
+    special_objects = {"bounds": None,
+                       "collision": None,
+                       "grid_u": None,
+                       "grid_x": None,
+                       "grid_b": None}
 
-    for ob in context.scene.objects:
-        if ob.name.lower() == "bounds":
-            if ob.type == "MESH":
-                bounds_ob = ob
-                update_min_max(bounds_min, bounds_max, ob)
-                break
-            else:
-                print("Warning: Object '{}' cannot be used as bounds, must be a mesh".format(ob.name))
-    else:
-        bounds_ob = None
-        print("Warning: No 'bounds' object found. Dimensions may be incorrect.")
+    vec_bounds_min = Vector((0, 0, 0))
+    vec_bounds_max = Vector((0, 0, 0))
 
-    quads = []
+    a_quads = []
 
     n_tris = 0
     n_ngon = 0
 
-    for ob in objects:
-        if ob.type != "MESH" or ob == bounds_ob:
+    # TODO: Layer support.
+
+    # Use selected objects?
+    if use_selection:
+        print("Exporting selection to BLB")
+        objects = context.selected_objects
+
+        object_count = len(objects)
+
+        print("Found {} object".format(len(objects)), end="")
+
+        if object_count != 1:
+            print("s")
+
+            if object_count == 0:
+                print("No objects selected, searching the entire scene")
+                use_selection = False
+        else:
+            print("\n")
+
+    # Get all scene objects.
+    if not use_selection:
+        print("Exporting scene to BLB")
+        objects = context.scene.objects
+
+        object_count = len(objects)
+
+        print("Found {} object".format(len(objects)), end="")
+
+        if object_count != 1:
+            print("s")
+
+            if object_count == 0:
+                print("No objects in the scene.")
+        else:
+            print("\n")
+
+    # Search for special objects.
+    for obj in objects:
+        # Bounds object
+        if obj.name.lower() == "bounds":
+            if obj.type == "MESH":
+                special_objects["bounds"] = obj
+                set_min_max(vec_bounds_min, vec_bounds_max, obj)
+                break
+            else:
+                print("Warning: Object '{}' cannot be used as bounds, must be a mesh".format(obj.name))
+    else:
+        print("Warning: No 'bounds' object found. Dimensions may be incorrect.")
+
+    for obj in objects:
+        # Ignore all non-mesh objects and certain special objects.
+        if obj.type != "MESH" or obj == special_objects["bounds"]:
             continue
 
-        print("Exporting mesh", ob.name)
+        print("Exporting mesh:", obj.name)
 
-        if not bounds_ob:
-            update_min_max(bounds_min, bounds_max, ob)
+        if not special_objects["bounds"]:
+            set_min_max(vec_bounds_min, vec_bounds_max, obj)
 
-        me = ob.data
+        current_data = obj.data
 
-        if me.uv_layers:
-            if len(me.uv_layers) > 1:
-                print("Warning: Mesh '{}' has {} UV layers, using 1st.".format(ob.name, len(me.uv_layers)))
+        # UVs
+        if current_data.uv_layers:
+            if len(current_data.uv_layers) > 1:
+                print("Warning: Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
 
-            uv_data = me.uv_layers[0].data
+            uv_data = current_data.uv_layers[0].data
         else:
             uv_data = None
 
-        def index_to_position(i):
-            v = ob.matrix_world * me.vertices[me.loops[i].vertex_index].co
-            v[2] /= 0.4 # Scale plates
-            return v
+        def index_to_position(index):
+            vec = obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co
+            vec[2] /= 0.4  # Scale plates
+            return vec
 
-        def index_to_normal(i):
-            return (ob.matrix_world.to_3x3() * me.vertices[me.loops[i].vertex_index].normal).normalized()
+        def index_to_normal(index):
+            return (obj.matrix_world.to_3x3() * current_data.vertices[current_data.loops[index].vertex_index].normal).normalized()
 
-        for poly in me.polygons:
+        # Faces.
+        for poly in current_data.polygons:
+            # Vertex positions
             if poly.loop_total == 4:
                 loop_indices = tuple(poly.loop_indices)
             elif poly.loop_total == 3:
@@ -100,36 +178,42 @@ def save(operator, context, filepath="",
             # Blender seems to keep opposite winding order
             positions = tuple(reversed(positions))
 
+            # Smooth shading
             if poly.use_smooth:
                 normals = tuple(map(index_to_normal, loop_indices))
             else:
                 normals = (poly.normal,) * 4
 
+            # UVs
             if uv_data:
                 uvs = tuple(map(lambda i: uv_data[i].uv, loop_indices))
             else:
+                # These UV coordinates with the SIDE texture lead to a blank textureless face.
                 uvs = (Vector((0.5, 0.5)),) * 4
 
+            # Colors
             colors = None
 
-            if me.materials and me.materials[poly.material_index] is not None:
-                tex = me.materials[poly.material_index].name.upper()
+            # Texture
+            if current_data.materials and current_data.materials[poly.material_index] is not None:
+                texture = current_data.materials[poly.material_index].name.upper()
             else:
-                tex = "SIDE"
+                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
+                texture = "SIDE"
 
-            quads.append((positions, normals, uvs, colors, tex))
+            a_quads.append((positions, normals, uvs, colors, texture))
 
     # More plate adjustment
-    bounds_min[2] /= 0.4
-    bounds_max[2] /= 0.4
+    vec_bounds_min[2] /= 0.4
+    vec_bounds_max[2] /= 0.4
 
-    # Group quads into sections
-    quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, bounds_min, bounds_max)), quads))
+    # Group a_quads into sections
+    quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, vec_bounds_min, vec_bounds_max)), a_quads))
 
     # Compute brick dimensions
-    size_x =  bounds_max[0] - bounds_min[0]
-    size_y =  bounds_max[1] - bounds_min[1]
-    size_z =  bounds_max[2] - bounds_min[2]
+    size_x = vec_bounds_max[0] - vec_bounds_min[0]
+    size_y = vec_bounds_max[1] - vec_bounds_min[1]
+    size_z = vec_bounds_max[2] - vec_bounds_min[2]
 
     if size_x != int(size_x) or size_y != int(size_y) or size_z != int(size_z):
         print("Warning: Brick has non-even size ({} {} {}), rounding up".format(size_x, size_y, size_z))
@@ -140,77 +224,99 @@ def save(operator, context, filepath="",
 
     print("Brick size: {} {} {}".format(size_x, size_y, size_z))
 
-    with open(filepath, "w") as fd:
-        write_vec(fd, (size_x, size_y, size_z))
-        fd.write("\nSPECIAL\n\n")
+    # Write the BLB file.
+    with open(filepath, "w") as file:
+        # Write brick size.
+        write_vector(file, (size_x, size_y, size_z))
 
-        for y in range(size_y):
-            for z in range(size_z):
-                is_top = z == 0
-                is_bot = z == size_z - 1
+        # Write brick type.
+        file.write("SPECIAL\n\n")
 
-                if is_bot and is_top: mode = "b"
-                elif is_bot: mode = "d"
-                elif is_top: mode = "u"
-                else: mode = "X"
+        # Write brick grid.
+        for y_coord in range(size_y):
+            for z_coord in range(size_z):
+                is_top = z_coord == 0
+                is_bot = z_coord == size_z - 1
 
-                fd.write(mode * size_x)
-                fd.write("\n")
+                if is_bot and is_top:
+                    mode = "b"
+                elif is_bot:
+                    mode = "d"
+                elif is_top:
+                    mode = "u"
+                else:
+                    mode = "X"
 
-            fd.write("\n")
+                file.write(mode * size_x)
+                file.write("\n")
 
+            file.write("\n")
+
+        # Write collisions.
         collision_cubes = (
             ((0, 0, 0), (size_x, size_y, size_z)),
         )
 
-        fd.write(str(len(collision_cubes)))
-        fd.write("\n")
+        file.write(str(len(collision_cubes)))
+        file.write("\n")
 
         for (center, size) in collision_cubes:
-            fd.write("\n")
-            write_vec(fd, center)
-            fd.write("\n")
-            write_vec(fd, size)
-            fd.write("\n")
+            file.write("\n")
+            write_vector(file, center)
+            write_vector(file, size)
+
+        # Write coverage.
+        file.write("COVERAGE:\n")
 
         # TBNESW
-        fd.write("COVERAGE:\n")
-
         for i in range(6):
-            fd.write("0 : 999\n")
+            file.write("0 : 999\n")
 
+        # Write quad data.
+        # Section names must be in lower case for some reason.
         for section_name in ("top", "bottom", "north", "east", "south", "west", "omni"):
             section_quads = tuple(map(lambda t: t[0], filter(lambda t: t[1] == section_name, quads_with_sections)))
 
-            fd.write("\n")
-            fd.write(str(len(section_quads)))
-            fd.write("\n")
+            # TODO: Terse mode where optional stuff is excluded.
 
-            for (positions, normals, uvs, colors, tex) in section_quads:
-                fd.write("\nTEX:")
-                fd.write(tex)
-                fd.write("\n\n") # POSITION:
+            # Write section name.
+            file.write("\n--{} QUADS--\n".format(section_name.upper()))  # Optional.
+
+            # Write section length.
+            file.write("{}\n".format(str(len(section_quads))))
+
+            for (positions, normals, uvs, colors, texture) in section_quads:
+                # Write face texture name.
+                file.write("\nTEX:")  # Optional.
+                file.write(texture)
+
+                # Write vertex positions.
+                file.write("\nPOSITION:\n")  # Optional.
                 for position in positions:
-                    write_vec(fd, position)
-                    fd.write("\n")
-                fd.write("\n") # UV COORDS:
-                for uv in uvs:
-                    write_vec(fd, uv)
-                    fd.write("\n")
-                fd.write("\n") # NORMALS:
+                    write_vector(file, position)
+
+                # Write face UV coordinates.
+                file.write("UV COORDS:\n")  # Optional.
+                for uv_vector in uvs:
+                    write_vector(file, uv_vector)
+
+                # Write vertex normals.
+                file.write("NORMALS:\n")  # Optional.
                 for normal in normals:
-                    write_vec(fd, normal)
-                    fd.write("\n")
+                    write_vector(file, normal)
+
+                # Write vertex colors if any.
                 if colors is not None:
-                    fd.write("COLORS:\n")
+                    file.write("COLORS:\n")  # Optional.
                     for color in colors:
-                        write_vec(fd, color)
-                        fd.write("\n")
+                        write_vector(file, color)
 
     if n_tris:
-        print("Note: {} triangles degenerated to quads.".format(n_tris))
+        print("Warning: {} triangles degenerated to a_quads.".format(n_tris))
 
     if n_ngon:
         print("Warning: {} n-gons skipped.".format(n_ngon))
+
+    # TODO: Write errors like these into a separate log file.
 
     return {'FINISHED'}
