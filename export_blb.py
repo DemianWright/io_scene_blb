@@ -54,8 +54,7 @@ def calc_quad_section(quad, bounds_min, bounds_max):
     return "omni"
 
 def set_min_max(vec_min, vec_max, obj):
-    """Updates the given vectors assigning the minimum vertex coordinate of the given object to the
-    minimum and maximum vertex coordinate to the maximum vector respectively."""
+    """Updates the given vectors assigning the minimum vertex coordinate of the given object to the minimum and maximum vertex coordinate to the maximum vector respectively."""
 
     for vert in obj.data.vertices:
         coord = obj.matrix_world * vert.co
@@ -66,7 +65,7 @@ def set_min_max(vec_min, vec_max, obj):
         vec_max[1] = max(vec_max[1], coord[1])
         vec_max[2] = max(vec_max[2], coord[2])
 
-def write(context, filepath="", logpath="", use_selection=True):
+def write(context, props, logger, filepath=""):
     """Write a BLB file."""
 
     special_objects = {"bounds": None,
@@ -86,39 +85,35 @@ def write(context, filepath="", logpath="", use_selection=True):
     # TODO: Layer support.
 
     # Use selected objects?
-    if use_selection:
-        print("Exporting selection to BLB")
+    if props.use_selection:
+        logger.log("Exporting selection to BLB")
         objects = context.selected_objects
 
         object_count = len(objects)
 
-        print("Found {} object".format(len(objects)), end="")
-
         if object_count != 1:
-            print("s")
+            logger.log("Found {} objects".format(len(objects)))
 
             if object_count == 0:
-                print("No objects selected, searching the entire scene")
-                use_selection = False
+                logger.log("No objects selected")
+                props.use_selection = False
         else:
-            print("\n")
+            logger.log("Found {} object".format(len(objects)))
 
     # Get all scene objects.
-    if not use_selection:
-        print("Exporting scene to BLB")
+    if not props.use_selection:
+        logger.log("Exporting scene to BLB")
         objects = context.scene.objects
 
         object_count = len(objects)
 
-        print("Found {} object".format(len(objects)), end="")
-
         if object_count != 1:
-            print("s")
+            logger.log("Found {} objects".format(len(objects)))
 
             if object_count == 0:
-                print("No objects in the scene.")
+                logger.log("No objects in the scene.")
         else:
-            print("\n")
+            logger.log("Found {} object".format(len(objects)))
 
     # Search for special objects.
     for obj in objects:
@@ -129,16 +124,16 @@ def write(context, filepath="", logpath="", use_selection=True):
                 set_min_max(vec_bounds_min, vec_bounds_max, obj)
                 break
             else:
-                print("Warning: Object '{}' cannot be used as bounds, must be a mesh".format(obj.name))
+                logger.warning("Warning: Object '{}' cannot be used as bounds, must be a mesh".format(obj.name))
     else:
-        print("Warning: No 'bounds' object found. Dimensions may be incorrect.")
+        logger.warning("Warning: No 'bounds' object found. Dimensions may be incorrect.")
 
     for obj in objects:
         # Ignore all non-mesh objects and certain special objects.
         if obj.type != "MESH" or obj == special_objects["bounds"]:
             continue
 
-        print("Exporting mesh:", obj.name)
+        logger.log("Exporting mesh: {}".format(obj.name))
 
         if not special_objects["bounds"]:
             set_min_max(vec_bounds_min, vec_bounds_max, obj)
@@ -148,7 +143,7 @@ def write(context, filepath="", logpath="", use_selection=True):
         # UVs
         if current_data.uv_layers:
             if len(current_data.uv_layers) > 1:
-                print("Warning: Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
+                logger.warning("Warning: Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
 
             uv_data = current_data.uv_layers[0].data
         else:
@@ -216,13 +211,13 @@ def write(context, filepath="", logpath="", use_selection=True):
     size_z = vec_bounds_max[2] - vec_bounds_min[2]
 
     if size_x != int(size_x) or size_y != int(size_y) or size_z != int(size_z):
-        print("Warning: Brick has non-even size ({} {} {}), rounding up".format(size_x, size_y, size_z))
+        logger.warning("Warning: Brick has non-even size ({} {} {}), rounding up".format(size_x, size_y, size_z))
 
     size_x = int(ceil(size_x))
     size_y = int(ceil(size_y))
     size_z = int(ceil(size_z))
 
-    print("Brick size: {} {} {}".format(size_x, size_y, size_z))
+    logger.log("Brick size: {} {} {}".format(size_x, size_y, size_z))
 
     # Write the BLB file.
     with open(filepath, "w") as file:
@@ -312,11 +307,7 @@ def write(context, filepath="", logpath="", use_selection=True):
                         write_vector(file, color)
 
     if n_tris:
-        print("Warning: {} triangles degenerated to a_quads.".format(n_tris))
+        logger.warning("Warning: {} triangles degenerated to a_quads.".format(n_tris))
 
     if n_ngon:
-        print("Warning: {} n-gons skipped.".format(n_ngon))
-
-    # TODO: Write errors like these into a separate log file.
-
-    return {'FINISHED'}
+        logger.warning("Warning: {} n-gons skipped.".format(n_ngon))

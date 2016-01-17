@@ -48,24 +48,51 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
         )
 
+    write_log = BoolProperty(
+        name="Write Log",
+        description="Write a log file after exporting",
+        default=True,
+        )
+
+    write_log_warnings = BoolProperty(
+        name="Only on Warnings",
+        description="Only write a log file if warnings were generated",
+        default=True,
+        )
+
     def execute(self, context):
         """Export the scene."""
 
         from . import export_blb
+        from . import logger
 
         print("\n____STARTING BLB EXPORT____")
-        # props = self.properties
+        props = self.properties
         filepath = self.filepath
         filepath = bpy.path.ensure_ext(filepath, self.filename_ext)
         logpath = bpy.path.ensure_ext(bpy.path.display_name_from_filepath(self.filepath), self.logfile_ext)
 
-        export_blb.write(context, filepath, logpath, self.use_selection)
+        logger = logger.Logger(props.write_log, props.write_log_warnings, logpath)
 
-        fullpath = "{}{}".format(bpy.path.abspath("//"), filepath)
+        export_blb.write(context, props, logger, filepath)
 
-        print("Output file:", fullpath)
+        logger.log("{}{}{}".format("Output file: ", bpy.path.abspath("//"), filepath))
+
+        logger.write_log()
 
         return {'FINISHED'}
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.prop(self, "use_selection")
+
+        layout.prop(self, "write_log")
+
+        # There might be a better way of doing this but I don't know how to.
+        row = layout.row()
+        row.active = self.write_log
+        row.prop(self, "write_log_warnings")
 
 ### REGISTER ###
 def menu_export(self, context):
