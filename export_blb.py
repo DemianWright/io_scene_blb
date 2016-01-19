@@ -65,13 +65,113 @@ def set_min_max(vec_min, vec_max, obj):
         vec_max[1] = max(vec_max[1], coord[1])
         vec_max[2] = max(vec_max[2], coord[2])
 
-def write(context, props, logger, filepath=""):
-    """Write a BLB file."""
+def __write_file(filepath, brick_size, quads):
+    """Write the BLB file."""
+
+    # For clarity.
+    size_x = brick_size[0]
+    size_y = brick_size[1]
+    size_z = brick_size[2]
+
+    # Brick grid constants.
+    GRID_UP = "u"  # Allow placing bricks above this plate.
+    GRID_INSIDE = "x"  # Disallow building inside brick.
+    GRID_OUTSIDE = "-"  # Allow building in empty space.
+    GRID_DOWN = "d"  # Allow placing bricks below this plate.
+    GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
+
+    with open(filepath, "w") as file:
+        # Write brick size.
+        write_vector(file, brick_size)
+
+        # Write brick type.
+        file.write("SPECIAL\n\n")
+
+        # Write brick grid.
+        for y_coord in range(size_y):
+            for z_coord in range(size_z):
+                is_top = z_coord == 0
+                is_bot = z_coord == size_z - 1
+
+                if is_bot and is_top:
+                    mode = "b"
+                elif is_bot:
+                    mode = "d"
+                elif is_top:
+                    mode = "u"
+                else:
+                    mode = "X"
+
+                file.write(mode * size_x)
+                file.write("\n")
+
+            file.write("\n")
+
+        # Write collisions.
+        collision_cubes = (((0, 0, 0), (size_x, size_y, size_z)),)
+
+        file.write(str(len(collision_cubes)))
+        file.write("\n")
+
+        for (center, size) in collision_cubes:
+            file.write("\n")
+            write_vector(file, center)
+            write_vector(file, size)
+
+        # Write coverage.
+        file.write("COVERAGE:\n")
+
+        # TBNESW
+        for i in range(6):
+            file.write("0 : 999\n")
+
+        # Write quad data.
+        # Section names must be in lower case for some reason.
+        for section_name in ("top", "bottom", "north", "east", "south", "west", "omni"):
+            section_quads = tuple(map(lambda t: t[0], filter(lambda t: t[1] == section_name, quads)))
+
+            # TODO: Terse mode where optional stuff is excluded.
+
+            # Write section name.
+            file.write("\n--{} QUADS--\n".format(section_name.upper()))  # Optional.
+
+            # Write section length.
+            file.write("{}\n".format(str(len(section_quads))))
+
+            for (positions, normals, uvs, colors, texture) in section_quads:
+                # Write face texture name.
+                file.write("\nTEX:")  # Optional.
+                file.write(texture)
+
+                # Write vertex positions.
+                file.write("\nPOSITION:\n")  # Optional.
+                for position in positions:
+                    write_vector(file, position)
+
+                # Write face UV coordinates.
+                file.write("UV COORDS:\n")  # Optional.
+                for uv_vector in uvs:
+                    write_vector(file, uv_vector)
+
+                # Write vertex normals.
+                file.write("NORMALS:\n")  # Optional.
+                for normal in normals:
+                    write_vector(file, normal)
+
+                # Write vertex colors if any.
+                if colors is not None:
+                    file.write("COLORS:\n")  # Optional.
+                    for color in colors:
+                        write_vector(file, color)
+
+def export(context, props, logger, filepath=""):
+    """Processes the data from the scene and writes it to a BLB file."""
 
     special_objects = {"bounds": None,
                        "collision": None,
                        "grid_u": None,
                        "grid_x": None,
+                       "grid_d": None,
                        "grid_b": None}
 
     vec_bounds_min = Vector((0, 0, 0))
@@ -202,7 +302,7 @@ def write(context, props, logger, filepath=""):
     vec_bounds_min[2] /= 0.4
     vec_bounds_max[2] /= 0.4
 
-    # Group a_quads into sections
+    # Group quads into sections
     quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, vec_bounds_min, vec_bounds_max)), a_quads))
 
     # Compute brick dimensions
@@ -213,101 +313,15 @@ def write(context, props, logger, filepath=""):
     if size_x != int(size_x) or size_y != int(size_y) or size_z != int(size_z):
         logger.warning("Warning: Brick has non-even size ({} {} {}), rounding up".format(size_x, size_y, size_z))
 
-    size_x = int(ceil(size_x))
-    size_y = int(ceil(size_y))
-    size_z = int(ceil(size_z))
+    brick_size = (int(ceil(size_x)), int(ceil(size_y)), int(ceil(size_z)))
 
     logger.log("Brick size: {} {} {}".format(size_x, size_y, size_z))
-
-    # Write the BLB file.
-    with open(filepath, "w") as file:
-        # Write brick size.
-        write_vector(file, (size_x, size_y, size_z))
-
-        # Write brick type.
-        file.write("SPECIAL\n\n")
-
-        # Write brick grid.
-        for y_coord in range(size_y):
-            for z_coord in range(size_z):
-                is_top = z_coord == 0
-                is_bot = z_coord == size_z - 1
-
-                if is_bot and is_top:
-                    mode = "b"
-                elif is_bot:
-                    mode = "d"
-                elif is_top:
-                    mode = "u"
-                else:
-                    mode = "X"
-
-                file.write(mode * size_x)
-                file.write("\n")
-
-            file.write("\n")
-
-        # Write collisions.
-        collision_cubes = (
-            ((0, 0, 0), (size_x, size_y, size_z)),
-        )
-
-        file.write(str(len(collision_cubes)))
-        file.write("\n")
-
-        for (center, size) in collision_cubes:
-            file.write("\n")
-            write_vector(file, center)
-            write_vector(file, size)
-
-        # Write coverage.
-        file.write("COVERAGE:\n")
-
-        # TBNESW
-        for i in range(6):
-            file.write("0 : 999\n")
-
-        # Write quad data.
-        # Section names must be in lower case for some reason.
-        for section_name in ("top", "bottom", "north", "east", "south", "west", "omni"):
-            section_quads = tuple(map(lambda t: t[0], filter(lambda t: t[1] == section_name, quads_with_sections)))
-
-            # TODO: Terse mode where optional stuff is excluded.
-
-            # Write section name.
-            file.write("\n--{} QUADS--\n".format(section_name.upper()))  # Optional.
-
-            # Write section length.
-            file.write("{}\n".format(str(len(section_quads))))
-
-            for (positions, normals, uvs, colors, texture) in section_quads:
-                # Write face texture name.
-                file.write("\nTEX:")  # Optional.
-                file.write(texture)
-
-                # Write vertex positions.
-                file.write("\nPOSITION:\n")  # Optional.
-                for position in positions:
-                    write_vector(file, position)
-
-                # Write face UV coordinates.
-                file.write("UV COORDS:\n")  # Optional.
-                for uv_vector in uvs:
-                    write_vector(file, uv_vector)
-
-                # Write vertex normals.
-                file.write("NORMALS:\n")  # Optional.
-                for normal in normals:
-                    write_vector(file, normal)
-
-                # Write vertex colors if any.
-                if colors is not None:
-                    file.write("COLORS:\n")  # Optional.
-                    for color in colors:
-                        write_vector(file, color)
 
     if n_tris:
         logger.warning("Warning: {} triangles degenerated to a_quads.".format(n_tris))
 
     if n_ngon:
         logger.warning("Warning: {} n-gons skipped.".format(n_ngon))
+
+    # Write the data to a file.
+    __write_file(filepath, brick_size, quads_with_sections)
