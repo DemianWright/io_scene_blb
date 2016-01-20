@@ -19,6 +19,10 @@
 from mathutils import Vector
 from math import ceil
 
+INDEX_X = 0
+INDEX_Y = 1
+INDEX_Z = 2
+
 def write_vector(file, vec, new_line=True):
     """
     Writes the values of the given vector separated with spaces into the given file.
@@ -58,20 +62,20 @@ def set_min_max(vec_min, vec_max, obj):
 
     for vert in obj.data.vertices:
         coord = obj.matrix_world * vert.co
-        vec_min[0] = min(vec_min[0], coord[0])
-        vec_min[1] = min(vec_min[1], coord[1])
-        vec_min[2] = min(vec_min[2], coord[2])
-        vec_max[0] = max(vec_max[0], coord[0])
-        vec_max[1] = max(vec_max[1], coord[1])
-        vec_max[2] = max(vec_max[2], coord[2])
+        vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
+        vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
+        vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
+        vec_max[INDEX_X] = max(vec_max[INDEX_X], coord[INDEX_X])
+        vec_max[INDEX_Y] = max(vec_max[INDEX_Y], coord[INDEX_Y])
+        vec_max[INDEX_Z] = max(vec_max[INDEX_Z], coord[INDEX_Z])
 
 def __write_file(filepath, brick_size, quads):
     """Write the BLB file."""
 
     # For clarity.
-    size_x = brick_size[0]
-    size_y = brick_size[1]
-    size_z = brick_size[2]
+    size_x = brick_size[INDEX_X]
+    size_y = brick_size[INDEX_Y]
+    size_z = brick_size[INDEX_Z]
 
     # Brick grid constants.
     GRID_UP = "u"  # Allow placing bricks above this plate.
@@ -167,22 +171,42 @@ def __write_file(filepath, brick_size, quads):
 def export(context, props, logger, filepath=""):
     """Processes the data from the scene and writes it to a BLB file."""
 
-    special_objects = {"bounds": None,
-                       "collision": None,
-                       "grid_u": None,
-                       "grid_x": None,
-                       "grid_d": None,
-                       "grid_b": None}
+    # TODO: Exporting multiple bricks from a single file.
 
-    vec_bounds_min = Vector((0, 0, 0))
-    vec_bounds_max = Vector((0, 0, 0))
+    # Object name constants.
+    BOUNDS_NAME_PREFIX = "bounds"
+    COLLISION_PREFIX = "collision"
+    GRID_U_PREFIX = "gridu"
+    GRID_X_PREFIX = "gridx"
+    GRID_D_PREFIX = "gridd"
+    GRID_B_PREFIX = "gridb"
+    
+    # Numerical constants.
+    PLATE_HEIGHT = 0.4 # (1, 1, 1) Blockland plate = (1.0, 1.0, 0.4) Blender units (X,Y,Z)
+
+    special_objects = {BOUNDS_NAME_PREFIX: None,
+                       COLLISION_PREFIX: None,
+                       GRID_U_PREFIX: None,
+                       GRID_X_PREFIX: None,
+                       GRID_D_PREFIX: None,
+                       GRID_B_PREFIX: None}
+
+    vec_bounding_box_min = Vector((0, 0, 0))
+    vec_bounding_box_max = Vector((0, 0, 0))
 
     a_quads = []
-
     n_tris = 0
     n_ngon = 0
 
     # TODO: Layer support.
+
+    def vector_z_to_plates(xyz):
+        """Returns a new tuple where the Z component of the given tuple is scaled to match Blockland plates.
+        If the given Vector/tuple does not have three components (assumed format is (X, Y, Z)) the input is returned unchanged."""
+        if len(xyz) > 2:
+            return (xyz[INDEX_X], xyz[INDEX_Y], xyz[INDEX_Z] / PLATE_HEIGHT)
+        else:
+            return xyz
 
     # Use selected objects?
     if props.use_selection:
@@ -215,32 +239,56 @@ def export(context, props, logger, filepath=""):
         else:
             logger.log("Found {} object".format(len(objects)))
 
-    # Search for special objects.
+    # Search for the bounds object.
     for obj in objects:
-        # Bounds object
-        if obj.name.lower() == "bounds":
-            if obj.type == "MESH":
-                special_objects["bounds"] = obj
-                set_min_max(vec_bounds_min, vec_bounds_max, obj)
-                break
-            else:
+        # Manually created bounds object?
+        if obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
+            if obj.type != "MESH":
                 logger.warning("Warning: Object '{}' cannot be used as bounds, must be a mesh".format(obj.name))
+                # Continue searching in case a mesh bounds is found.
+            else:
+                special_objects[BOUNDS_NAME_PREFIX] = obj
+
+                # Get the dimensions of the Blender object, set the values into an array as they may change later, and convert height to plates.
+                bounds_size = [obj.dimensions[INDEX_X],
+                               obj.dimensions[INDEX_Y],
+                               obj.dimensions[INDEX_Z] / PLATE_HEIGHT]
+
+                # Are the dimensions of the bounds object integers?
+                if bounds_size[INDEX_X] != int(bounds_size[INDEX_X]) or bounds_size[INDEX_Y] != int(bounds_size[INDEX_Y]) or bounds_size[INDEX_Z] != int(bounds_size[INDEX_Z]):
+                    # The bounds object was made manually, allow for some error & floating point inaccuracy.
+                    bounds_error = 0.1
+
+                    logger.warning("Warning: Bounds has non-integer size {}, rounding to a precision of {}".format(bounds_size, bounds_error))
+
+                    for index, value in enumerate(bounds_size):
+                        # Round to the specified error amount and force to int.
+                        bounds_size[index] = int(round(bounds_error * round(value / bounds_error)))
+
+                # Bounds object found and processed, break the loop.
+                manual_bounds = True
+                break
     else:
-        logger.warning("Warning: No 'bounds' object found. Dimensions may be incorrect.")
+        logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size may be undesirable.")
+        manual_bounds = False
+        # Brick size calculation must be performed after all other objects are processed.
+
+    # TODO: Check that every vertex is within manually defined bounds.
 
     for obj in objects:
         # Ignore all non-mesh objects and certain special objects.
-        if obj.type != "MESH" or obj == special_objects["bounds"]:
+        if obj.type != "MESH" or obj == special_objects[BOUNDS_NAME_PREFIX]:
             continue
 
         logger.log("Exporting mesh: {}".format(obj.name))
 
-        if not special_objects["bounds"]:
-            set_min_max(vec_bounds_min, vec_bounds_max, obj)
+        # Current object is not the bounds object, record the minimum and maximum vertex coordinates.
+        if not special_objects[BOUNDS_NAME_PREFIX]:
+            set_min_max(vec_bounding_box_min, vec_bounding_box_max, obj)
 
         current_data = obj.data
 
-        # UVs
+        # UV layers exist.
         if current_data.uv_layers:
             if len(current_data.uv_layers) > 1:
                 logger.warning("Warning: Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
@@ -251,8 +299,7 @@ def export(context, props, logger, filepath=""):
 
         def index_to_position(index):
             vec = obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co
-            vec[2] /= 0.4  # Scale plates
-            return vec
+            return vector_z_to_plates(vec)
 
         def index_to_normal(index):
             return (obj.matrix_world.to_3x3() * current_data.vertices[current_data.loops[index].vertex_index].normal).normalized()
@@ -281,7 +328,7 @@ def export(context, props, logger, filepath=""):
 
             # UVs
             if uv_data:
-                uvs = tuple(map(lambda i: uv_data[i].uv, loop_indices))
+                uvs = tuple(map(lambda index: uv_data[index].uv, loop_indices))
             else:
                 # These UV coordinates with the SIDE texture lead to a blank textureless face.
                 uvs = (Vector((0.5, 0.5)),) * 4
@@ -298,30 +345,41 @@ def export(context, props, logger, filepath=""):
 
             a_quads.append((positions, normals, uvs, colors, texture))
 
-    # More plate adjustment
-    vec_bounds_min[2] /= 0.4
-    vec_bounds_max[2] /= 0.4
+    # Calculate brick size.
+    if not manual_bounds:
+        # Get the dimensions defined by the vectors and convert height to plates.
+        bounds_size = [vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
+                       vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
+                       (vec_bounding_box_max[INDEX_Z] - vec_bounding_box_min[INDEX_Z]) / PLATE_HEIGHT]
 
-    # Group quads into sections
-    quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, vec_bounds_min, vec_bounds_max)), a_quads))
+        # Are the dimensions of the bounds object integers?
+        if bounds_size[INDEX_X] != int(bounds_size[INDEX_X]) or bounds_size[INDEX_Y] != int(bounds_size[INDEX_Y]) or bounds_size[INDEX_Z] != int(bounds_size[INDEX_Z]):
+            logger.warning("Warning: Bounds has non-integer size {}, rounding up".format(bounds_size))
 
-    # Compute brick dimensions
-    size_x = vec_bounds_max[0] - vec_bounds_min[0]
-    size_y = vec_bounds_max[1] - vec_bounds_min[1]
-    size_z = vec_bounds_max[2] - vec_bounds_min[2]
+            # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
+            bounds_size = [ceil(bounds_size[INDEX_X]),
+                           ceil(bounds_size[INDEX_Y]),
+                           ceil(bounds_size[INDEX_Z])]
 
-    if size_x != int(size_x) or size_y != int(size_y) or size_z != int(size_z):
-        logger.warning("Warning: Brick has non-even size ({} {} {}), rounding up".format(size_x, size_y, size_z))
+        # The number type must be int because you can't have partial plates.
+        bounds_size = [int(bounds_size[INDEX_X]),
+                       int(bounds_size[INDEX_Y]),
+                       int(bounds_size[INDEX_Z])]
 
-    brick_size = (int(ceil(size_x)), int(ceil(size_y)), int(ceil(size_z)))
+    logger.log("Brick size: {}".format(bounds_size))
 
-    logger.log("Brick size: {} {} {}".format(size_x, size_y, size_z))
+    # Plate adjustment.
+    vec_bounding_box_min = vector_z_to_plates(vec_bounding_box_min)
+    vec_bounding_box_max = vector_z_to_plates(vec_bounding_box_max)
+
+    # Group quads into sections.
+    quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, vec_bounding_box_min, vec_bounding_box_max)), a_quads))
 
     if n_tris:
-        logger.warning("Warning: {} triangles degenerated to a_quads.".format(n_tris))
+        logger.warning("Warning: {} triangles degenerated to quads.".format(n_tris))
 
     if n_ngon:
         logger.warning("Warning: {} n-gons skipped.".format(n_ngon))
 
     # Write the data to a file.
-    __write_file(filepath, brick_size, quads_with_sections)
+    __write_file(filepath, bounds_size, quads_with_sections)
