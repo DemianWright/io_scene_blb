@@ -137,7 +137,7 @@ def __write_file(filepath, brick_size, quads):
             # TODO: Terse mode where optional stuff is excluded.
 
             # Write section name.
-            file.write("\n--{} QUADS--\n".format(section_name.upper()))  # Optional.
+            file.write("--{} QUADS--\n".format(section_name.upper()))  # Optional.
 
             # Write section length.
             file.write("{}\n".format(str(len(section_quads))))
