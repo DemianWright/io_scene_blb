@@ -230,13 +230,22 @@ def export(context, props, logger, filepath=""):
 
     # TODO: Layer support.
 
-    def vector_z_to_plates(xyz):
-        """Returns a new array where the Z component of the given vector is scaled to match Blockland plates.
-        If the given vector does not have three components (assumed format is (X, Y, Z)) the input is returned unchanged."""
-        if len(xyz) > 2:
-            return [xyz[INDEX_X], xyz[INDEX_Y], xyz[INDEX_Z] / PLATE_HEIGHT]
+    def vector_z_to_plates(vec_xyz):
+        """Returns a new Vector(X,Y,Z) where the Z component of the given vector is scaled to match Blockland plates.
+        If the given vector does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged."""
+        if len(vec_xyz) == 3:
+            return Vector((vec_xyz[INDEX_X], vec_xyz[INDEX_Y], vec_xyz[INDEX_Z] / PLATE_HEIGHT))
         else:
-            return xyz
+            return vec_xyz
+
+    def force_to_int(vector):
+        """Returns a new list of vector values casted to integers."""
+        result = []
+
+        for index, value in enumerate(vector):
+            result.append(int(value))
+
+        return result
 
     # Use selected objects?
     if props.use_selection:
@@ -279,21 +288,24 @@ def export(context, props, logger, filepath=""):
             else:
                 special_objects[BOUNDS_NAME_PREFIX] = obj
 
-                # Get the dimensions of the Blender object, set the values into an array as they may change later, and convert height to plates.
-                bounds_size = [obj.dimensions[INDEX_X],
-                               obj.dimensions[INDEX_Y],
-                               obj.dimensions[INDEX_Z] / PLATE_HEIGHT]
+                # Get the dimensions of the Blender object and convert the height to plates.
+                bounds_size = Vector((obj.dimensions[INDEX_X],
+                                      obj.dimensions[INDEX_Y],
+                                      obj.dimensions[INDEX_Z] / PLATE_HEIGHT))
 
                 # Are the dimensions of the bounds object integers?
                 if bounds_size[INDEX_X] != int(bounds_size[INDEX_X]) or bounds_size[INDEX_Y] != int(bounds_size[INDEX_Y]) or bounds_size[INDEX_Z] != int(bounds_size[INDEX_Z]):
                     # The bounds object was made manually, allow for some error & floating point inaccuracy.
                     bounds_error = 0.1
 
-                    logger.warning("Warning: Bounds has non-integer size {}, rounding to a precision of {}".format(bounds_size, bounds_error))
+                    logger.warning("Warning: Bounds has a non-integer size {} {} {}, rounding to a precision of {}".format(bounds_size[INDEX_X], bounds_size[INDEX_Y], bounds_size[INDEX_Z], bounds_error))
 
                     for index, value in enumerate(bounds_size):
                         # Round to the specified error amount and force to int.
-                        bounds_size[index] = int(round(bounds_error * round(value / bounds_error)))
+                        bounds_size[index] = round(bounds_error * round(value / bounds_error))
+
+                # The number type must be int because you can't have partial plates. Returns a list.
+                bounds_size = force_to_int(bounds_size)
 
                 # Bounds object found and processed, break the loop.
                 manual_bounds = True
@@ -304,7 +316,6 @@ def export(context, props, logger, filepath=""):
         # Brick size calculation must be performed after all other objects are processed.
 
     # TODO: Check that every vertex is within manually defined bounds.
-    # TODO: Floating point rounding.
 
     for obj in objects:
         # Ignore all non-mesh objects and certain special objects.
@@ -379,25 +390,22 @@ def export(context, props, logger, filepath=""):
     # Calculate brick size.
     if not manual_bounds:
         # Get the dimensions defined by the vectors and convert height to plates.
-        bounds_size = [vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
-                       vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
-                       (vec_bounding_box_max[INDEX_Z] - vec_bounding_box_min[INDEX_Z]) / PLATE_HEIGHT]
+        bounds_size = Vector((vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
+                              vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
+                              (vec_bounding_box_max[INDEX_Z] - vec_bounding_box_min[INDEX_Z]) / PLATE_HEIGHT))
 
         # Are the dimensions of the bounds object integers?
         if bounds_size[INDEX_X] != int(bounds_size[INDEX_X]) or bounds_size[INDEX_Y] != int(bounds_size[INDEX_Y]) or bounds_size[INDEX_Z] != int(bounds_size[INDEX_Z]):
-            logger.warning("Warning: Bounds has non-integer size {}, rounding up".format(bounds_size))
+            logger.warning("Warning: Bounds has a non-integer size {} {} {}, rounding up".format(bounds_size[INDEX_X], bounds_size[INDEX_Y], bounds_size[INDEX_Z]))
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
-            bounds_size = [ceil(bounds_size[INDEX_X]),
-                           ceil(bounds_size[INDEX_Y]),
-                           ceil(bounds_size[INDEX_Z])]
+            for index, value in enumerate(bounds_size):
+                bounds_size[index] = ceil(value)
 
-        # The number type must be int because you can't have partial plates.
-        bounds_size = [int(bounds_size[INDEX_X]),
-                       int(bounds_size[INDEX_Y]),
-                       int(bounds_size[INDEX_Z])]
+        # The number type must be int because you can't have partial plates. Returns a list.
+        bounds_size = force_to_int(bounds_size)
 
-    logger.log("Brick size: {}".format(bounds_size))
+    logger.log("Brick size: {} {} {}".format(bounds_size[INDEX_X], bounds_size[INDEX_Y], bounds_size[INDEX_Z]))
 
     # Plate adjustment.
     vec_bounding_box_min = vector_z_to_plates(vec_bounding_box_min)
