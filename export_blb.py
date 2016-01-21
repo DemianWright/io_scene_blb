@@ -57,14 +57,16 @@ def calc_quad_section(quad, bounds_min, bounds_max):
 
     return "omni"
 
-def set_min_max(vec_min, vec_max, obj):
-    """Updates the given vectors assigning the minimum vertex coordinate of the given object to the minimum and maximum vertex coordinate to the maximum vector respectively."""
+def set_world_min_max(vec_min, vec_max, obj):
+    """Updates the given vectors assigning the minimum and maximum world space vertex coordinates of the given object to the minimum and maximum vectors respectively."""
 
     for vert in obj.data.vertices:
         coord = obj.matrix_world * vert.co
+        
         vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
         vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
         vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
+        
         vec_max[INDEX_X] = max(vec_max[INDEX_X], coord[INDEX_X])
         vec_max[INDEX_Y] = max(vec_max[INDEX_Y], coord[INDEX_Y])
         vec_max[INDEX_Z] = max(vec_max[INDEX_Z], coord[INDEX_Z])
@@ -147,6 +149,8 @@ def __write_file(filepath, brick_size, quads):
                 file.write("\nTEX:")  # Optional.
                 file.write(texture)
 
+                # TODO: Fix incorrect model rotation. -Y in Blender is +X in-game.
+
                 # Write vertex positions.
                 file.write("\nPOSITION:\n")  # Optional.
                 for position in positions:
@@ -191,8 +195,8 @@ def export(context, props, logger, filepath=""):
                        GRID_D_PREFIX: None,
                        GRID_B_PREFIX: None}
 
-    vec_bounding_box_min = Vector((0, 0, 0))
-    vec_bounding_box_max = Vector((0, 0, 0))
+    vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+    vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
 
     a_quads = []
     n_tris = 0
@@ -201,10 +205,10 @@ def export(context, props, logger, filepath=""):
     # TODO: Layer support.
 
     def vector_z_to_plates(xyz):
-        """Returns a new tuple where the Z component of the given tuple is scaled to match Blockland plates.
-        If the given Vector/tuple does not have three components (assumed format is (X, Y, Z)) the input is returned unchanged."""
+        """Returns a new array where the Z component of the given vector is scaled to match Blockland plates.
+        If the given vector does not have three components (assumed format is (X, Y, Z)) the input is returned unchanged."""
         if len(xyz) > 2:
-            return (xyz[INDEX_X], xyz[INDEX_Y], xyz[INDEX_Z] / PLATE_HEIGHT)
+            return [xyz[INDEX_X], xyz[INDEX_Y], xyz[INDEX_Z] / PLATE_HEIGHT]
         else:
             return xyz
 
@@ -274,6 +278,7 @@ def export(context, props, logger, filepath=""):
         # Brick size calculation must be performed after all other objects are processed.
 
     # TODO: Check that every vertex is within manually defined bounds.
+    # TODO: Floating point rounding.
 
     for obj in objects:
         # Ignore all non-mesh objects and certain special objects.
@@ -284,7 +289,7 @@ def export(context, props, logger, filepath=""):
 
         # Current object is not the bounds object, record the minimum and maximum vertex coordinates.
         if not special_objects[BOUNDS_NAME_PREFIX]:
-            set_min_max(vec_bounding_box_min, vec_bounding_box_max, obj)
+            set_world_min_max(vec_bounding_box_min, vec_bounding_box_max, obj)
 
         current_data = obj.data
 
