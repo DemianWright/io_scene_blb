@@ -57,19 +57,45 @@ def calc_quad_section(quad, bounds_min, bounds_max):
 
     return "omni"
 
-def set_world_min_max(vec_min, vec_max, obj):
-    """Updates the given vectors assigning the minimum and maximum world space vertex coordinates of the given object to the minimum and maximum vectors respectively."""
+def get_world_min(obj):
+    """Returns a new Vector(X,Y,Z) of the minimum world space vertex coordinates of the given object."""
+
+    vec_min = Vector((float("+inf"), float("+inf"), float("+inf")))
 
     for vert in obj.data.vertices:
         coord = obj.matrix_world * vert.co
-        
+
         vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
         vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
         vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
-        
+
+    return vec_min
+
+def set_world_min_max(vec_min, vec_max, obj):
+    """Updates the given vectors by assigning the minimum and maximum world space vertex coordinates of the given object to the minimum and maximum vectors respectively."""
+
+    for vert in obj.data.vertices:
+        coord = obj.matrix_world * vert.co
+
+        vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
+        vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
+        vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
+
         vec_max[INDEX_X] = max(vec_max[INDEX_X], coord[INDEX_X])
         vec_max[INDEX_Y] = max(vec_max[INDEX_Y], coord[INDEX_Y])
         vec_max[INDEX_Z] = max(vec_max[INDEX_Z], coord[INDEX_Z])
+
+def recenter(vector, local_bounds_object):
+    """Returns a new Vector(X,Y,Z) where the coordinates of the given vector/array have been translated so they are relative to the geometric center of the given local space bounds."""
+    bounds_min = get_world_min(local_bounds_object)
+
+    local_center = Vector((bounds_min[INDEX_X] + (local_bounds_object.dimensions[INDEX_X] / 2),
+                           bounds_min[INDEX_Y] + (local_bounds_object.dimensions[INDEX_Y] / 2),
+                           bounds_min[INDEX_Z] + (local_bounds_object.dimensions[INDEX_Z] / 2)))
+
+    return Vector((vector[INDEX_X] - local_center[INDEX_X],
+                   vector[INDEX_Y] - local_center[INDEX_Y],
+                   vector[INDEX_Z] - local_center[INDEX_Z]))
 
 def __write_file(filepath, brick_size, quads):
     """Write the BLB file."""
@@ -186,7 +212,7 @@ def export(context, props, logger, filepath=""):
     GRID_B_PREFIX = "gridb"
     
     # Numerical constants.
-    PLATE_HEIGHT = 0.4 # (1, 1, 1) Blockland plate = (1.0, 1.0, 0.4) Blender units (X,Y,Z)
+    PLATE_HEIGHT = 0.4  # (1, 1, 1) Blockland plate = (1.0, 1.0, 0.4) Blender units (X,Y,Z)
 
     special_objects = {BOUNDS_NAME_PREFIX: None,
                        COLLISION_PREFIX: None,
