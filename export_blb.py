@@ -33,12 +33,26 @@ HUMAN_ERROR = 0.1
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"
 GRID_X_PREFIX = "gridx"
-GRID_B_PREFIX = "gridb"
-GRID_D_PREFIX = "gridd"
+GRID_DASH_PREFIX = "grid-"
 GRID_U_PREFIX = "gridu"
+GRID_D_PREFIX = "gridd"
+GRID_B_PREFIX = "gridb"
 
-# Grid definition object names in priority order.
-BRICK_GRID_DEFINITIONS_PRIORITY = (GRID_X_PREFIX, GRID_B_PREFIX, GRID_D_PREFIX, GRID_U_PREFIX)
+# Brick grid constants.
+GRID_INSIDE = 'x'  # Disallow building inside brick.
+GRID_OUTSIDE = '-'  # Allow building in empty space.
+GRID_UP = 'u'  # Allow placing bricks above this plate.
+GRID_DOWN = 'd'  # Allow placing bricks below this plate.
+GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
+
+# Brick grid definition object names in priority order.
+BRICK_GRID_DEFINITIONS_PRIORITY = (GRID_X_PREFIX, GRID_DASH_PREFIX, GRID_U_PREFIX, GRID_D_PREFIX, GRID_B_PREFIX)
+
+BRICK_GRID_DEFINITIONS = { GRID_X_PREFIX: GRID_INSIDE,
+                           GRID_DASH_PREFIX: GRID_OUTSIDE,
+                           GRID_U_PREFIX: GRID_UP,
+                           GRID_D_PREFIX: GRID_DOWN,
+                           GRID_B_PREFIX: GRID_BOTH }
 
 # Set the Decimal number context: 6 decimal points and 0.5 is rounded up.
 setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
@@ -47,8 +61,8 @@ setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
 
 def to_decimal(f, decimals=FLOATING_POINT_DECIMALS):
     """Converts the given float to a Decimal value with up to 6 decimal places of precision."""
-    if decimals > 6:
-        decimals = 6
+    if decimals > FLOATING_POINT_DECIMALS:
+        decimals = FLOATING_POINT_DECIMALS
 
     # First convert float to string with n decimal digits and then make a Decimal out of it.
     return Decimal(("{0:." + str(decimals) + "f}").format(f))
@@ -144,12 +158,60 @@ def __write_file(filepath, quads, definitions):
     size_y = definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
     size_z = definitions[BOUNDS_NAME_PREFIX][INDEX_Z]
 
-    # Brick grid constants.
-    GRID_INSIDE = "x"  # Disallow building inside brick.
-    GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
-    GRID_DOWN = "d"  # Allow placing bricks below this plate.
-    GRID_UP = "u"  # Allow placing bricks above this plate.
-    GRID_OUTSIDE = "-"  # Allow building in empty space.
+    def write_brick_grid(grid=None):
+        """Writes the given brick grid to the file or if no parameter is given, writes the default brick grid according to the size of the brick."""
+
+        if grid is not None:
+            for y_slice in grid:
+                for x_row in y_slice:
+                    # Join each X row of data without a separator.
+                    file.write("".join(x_row))
+                    file.write("\n")
+
+                # A new line after each Y slice.
+                file.write("\n")
+        else:
+            for y in range(size_y):
+                for z in range(size_z):
+                    # Current Z index is 0 which is the top of the brick?
+                    is_top = (z == 0)
+
+                    # Current Z index is Z size - 1 which is the bottom of the brick?
+                    is_bottom = (z == size_z - 1)
+
+                    if is_bottom and is_top:
+                        symbol = GRID_BOTH
+                    elif is_bottom:
+                        symbol = GRID_DOWN
+                    elif is_top:
+                        symbol = GRID_UP
+                    else:
+                        symbol = GRID_INSIDE
+
+                    # Write the symbol X size times.
+                    file.write(symbol * size_x)
+                    file.write("\n")
+
+                # A new line after each Y slice.
+                file.write("\n")
+
+    def modify_brick_grid(brick_grid, volume, symbol):
+        """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
+
+        x_range = volume[INDEX_X]
+        y_range = volume[INDEX_Y]
+        z_range = volume[INDEX_Z]
+
+        # y_index is the index of list of X row data.
+        for y_index in range(y_range[0], y_range[1]):
+            # z_index is the index of the X row data in y_index list.
+            for z_index in range(z_range[0], z_range[1]):
+                # x_index is the index of the character in the X row data.
+                for x_index in range(x_range[0], x_range[1]):
+                    # From this Y slice.
+                    # Select the appropriate Z row.
+                    # And for every X index, assign the correct symbol.
+                    brick_grid[y_index][z_index][x_index] = symbol
 
     with open(filepath, "w") as file:
         # Write brick size.
@@ -159,24 +221,19 @@ def __write_file(filepath, quads, definitions):
         file.write("SPECIAL\n\n")
 
         # Write brick grid.
-        for y_coord in range(size_y):
-            for z_coord in range(size_z):
-                is_top = z_coord == 0
-                is_bot = z_coord == size_z - 1
+        if len(definitions[GRID_B_PREFIX]) == 0 and len(definitions[GRID_D_PREFIX]) == 0 and len(definitions[GRID_U_PREFIX]) == 0 and len(definitions[GRID_X_PREFIX]) == 0:
+            # No brick grid definitions, write default grid.
+            write_brick_grid()
+        else:
+            # Initialize the brick grid with the empty symbol with the dimensions of the brick.
+            brick_grid = [[[GRID_OUTSIDE for x in range(size_x)] for z in range(size_z)] for y in range(size_y)]
 
-                if is_bot and is_top:
-                    mode = "b"
-                elif is_bot:
-                    mode = "d"
-                elif is_top:
-                    mode = "u"
-                else:
-                    mode = "X"
+            for name_prefix in BRICK_GRID_DEFINITIONS_PRIORITY:
+                if len(definitions[name_prefix]) > 0:
+                    for volume in definitions[name_prefix]:
+                        modify_brick_grid(brick_grid, volume, BRICK_GRID_DEFINITIONS.get(name_prefix))
 
-                file.write(mode * size_x)
-                file.write("\n")
-
-            file.write("\n")
+            write_brick_grid(brick_grid)
 
         # Write collisions.
         collision_cubes = (((0, 0, 0), (size_x, size_y, size_z)),)
@@ -247,8 +304,9 @@ def export(context, props, logger, filepath=""):
 
     definition_data = {BOUNDS_NAME_PREFIX: None,
                        COLLISION_PREFIX: None,
-                       GRID_U_PREFIX: [],
                        GRID_X_PREFIX: [],
+                       GRID_DASH_PREFIX: [],
+                       GRID_U_PREFIX: [],
                        GRID_D_PREFIX: [],
                        GRID_B_PREFIX: []}
 
@@ -281,7 +339,7 @@ def export(context, props, logger, filepath=""):
 
     def brick_grid_obj_to_index_ranges(obj, bounds_object):
         """
-        Calculates the brick grid definition index range (inclusive) for each axis from the vertex coordinates of the given object.
+        Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the given object.
         The indices represent a three dimensional volume in the local space of the given bounds object.
         Returns a tuple in the following format: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
         """
@@ -298,18 +356,23 @@ def export(context, props, logger, filepath=""):
         dimensions = bounds_object.dimensions
 
         # Convert the coordinates into brick grid array indices. (Floating point error still present.)
-        grid_min.x = grid_min.x + (dimensions.x / 2)
-        grid_min.y = grid_min.y + (dimensions.y / 2)
-        grid_min.z = (grid_min.z - (dimensions.z / 2)) / PLATE_HEIGHT
+        grid_min.x = grid_min.x + (dimensions.x / 2)  # Translate coordinates to positive X axis.
+        grid_min.y = grid_min.y - (dimensions.y / 2)  # Translate coordinates to negative Y axis.
+        grid_min.z = (grid_min.z - (dimensions.z / 2)) / PLATE_HEIGHT  # Translate coordinates to negative Z axis.
 
         grid_max.x = grid_max.x + (dimensions.x / 2)
-        grid_max.y = grid_max.y + (dimensions.y / 2)
+        grid_max.y = grid_max.y - (dimensions.y / 2)
         grid_max.z = (grid_max.z - (dimensions.z / 2)) / PLATE_HEIGHT
 
-        # Swap around min/max Z index and make it positive. Index 0 = top of the brick.
+        # Swap min/max Z index and make it positive. Index 0 = top of the brick.
         temp = grid_min.z
         grid_min.z = abs(grid_max.z)
         grid_max.z = abs(temp)
+
+        # Swap min/max Y index and make it positive. Index 0 = back of the brick.
+        temp = grid_min.y
+        grid_min.y = abs(grid_max.y)
+        grid_max.y = abs(temp)
 
         # Floating point error eliminated.
         grid_min = round_vector_to_list(grid_min)
@@ -345,15 +408,12 @@ def export(context, props, logger, filepath=""):
 
         # The value type must be int because you can't have partial plates. Returns a list.
         grid_min = force_to_int(grid_min)
-
-        # grid_max values are indices. Subtract one to prevent the index from going out of bounds.
-        for index, value in enumerate(grid_max):
-            grid_max[index] = int(value) - 1
+        grid_max = force_to_int(grid_max)
 
         # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
-        return ( (grid_min[INDEX_X], grid_max[INDEX_X]),
+        return ((grid_min[INDEX_X], grid_max[INDEX_X]),
                  (grid_min[INDEX_Y], grid_max[INDEX_Y]),
-                 (grid_min[INDEX_Z], grid_max[INDEX_Z]) )
+                 (grid_min[INDEX_Z], grid_max[INDEX_Z]))
 
     # Use selected objects?
     if props.use_selection:
@@ -430,6 +490,8 @@ def export(context, props, logger, filepath=""):
         if obj.type != "MESH" or obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
             continue
         elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
+            # Object name starts with one of the brick grid definition object name prefixes.
+
             # TODO: Make this work without a bounds object.
 
             # All brick grid definition object names are exactly 5 characters long and lower case.
