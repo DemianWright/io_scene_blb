@@ -590,8 +590,11 @@ def export(context, props, logger, filepath=""):
             uv_data = None
 
         def index_to_position(index):
-            vec = obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co
-            return array_z_to_plates(vec)
+            """
+            Returns the world coordinates for the vertex whose index was given in the current polygon loop.
+            Additionally rounds the coordinates to Decimal and converts the height to plates with array_z_to_plates(array).
+            """
+            return array_z_to_plates(obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co)
 
         def index_to_normal(index):
             return (obj.matrix_world.to_3x3() * current_data.vertices[current_data.loops[index].vertex_index].normal).normalized()
@@ -600,25 +603,37 @@ def export(context, props, logger, filepath=""):
         for poly in current_data.polygons:
             # Vertex positions
             if poly.loop_total == 4:
+                # Quad.
                 loop_indices = tuple(poly.loop_indices)
             elif poly.loop_total == 3:
+                # Tri.
                 loop_indices = tuple(poly.loop_indices) + (poly.loop_start,)
                 n_tris += 1
             else:
+                # N-gon.
                 n_ngon += 1
                 continue
 
-            positions = tuple(map(index_to_position, loop_indices))
-            # Blender seems to keep opposite winding order
-            positions = tuple(reversed(positions))
+            positions = []
+
+            # Reverse the loop_indices tuple. (Blender seems to keep opposite winding order.)
+            for index in reversed(loop_indices):
+                # Get the world position from the index. (This rounds it and converts the height to plates.)
+                # Center the position to the current bounds object.
+                positions.append(recenter(index_to_position(index)))
 
             # FIXME: Object rotation affects normals.
 
             # Normals.
-            # They are kept as floats on purpose.
+            # They are kept as floats for maximum accuracy.
+            # Use smooth shading?
             if poly.use_smooth:
+                # For every element in the loop_indices tuple.
+                # Run it through the index_to_normal(index) function. (This rounds it and converts the height to plates.)
+                # And assign the result to the normals tuple.
                 normals = tuple(map(index_to_normal, loop_indices))
             else:
+                # No smooth shading, every vertex in this loop has the same normal.
                 normals = (poly.normal,) * 4
 
             # UVs
