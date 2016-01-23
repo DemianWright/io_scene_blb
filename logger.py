@@ -44,6 +44,10 @@ class Logger(object):
         """Shorthand for log(message, True) to improve clarity."""
         self.log(message, True)
 
+    def error(self, message):
+        """Shorthand for log(message, True) to improve clarity."""
+        self.log(message, True)
+
     def write_log(self):
         """Writes a log file only if so specified at object creation."""
         # Write a log file? Anything to write?
