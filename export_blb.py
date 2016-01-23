@@ -16,6 +16,9 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+class OutOfBoundsException(Exception):
+    pass
+
 from mathutils import Vector
 from math import ceil
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
@@ -344,76 +347,98 @@ def export(context, props, logger, filepath=""):
         Returns a tuple in the following format: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
         """
 
+        out_of_bounds = False
+
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         set_world_min_max(grid_min, grid_max, obj)
 
-        # Recenter the coordinates to the bounding box.
-        grid_min = recenter(grid_min, bounds_object)
-        grid_max = recenter(grid_max, bounds_object)
+        # TODO: The calculations done with the bounds object can be optimized by doing them only once earlier when the bounds object is found because the object does not change.
 
-        dimensions = bounds_object.dimensions
+        # Find the minimum and maximum coordinates for the bounds object.
+        bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+        bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+        set_world_min_max(bounds_min, bounds_max, bounds_object)
 
-        # Convert the coordinates into brick grid array indices. (Floating point error still present.)
-        grid_min.x = grid_min.x + (dimensions.x / 2)  # Translate coordinates to positive X axis.
-        grid_min.y = grid_min.y - (dimensions.y / 2)  # Translate coordinates to negative Y axis.
-        grid_min.z = (grid_min.z - (dimensions.z / 2)) / PLATE_HEIGHT  # Translate coordinates to negative Z axis.
-
-        grid_max.x = grid_max.x + (dimensions.x / 2)
-        grid_max.y = grid_max.y - (dimensions.y / 2)
-        grid_max.z = (grid_max.z - (dimensions.z / 2)) / PLATE_HEIGHT
-
-        # Swap min/max Z index and make it positive. Index 0 = top of the brick.
-        temp = grid_min.z
-        grid_min.z = abs(grid_max.z)
-        grid_max.z = abs(temp)
-
-        # Swap min/max Y index and make it positive. Index 0 = back of the brick.
-        temp = grid_min.y
-        grid_min.y = abs(grid_max.y)
-        grid_max.y = abs(temp)
-
-        # Floating point error eliminated.
-        grid_min = round_vector_to_list(grid_min)
-        grid_max = round_vector_to_list(grid_max)
-
-        non_int = False
-
-        # Are the minimum and maximum indices of the grid object integers?
-        for value in grid_min:
-            if value != int(value):
-                non_int = True
+        for index, value in enumerate(grid_min):
+            if value < bounds_min[index]:
+                out_of_bounds = True
                 break
+
+        if not out_of_bounds:
+            for index, value in enumerate(grid_max):
+                if value > bounds_max[index]:
+                    out_of_bounds = True
+                    break
+
+        if out_of_bounds:
+            logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, bounds_object.name))
+            raise OutOfBoundsException()
         else:
-            for value in grid_max:
+            # Recenter the coordinates to the bounding box.
+            grid_min = recenter(grid_min, bounds_object)
+            grid_max = recenter(grid_max, bounds_object)
+
+            dimensions = bounds_object.dimensions
+
+            # Convert the coordinates into brick grid array indices. (Floating point error still present.)
+            grid_min.x = grid_min.x + (dimensions.x / 2)  # Translate coordinates to positive X axis.
+            grid_min.y = grid_min.y - (dimensions.y / 2)  # Translate coordinates to negative Y axis.
+            grid_min.z = (grid_min.z - (dimensions.z / 2)) / PLATE_HEIGHT  # Translate coordinates to negative Z axis.
+
+            grid_max.x = grid_max.x + (dimensions.x / 2)
+            grid_max.y = grid_max.y - (dimensions.y / 2)
+            grid_max.z = (grid_max.z - (dimensions.z / 2)) / PLATE_HEIGHT
+
+            # Swap min/max Z index and make it positive. Index 0 = top of the brick.
+            temp = grid_min.z
+            grid_min.z = abs(grid_max.z)
+            grid_max.z = abs(temp)
+
+            # Swap min/max Y index and make it positive. Index 0 = back of the brick.
+            temp = grid_min.y
+            grid_min.y = abs(grid_max.y)
+            grid_max.y = abs(temp)
+
+            # Floating point error eliminated.
+            grid_min = round_vector_to_list(grid_min)
+            grid_max = round_vector_to_list(grid_max)
+
+            non_int = False
+
+            # Are the minimum and maximum indices of the grid object integers?
+            for value in grid_min:
                 if value != int(value):
                     non_int = True
                     break
+            else:
+                for value in grid_max:
+                    if value != int(value):
+                        non_int = True
+                        break
 
-        if non_int:
-            logger.warning("Warning: '{}' has a non-integer size {} {} {}, rounding to a precision of {}.".format(obj.name,
-                                                                                                                  grid_max[INDEX_X] - grid_min[INDEX_X],
-                                                                                                                  grid_max[INDEX_Y] - grid_min[INDEX_Y],
-                                                                                                                  grid_max[INDEX_Z] - grid_min[INDEX_Z],
-                                                                                                                  HUMAN_ERROR))
-            # FIXME: Temporarily making a Decimal out of the human error value. Fix later when bounds calculation and detection has been converted to use Decimals as well.
+            if non_int:
+                logger.warning("Warning: '{}' has a non-integer coordinates, rounding to a precision of {}.".format(obj.name, HUMAN_ERROR))
+                # FIXME: Temporarily making a Decimal out of the human error value. Fix later when bounds calculation and detection has been converted to use Decimals as well.
 
-            # Round indices up the nearest integer. (Floating point error fixed.)
-            for index, value in enumerate(grid_min):
-                grid_min[index] = round(HUMAN_ERROR * round(value / Decimal(HUMAN_ERROR)))
+                # Round indices up the nearest integer. (Floating point error fixed.)
+                for index, value in enumerate(grid_min):
+                    grid_min[index] = round(HUMAN_ERROR * round(value / Decimal(HUMAN_ERROR)))
 
-            for index, value in enumerate(grid_max):
-                grid_max[index] = round(HUMAN_ERROR * round(value / Decimal(HUMAN_ERROR)))
+                for index, value in enumerate(grid_max):
+                    grid_max[index] = round(HUMAN_ERROR * round(value / Decimal(HUMAN_ERROR)))
 
-        # The value type must be int because you can't have partial plates. Returns a list.
-        grid_min = force_to_int(grid_min)
-        grid_max = force_to_int(grid_max)
+            # The value type must be int because you can't have partial plates. Returns a list.
+            grid_min = force_to_int(grid_min)
+            grid_max = force_to_int(grid_max)
 
-        # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
-        return ((grid_min[INDEX_X], grid_max[INDEX_X]),
-                 (grid_min[INDEX_Y], grid_max[INDEX_Y]),
-                 (grid_min[INDEX_Z], grid_max[INDEX_Z]))
+            # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
+            return ((grid_min[INDEX_X], grid_max[INDEX_X]),
+                     (grid_min[INDEX_Y], grid_max[INDEX_Y]),
+                     (grid_min[INDEX_Z], grid_max[INDEX_Z]))
+
+    #### export function begin ####
 
     # Use selected objects?
     if props.use_selection:
@@ -448,11 +473,11 @@ def export(context, props, logger, filepath=""):
 
     # Search for the bounds object.
     for obj in objects:
-        # Manually created bounds object?
+        # Object name starts with the bounds object definition name?
         if obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
             if obj.type != "MESH":
                 logger.warning("Warning: Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
-                # Continue searching in case a mesh bounds is found.
+                # Continue searching in case mesh bounds is found.
             else:
                 bounds_object = obj
 
@@ -477,35 +502,39 @@ def export(context, props, logger, filepath=""):
                 # Bounds object found and processed, break the loop.
                 break
     else:
-        logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size may be undesirable.")
+        logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size and brick grid may be undesirable.")
         # Brick size calculation must be performed after all other objects are processed.
 
     # TODO: Check that every vertex is within manually defined bounds.
-    # TODO: Check that grid objects are within bounds.
 
-    brick_grid_objects = 0
+    brick_grid_objects_found = 0
+    brick_grid_objects_processed = 0
 
     for obj in objects:
-        # Ignore all non-mesh objects and certain special objects.
-        if obj.type != "MESH" or obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
+        # Ignore all non-mesh objects and the bounds object.
+        if obj.type != "MESH" or obj is bounds_object:
             continue
         elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
             # Object name starts with one of the brick grid definition object name prefixes.
+            brick_grid_objects_found += 1
 
-            # TODO: Make this work without a bounds object.
-
-            # All brick grid definition object names are exactly 5 characters long and lower case.
-            definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj, bounds_object))
-
-            brick_grid_objects += 1
+            # Brick grid can only be defined if the brick bounds have been defined.
+            if bounds_object is not None:
+                try:
+                    # All brick grid definition object names are exactly 5 characters long and lower case.
+                    definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj, bounds_object))
+                    brick_grid_objects_processed += 1
+                except OutOfBoundsException:
+                    # Do nothing, definition is ignored.
+                    pass
 
             # Skip the rest of the loop as definition objects are not to be exported as models.
             continue
 
         logger.log("Exporting mesh: {}".format(obj.name))
 
-        # Current object is not the bounds object, record the minimum and maximum vertex coordinates.
-        if not definition_data[BOUNDS_NAME_PREFIX]:
+        # Record the minimum and maximum vertex coordinates only if no bounds was defined.
+        if bounds_object is None:
             set_world_min_max(vec_bounding_box_min, vec_bounding_box_max, obj)
 
         current_data = obj.data
@@ -567,13 +596,28 @@ def export(context, props, logger, filepath=""):
 
             a_quads.append((positions, normals, uvs, colors, texture))
 
-    if brick_grid_objects == 0:
+    # Log messages for brick grid definitions.
+    if brick_grid_objects_found == 0:
         logger.warning("Warning: No brick grid definitions found. Default brick grid may be undesirable.")
     else:
-        logger.log("Processed {} brick grid definitions.".format(brick_grid_objects))
+        if bounds_object is not None:
+            if brick_grid_objects_found == 1:
+                if brick_grid_objects_processed == 0:
+                    logger.warning("Warning: {} brick grid definition found but was not processed.".format(brick_grid_objects_found))
+            else:
+                if brick_grid_objects_processed == 0:
+                    logger.warning("Warning: {} brick grid definitions found but were not processed.".format(brick_grid_objects_found))
+            if brick_grid_objects_found == 1:
+                logger.log("Processed {} of {} brick grid definition.".format(brick_grid_objects_processed, brick_grid_objects_found))
+            else:
+                logger.log("Processed {} of {}  brick grid definitions.".format(brick_grid_objects_processed, brick_grid_objects_found))
+        elif brick_grid_objects_found == 1:
+            logger.warning("Warning: {} brick grid definition found but was not processed because bounds definition was missing.".format(brick_grid_objects_found))
+        else:
+            logger.warning("Warning: {} brick grid definitions found but were not processed because bounds definition was missing.".format(brick_grid_objects_found))
 
     # No manually created bounds object was found, calculate brick size according to the minimum and maximum vertex coordinates.
-    if definition_data[BOUNDS_NAME_PREFIX] is None:
+    if bounds_object is None:
         # Get the dimensions defined by the vectors and convert height to plates.
         bounds_size = Vector((vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
                               vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
