@@ -17,50 +17,18 @@
 # ##### END GPL LICENSE BLOCK #####
 
 class OutOfBoundsException(Exception):
+    """An exception thrown when vertex coordinates are outside of brick bounds."""
     pass
 
 from mathutils import Vector
 from math import ceil
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
 
-INDEX_X = 0
-INDEX_Y = 1
-INDEX_Z = 2
-
+# Number of decimal places to round floating point numbers.
 FLOATING_POINT_DECIMALS = 6
-
-# Error allowed for manually created definition objects. Used for rounding vertex coordinates to the brick grid.
-HUMAN_ERROR = 0.1
-
-# Object name constants.
-BOUNDS_NAME_PREFIX = "bounds"
-COLLISION_PREFIX = "collision"
-GRID_X_PREFIX = "gridx"
-GRID_DASH_PREFIX = "grid-"
-GRID_U_PREFIX = "gridu"
-GRID_D_PREFIX = "gridd"
-GRID_B_PREFIX = "gridb"
-
-# Brick grid constants.
-GRID_INSIDE = 'x'  # Disallow building inside brick.
-GRID_OUTSIDE = '-'  # Allow building in empty space.
-GRID_UP = 'u'  # Allow placing bricks above this plate.
-GRID_DOWN = 'd'  # Allow placing bricks below this plate.
-GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
-
-# Brick grid definition object names in priority order.
-BRICK_GRID_DEFINITIONS_PRIORITY = (GRID_X_PREFIX, GRID_DASH_PREFIX, GRID_U_PREFIX, GRID_D_PREFIX, GRID_B_PREFIX)
-
-BRICK_GRID_DEFINITIONS = { GRID_X_PREFIX: GRID_INSIDE,
-                           GRID_DASH_PREFIX: GRID_OUTSIDE,
-                           GRID_U_PREFIX: GRID_UP,
-                           GRID_D_PREFIX: GRID_DOWN,
-                           GRID_B_PREFIX: GRID_BOTH }
 
 # Set the Decimal number context: 6 decimal points and 0.5 is rounded up.
 setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
-
-# TODO: Move logger to this file.
 
 def to_decimal(f, decimals=FLOATING_POINT_DECIMALS):
     """Converts the given float to a Decimal value with up to 6 decimal places of precision."""
@@ -79,266 +47,125 @@ def round_vector_to_list(vector, decimals=FLOATING_POINT_DECIMALS):
 
     return result
 
-def write_vector(file, vec, new_line=True):
-    """
-    Writes the values of the given vector separated with spaces into the given file.
-    An optional new line character is printed at the end of the line by default.
-    """
+def force_to_int(vector):
+    """Returns a new list of vector values casted to integers."""
+    result = []
 
-    for i, dim in enumerate(vec):
-        if i:
-            file.write(" ")
-        if dim == 0:
-            file.write("0")
-        elif dim == int(dim):
-            file.write(str(int(dim)))
-        else:
-            file.write(str(dim))
-    if new_line:
-        file.write("\n")
+    for value in vector:
+        result.append(int(value))
 
-def calc_quad_section(quad, bounds_min, bounds_max):
-    if all(map(lambda q: q[2] == bounds_max[2], quad[0])):
-        return "top"
-    if all(map(lambda q: q[2] == bounds_min[2], quad[0])):
-        return "bottom"
-    if all(map(lambda q: q[1] == bounds_max[1], quad[0])):
-        return "north"
-    if all(map(lambda q: q[1] == bounds_min[1], quad[0])):
-        return "south"
-    if all(map(lambda q: q[0] == bounds_max[0], quad[0])):
-        return "east"
-    if all(map(lambda q: q[0] == bounds_min[0], quad[0])):
-        return "west"
+    return result
 
-    return "omni"
-
-def get_world_min(obj):
-    """Returns a new Vector(X,Y,Z) of the minimum world space vertex coordinates of the given object."""
-
-    vec_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-
-    for vert in obj.data.vertices:
-        coord = obj.matrix_world * vert.co
-
-        vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
-        vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
-        vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
-
-    return vec_min
-
-def set_world_min_max(vec_min, vec_max, obj):
-    """Updates the given vectors by assigning the minimum and maximum world space vertex coordinates of the given object to the minimum and maximum vectors respectively."""
-
-    for vert in obj.data.vertices:
-        coord = obj.matrix_world * vert.co
-
-        vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
-        vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
-        vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
-
-        vec_max[INDEX_X] = max(vec_max[INDEX_X], coord[INDEX_X])
-        vec_max[INDEX_Y] = max(vec_max[INDEX_Y], coord[INDEX_Y])
-        vec_max[INDEX_Z] = max(vec_max[INDEX_Z], coord[INDEX_Z])
-
-def recenter(world_vector, local_bounds_object):
-    """Returns a new Vector(X,Y,Z) where the coordinates of the given world space vector/array of coordinates have been translated so they are relative to the geometric center of the given local space bounds."""
-    bounds_min = get_world_min(local_bounds_object)
-
-    local_center = Vector((bounds_min[INDEX_X] + (local_bounds_object.dimensions[INDEX_X] / 2),
-                           bounds_min[INDEX_Y] + (local_bounds_object.dimensions[INDEX_Y] / 2),
-                           bounds_min[INDEX_Z] + (local_bounds_object.dimensions[INDEX_Z] / 2)))
-
-    return Vector((world_vector[INDEX_X] - local_center[INDEX_X],
-                   world_vector[INDEX_Y] - local_center[INDEX_Y],
-                   world_vector[INDEX_Z] - local_center[INDEX_Z]))
-
-def __write_file(filepath, quads, definitions):
-    """Write the BLB file."""
-
-    # For clarity.
-    size_x = definitions[BOUNDS_NAME_PREFIX][INDEX_X]
-    size_y = definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
-    size_z = definitions[BOUNDS_NAME_PREFIX][INDEX_Z]
-
-    def write_brick_grid(grid=None):
-        """Writes the given brick grid to the file or if no parameter is given, writes the default brick grid according to the size of the brick."""
-
-        if grid is not None:
-            for y_slice in grid:
-                for x_row in y_slice:
-                    # Join each X row of data without a separator.
-                    file.write("".join(x_row))
-                    file.write("\n")
-
-                # A new line after each Y slice.
-                file.write("\n")
-        else:
-            for y in range(size_y):
-                for z in range(size_z):
-                    # Current Z index is 0 which is the top of the brick?
-                    is_top = (z == 0)
-
-                    # Current Z index is Z size - 1 which is the bottom of the brick?
-                    is_bottom = (z == size_z - 1)
-
-                    if is_bottom and is_top:
-                        symbol = GRID_BOTH
-                    elif is_bottom:
-                        symbol = GRID_DOWN
-                    elif is_top:
-                        symbol = GRID_UP
-                    else:
-                        symbol = GRID_INSIDE
-
-                    # Write the symbol X size times.
-                    file.write(symbol * size_x)
-                    file.write("\n")
-
-                # A new line after each Y slice.
-                file.write("\n")
-
-    def modify_brick_grid(brick_grid, volume, symbol):
-        """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
-
-        x_range = volume[INDEX_X]
-        y_range = volume[INDEX_Y]
-        z_range = volume[INDEX_Z]
-
-        # y_index is the index of list of X row data.
-        for y_index in range(y_range[0], y_range[1]):
-            # z_index is the index of the X row data in y_index list.
-            for z_index in range(z_range[0], z_range[1]):
-                # x_index is the index of the character in the X row data.
-                for x_index in range(x_range[0], x_range[1]):
-                    # From this Y slice.
-                    # Select the appropriate Z row.
-                    # And for every X index, assign the correct symbol.
-                    brick_grid[y_index][z_index][x_index] = symbol
-
-    with open(filepath, "w") as file:
-        # Write brick size.
-        write_vector(file, definitions[BOUNDS_NAME_PREFIX])
-
-        # Write brick type.
-        file.write("SPECIAL\n\n")
-
-        # Write brick grid.
-        if len(definitions[GRID_B_PREFIX]) == 0 and len(definitions[GRID_D_PREFIX]) == 0 and len(definitions[GRID_U_PREFIX]) == 0 and len(definitions[GRID_X_PREFIX]) == 0:
-            # No brick grid definitions, write default grid.
-            write_brick_grid()
-        else:
-            # Initialize the brick grid with the empty symbol with the dimensions of the brick.
-            brick_grid = [[[GRID_OUTSIDE for x in range(size_x)] for z in range(size_z)] for y in range(size_y)]
-
-            for name_prefix in BRICK_GRID_DEFINITIONS_PRIORITY:
-                if len(definitions[name_prefix]) > 0:
-                    for volume in definitions[name_prefix]:
-                        modify_brick_grid(brick_grid, volume, BRICK_GRID_DEFINITIONS.get(name_prefix))
-
-            write_brick_grid(brick_grid)
-
-        # Write collisions.
-        collision_cubes = (((0, 0, 0), (size_x, size_y, size_z)),)
-
-        file.write(str(len(collision_cubes)))
-        file.write("\n")
-
-        for (center, size) in collision_cubes:
-            file.write("\n")
-            write_vector(file, center)
-            write_vector(file, size)
-
-        # Write coverage.
-        file.write("COVERAGE:\n")
-
-        # TBNESW
-        for i in range(6):
-            file.write("0 : 999\n")
-
-        # Write quad data.
-        # Section names must be in lower case for some reason.
-        for section_name in ("top", "bottom", "north", "east", "south", "west", "omni"):
-            section_quads = tuple(map(lambda t: t[0], filter(lambda t: t[1] == section_name, quads)))
-
-            # TODO: Terse mode where optional stuff is excluded.
-
-            # Write section name.
-            file.write("--{} QUADS--\n".format(section_name.upper()))  # Optional.
-
-            # Write section length.
-            file.write("{}\n".format(str(len(section_quads))))
-
-            for (positions, normals, uvs, colors, texture) in section_quads:
-                # Write face texture name.
-                file.write("\nTEX:")  # Optional.
-                file.write(texture)
-
-                # TODO: Fix incorrect model rotation. -Y in Blender is +X in-game.
-
-                # Write vertex positions.
-                file.write("\nPOSITION:\n")  # Optional.
-                for position in positions:
-                    write_vector(file, position)
-
-                # Write face UV coordinates.
-                file.write("UV COORDS:\n")  # Optional.
-                for uv_vector in uvs:
-                    write_vector(file, uv_vector)
-
-                # Write vertex normals.
-                file.write("NORMALS:\n")  # Optional.
-                for normal in normals:
-                    write_vector(file, normal)
-
-                # Write vertex colors if any.
-                if colors is not None:
-                    file.write("COLORS:\n")  # Optional.
-                    for color in colors:
-                        write_vector(file, color)
+### EXPORT FUNCTION ###
 
 def export(context, props, logger, filepath=""):
     """Processes the data from the scene and writes it to a BLB file."""
 
-    # TODO: Exporting multiple bricks from a single file.
+    # Constants.
+
+    INDEX_X = 0
+    INDEX_Y = 1
+    INDEX_Z = 2
+
+    # Error allowed for manually created definition objects. Used for rounding vertex coordinates to the brick grid.
+    HUMAN_ERROR = 0.1
 
     # Numerical constants.
-    PLATE_HEIGHT = 0.4  # (1, 1, 1) Blockland plate = (1.0, 1.0, 0.4) Blender units (X,Y,Z)
+    PLATE_HEIGHT = 0.4  # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
 
-    definition_data = {BOUNDS_NAME_PREFIX: None,
-                       COLLISION_PREFIX: None,
-                       GRID_X_PREFIX: [],
-                       GRID_DASH_PREFIX: [],
-                       GRID_U_PREFIX: [],
-                       GRID_D_PREFIX: [],
-                       GRID_B_PREFIX: []}
+    # Object name constants.
+    BOUNDS_NAME_PREFIX = "bounds"
+    COLLISION_PREFIX = "collision"
+    GRID_X_PREFIX = "gridx"
+    GRID_DASH_PREFIX = "grid-"
+    GRID_U_PREFIX = "gridu"
+    GRID_D_PREFIX = "gridd"
+    GRID_B_PREFIX = "gridb"
 
-    vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-    vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+    # Brick grid constants.
+    GRID_INSIDE = 'x'  # Disallow building inside brick.
+    GRID_OUTSIDE = '-'  # Allow building in empty space.
+    GRID_UP = 'u'  # Allow placing bricks above this plate.
+    GRID_DOWN = 'd'  # Allow placing bricks below this plate.
+    GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
 
-    a_quads = []
-    n_tris = 0
-    n_ngon = 0
-    bounds_object = None
+    # Brick grid definition object names in priority order.
+    BRICK_GRID_DEFINITIONS_PRIORITY = (GRID_X_PREFIX, GRID_DASH_PREFIX, GRID_U_PREFIX, GRID_D_PREFIX, GRID_B_PREFIX)
 
-    # TODO: Layer support.
+    BRICK_GRID_DEFINITIONS = { GRID_X_PREFIX: GRID_INSIDE,
+                               GRID_DASH_PREFIX: GRID_OUTSIDE,
+                               GRID_U_PREFIX: GRID_UP,
+                               GRID_D_PREFIX: GRID_DOWN,
+                               GRID_B_PREFIX: GRID_BOTH }
+
+    ### BEGIN EXPORT FUNCTION NESTED FUNCTIONS ###
+
+    def calc_quad_section(quad, bounds_min, bounds_max):
+        if all(map(lambda q: q[2] == bounds_max[2], quad[0])):
+            return "top"
+        if all(map(lambda q: q[2] == bounds_min[2], quad[0])):
+            return "bottom"
+        if all(map(lambda q: q[1] == bounds_max[1], quad[0])):
+            return "north"
+        if all(map(lambda q: q[1] == bounds_min[1], quad[0])):
+            return "south"
+        if all(map(lambda q: q[0] == bounds_max[0], quad[0])):
+            return "east"
+        if all(map(lambda q: q[0] == bounds_min[0], quad[0])):
+            return "west"
+
+        return "omni"
+
+    def get_world_min(obj):
+        """Returns a new Vector(X,Y,Z) of the minimum world space vertex coordinates of the given object."""
+
+        vec_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+
+        for vert in obj.data.vertices:
+            coord = obj.matrix_world * vert.co
+
+            vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
+            vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
+            vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
+
+        return vec_min
+
+    def set_world_min_max(vec_min, vec_max, obj):
+        """Updates the given vectors by assigning the minimum and maximum world space vertex coordinates of the given object to the minimum and maximum vectors respectively."""
+
+        for vert in obj.data.vertices:
+            coord = obj.matrix_world * vert.co
+
+            vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
+            vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
+            vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
+
+            vec_max[INDEX_X] = max(vec_max[INDEX_X], coord[INDEX_X])
+            vec_max[INDEX_Y] = max(vec_max[INDEX_Y], coord[INDEX_Y])
+            vec_max[INDEX_Z] = max(vec_max[INDEX_Z], coord[INDEX_Z])
+
+    def recenter(world_vector, local_bounds_object):
+        """Returns a new Vector(X,Y,Z) where the coordinates of the given world space vector/array of coordinates have been translated so they are relative to the geometric center of the given local space bounds."""
+        bounds_min = get_world_min(local_bounds_object)
+
+        local_center = Vector((bounds_min[INDEX_X] + (local_bounds_object.dimensions[INDEX_X] / 2),
+                               bounds_min[INDEX_Y] + (local_bounds_object.dimensions[INDEX_Y] / 2),
+                               bounds_min[INDEX_Z] + (local_bounds_object.dimensions[INDEX_Z] / 2)))
+
+        return Vector((world_vector[INDEX_X] - local_center[INDEX_X],
+                       world_vector[INDEX_Y] - local_center[INDEX_Y],
+                       world_vector[INDEX_Z] - local_center[INDEX_Z]))
 
     def vector_z_to_plates(vec_xyz):
-        """Returns a new Vector(X,Y,Z) where the Z component of the given vector is scaled to match Blockland plates.
-        If the given vector does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged."""
+        """
+        Returns a new Vector(X,Y,Z) where the Z component of the given vector is scaled to match Blockland plates.
+        If the given vector does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
+        """
+
         if len(vec_xyz) == 3:
             return Vector((vec_xyz[INDEX_X], vec_xyz[INDEX_Y], vec_xyz[INDEX_Z] / PLATE_HEIGHT))
         else:
             return vec_xyz
-
-    def force_to_int(vector):
-        """Returns a new list of vector values casted to integers."""
-        result = []
-
-        for value in vector:
-            result.append(int(value))
-
-        return result
 
     def brick_grid_obj_to_index_ranges(obj, bounds_object):
         """
@@ -438,7 +265,196 @@ def export(context, props, logger, filepath=""):
                      (grid_min[INDEX_Y], grid_max[INDEX_Y]),
                      (grid_min[INDEX_Z], grid_max[INDEX_Z]))
 
-    #### export function begin ####
+    def write_file(filepath, quads, definitions):
+        """Write the BLB file."""
+
+        # For clarity.
+        size_x = definitions[BOUNDS_NAME_PREFIX][INDEX_X]
+        size_y = definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
+        size_z = definitions[BOUNDS_NAME_PREFIX][INDEX_Z]
+
+        ### BEGIN WRITE_FILE FUNCTION NESTED FUNCTIONS ###
+
+        def write_vector(file, vec, new_line=True):
+            """
+            Writes the values of the given vector separated with spaces into the given file.
+            An optional new line character is printed at the end of the line by default.
+            """
+
+            for i, dim in enumerate(vec):
+                if i:
+                    file.write(" ")
+                if dim == 0:
+                    file.write("0")
+                elif dim == int(dim):
+                    file.write(str(int(dim)))
+                else:
+                    file.write(str(dim))
+            if new_line:
+                file.write("\n")
+
+        def write_brick_grid(grid=None):
+            """Writes the given brick grid to the file or if no parameter is given, writes the default brick grid according to the size of the brick."""
+
+            if grid is not None:
+                for y_slice in grid:
+                    for x_row in y_slice:
+                        # Join each X row of data without a separator.
+                        file.write("".join(x_row))
+                        file.write("\n")
+
+                    # A new line after each Y slice.
+                    file.write("\n")
+            else:
+                for y in range(size_y):
+                    for z in range(size_z):
+                        # Current Z index is 0 which is the top of the brick?
+                        is_top = (z == 0)
+
+                        # Current Z index is Z size - 1 which is the bottom of the brick?
+                        is_bottom = (z == size_z - 1)
+
+                        if is_bottom and is_top:
+                            symbol = GRID_BOTH
+                        elif is_bottom:
+                            symbol = GRID_DOWN
+                        elif is_top:
+                            symbol = GRID_UP
+                        else:
+                            symbol = GRID_INSIDE
+
+                        # Write the symbol X size times.
+                        file.write(symbol * size_x)
+                        file.write("\n")
+
+                    # A new line after each Y slice.
+                    file.write("\n")
+
+        def modify_brick_grid(brick_grid, volume, symbol):
+            """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
+
+            x_range = volume[INDEX_X]
+            y_range = volume[INDEX_Y]
+            z_range = volume[INDEX_Z]
+
+            # y_index is the index of list of X row data.
+            for y_index in range(y_range[0], y_range[1]):
+                # z_index is the index of the X row data in y_index list.
+                for z_index in range(z_range[0], z_range[1]):
+                    # x_index is the index of the character in the X row data.
+                    for x_index in range(x_range[0], x_range[1]):
+                        # From this Y slice.
+                        # Select the appropriate Z row.
+                        # And for every X index, assign the correct symbol.
+                        brick_grid[y_index][z_index][x_index] = symbol
+
+        ### END WRITE_FILE FUNCTION NESTED FUNCTIONS ###
+
+        ### BEGIN WRITE_FILE FUNCTION ###
+
+        with open(filepath, "w") as file:
+            # Write brick size.
+            write_vector(file, definitions[BOUNDS_NAME_PREFIX])
+
+            # Write brick type.
+            file.write("SPECIAL\n\n")
+
+            # Write brick grid.
+            if len(definitions[GRID_B_PREFIX]) == 0 and len(definitions[GRID_D_PREFIX]) == 0 and len(definitions[GRID_U_PREFIX]) == 0 and len(definitions[GRID_X_PREFIX]) == 0:
+                # No brick grid definitions, write default grid.
+                write_brick_grid()
+            else:
+                # Initialize the brick grid with the empty symbol with the dimensions of the brick.
+                brick_grid = [[[GRID_OUTSIDE for x in range(size_x)] for z in range(size_z)] for y in range(size_y)]
+
+                for name_prefix in BRICK_GRID_DEFINITIONS_PRIORITY:
+                    if len(definitions[name_prefix]) > 0:
+                        for volume in definitions[name_prefix]:
+                            modify_brick_grid(brick_grid, volume, BRICK_GRID_DEFINITIONS.get(name_prefix))
+
+                write_brick_grid(brick_grid)
+
+            # Write collisions.
+            collision_cubes = (((0, 0, 0), (size_x, size_y, size_z)),)
+
+            file.write(str(len(collision_cubes)))
+            file.write("\n")
+
+            for (center, size) in collision_cubes:
+                file.write("\n")
+                write_vector(file, center)
+                write_vector(file, size)
+
+            # Write coverage.
+            file.write("COVERAGE:\n")
+
+            # TBNESW
+            for i in range(6):
+                file.write("0 : 999\n")
+
+            # Write quad data.
+            # Section names must be in lower case for some reason.
+            for section_name in ("top", "bottom", "north", "east", "south", "west", "omni"):
+                section_quads = tuple(map(lambda t: t[0], filter(lambda t: t[1] == section_name, quads)))
+
+                # TODO: Terse mode where optional stuff is excluded.
+
+                # Write section name.
+                file.write("--{} QUADS--\n".format(section_name.upper()))  # Optional.
+
+                # Write section length.
+                file.write("{}\n".format(str(len(section_quads))))
+
+                for (positions, normals, uvs, colors, texture) in section_quads:
+                    # Write face texture name.
+                    file.write("\nTEX:")  # Optional.
+                    file.write(texture)
+
+                    # TODO: Fix incorrect model rotation. -Y in Blender is +X in-game.
+
+                    # Write vertex positions.
+                    file.write("\nPOSITION:\n")  # Optional.
+                    for position in positions:
+                        write_vector(file, position)
+
+                    # Write face UV coordinates.
+                    file.write("UV COORDS:\n")  # Optional.
+                    for uv_vector in uvs:
+                        write_vector(file, uv_vector)
+
+                    # Write vertex normals.
+                    file.write("NORMALS:\n")  # Optional.
+                    for normal in normals:
+                        write_vector(file, normal)
+
+                    # Write vertex colors if any.
+                    if colors is not None:
+                        file.write("COLORS:\n")  # Optional.
+                        for color in colors:
+                            write_vector(file, color)
+
+    ### END EXPORT FUNTION NESTED FUNCTIONS ###
+
+    ### EXPORT FUNCTION BEGIN ###
+
+    definition_data = {BOUNDS_NAME_PREFIX: None,
+                       COLLISION_PREFIX: None,
+                       GRID_X_PREFIX: [],
+                       GRID_DASH_PREFIX: [],
+                       GRID_U_PREFIX: [],
+                       GRID_D_PREFIX: [],
+                       GRID_B_PREFIX: []}
+
+    vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+    vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+
+    a_quads = []
+    n_tris = 0
+    n_ngon = 0
+    bounds_object = None
+
+    # TODO: Layer support.
+    # TODO: Exporting multiple bricks from a single file.
 
     # Use selected objects?
     if props.use_selection:
@@ -653,4 +669,4 @@ def export(context, props, logger, filepath=""):
         logger.warning("Warning: {} n-gons skipped.".format(n_ngon))
 
     # Write the data to a file.
-    __write_file(filepath, quads_with_sections, definition_data)
+    write_file(filepath, quads_with_sections, definition_data)

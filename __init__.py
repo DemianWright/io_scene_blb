@@ -33,7 +33,7 @@ class Logger(object):
 
     def __init__(self, write_file, warnings_only=True, logpath=""):
         """Initializes the logger with the specified options and an appropriate log path."""
-        self.__write_file = write_file
+        self.write_file = write_file
         self.__warnings_only = warnings_only
         self.__logpath = logpath
 
@@ -42,7 +42,7 @@ class Logger(object):
         print(message)
 
         # Only write to a log if specified.
-        if self.__write_file:
+        if self.write_file:
             if self.__warnings_only:
                 # If only writing a log when a warning is encountered, ensure that current log message is a warning.
                 if is_warning:
@@ -62,7 +62,7 @@ class Logger(object):
     def write_log(self):
         """Writes a log file only if so specified at object creation."""
         # Write a log file? Anything to write?
-        if self.__write_file and len(self.__log_lines) > 0:
+        if self.write_file and len(self.__log_lines) > 0:
             if self.__warnings_only:
                 print("Writing log (warnings only) to:", self.__logpath)
             else:
@@ -129,6 +129,8 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         return {'FINISHED'}
 
     def draw(self, context):
+        """Draws the UI in the export menu."""
+
         layout = self.layout
 
         layout.prop(self, "use_selection")
