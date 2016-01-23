@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 class OutOfBoundsException(Exception):
-    """An exception thrown when vertex coordinates are outside of brick bounds."""
+    """An exception thrown when a vertex position is outside of brick bounds."""
     pass
 
 from mathutils import Vector
@@ -32,29 +32,41 @@ setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
 
 def to_decimal(f, decimals=FLOATING_POINT_DECIMALS):
     """Converts the given float to a Decimal value with up to 6 decimal places of precision."""
+
     if decimals > FLOATING_POINT_DECIMALS:
         decimals = FLOATING_POINT_DECIMALS
 
     # First convert float to string with n decimal digits and then make a Decimal out of it.
     return Decimal(("{0:." + str(decimals) + "f}").format(f))
 
-def round_vector_to_list(vector, decimals=FLOATING_POINT_DECIMALS):
-    """Returns a new list of Decimal values with the values of the given vector rounded to the specified number of decimal places."""
+def round_values(array, decimals=FLOATING_POINT_DECIMALS):
+    """Returns a new list of Decimal values with the values of the given array rounded to the specified number of decimal places."""
+
     result = []
 
-    for value in vector:
+    for value in array:
         result.append(to_decimal(value, decimals))
 
     return result
 
-def force_to_int(vector):
-    """Returns a new list of vector values casted to integers."""
+def force_to_int(array):
+    """Returns a new list of array values casted to integers."""
     result = []
 
-    for value in vector:
+    for value in array:
         result.append(int(value))
 
     return result
+
+def are_not_ints(array):
+    """
+    Returns True if at least one value in the given list is not numerically equal to its integer counterparts.
+    '1.000' is numerically equal to '1' while '1.001' is not.
+    """
+
+    for value in array:
+        if value != int(value):
+            return True
 
 ### EXPORT FUNCTION ###
 
@@ -67,11 +79,11 @@ def export(context, props, logger, filepath=""):
     INDEX_Y = 1
     INDEX_Z = 2
 
-    # Error allowed for manually created definition objects. Used for rounding vertex coordinates to the brick grid.
-    HUMAN_ERROR = 0.1
+    # Error allowed for manually created definition objects. Used for rounding vertex positions to the brick grid.
+    HUMAN_ERROR = Decimal("0.1")
 
     # Numerical constants.
-    PLATE_HEIGHT = 0.4  # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
+    PLATE_HEIGHT = Decimal("0.4")  # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
 
     # Object name constants.
     BOUNDS_NAME_PREFIX = "bounds"
@@ -98,6 +110,12 @@ def export(context, props, logger, filepath=""):
                                GRID_D_PREFIX: GRID_DOWN,
                                GRID_B_PREFIX: GRID_BOTH }
 
+    # Bounds object data needed in several functions.
+    bounds_data = { "name": None,
+                    "dimensions": [],
+                    "world_coords_min": [],
+                    "world_coords_max": [] }
+
     ### BEGIN EXPORT FUNCTION NESTED FUNCTIONS ###
 
     def calc_quad_section(quad, bounds_min, bounds_max):
@@ -117,11 +135,12 @@ def export(context, props, logger, filepath=""):
         return "omni"
 
     def get_world_min(obj):
-        """Returns a new Vector(X,Y,Z) of the minimum world space vertex coordinates of the given object."""
+        """Returns a new Vector(X,Y,Z) of the minimum world space coordinates of the given object."""
 
         vec_min = Vector((float("+inf"), float("+inf"), float("+inf")))
 
         for vert in obj.data.vertices:
+            # Local coordinates to world space.
             coord = obj.matrix_world * vert.co
 
             vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
@@ -130,47 +149,61 @@ def export(context, props, logger, filepath=""):
 
         return vec_min
 
-    def set_world_min_max(vec_min, vec_max, obj):
-        """Updates the given vectors by assigning the minimum and maximum world space vertex coordinates of the given object to the minimum and maximum vectors respectively."""
+    def set_world_min_max(array_min, array_max, obj):
+        """Updates the given arrays by assigning the minimum and maximum world space coordinates of the given object to the minimum and maximum arrays respectively."""
 
         for vert in obj.data.vertices:
             coord = obj.matrix_world * vert.co
 
-            vec_min[INDEX_X] = min(vec_min[INDEX_X], coord[INDEX_X])
-            vec_min[INDEX_Y] = min(vec_min[INDEX_Y], coord[INDEX_Y])
-            vec_min[INDEX_Z] = min(vec_min[INDEX_Z], coord[INDEX_Z])
+            array_min[INDEX_X] = min(array_min[INDEX_X], coord[INDEX_X])
+            array_min[INDEX_Y] = min(array_min[INDEX_Y], coord[INDEX_Y])
+            array_min[INDEX_Z] = min(array_min[INDEX_Z], coord[INDEX_Z])
 
-            vec_max[INDEX_X] = max(vec_max[INDEX_X], coord[INDEX_X])
-            vec_max[INDEX_Y] = max(vec_max[INDEX_Y], coord[INDEX_Y])
-            vec_max[INDEX_Z] = max(vec_max[INDEX_Z], coord[INDEX_Z])
+            array_max[INDEX_X] = max(array_max[INDEX_X], coord[INDEX_X])
+            array_max[INDEX_Y] = max(array_max[INDEX_Y], coord[INDEX_Y])
+            array_max[INDEX_Z] = max(array_max[INDEX_Z], coord[INDEX_Z])
 
-    def recenter(world_vector, local_bounds_object):
-        """Returns a new Vector(X,Y,Z) where the coordinates of the given world space vector/array of coordinates have been translated so they are relative to the geometric center of the given local space bounds."""
-        bounds_min = get_world_min(local_bounds_object)
-
-        local_center = Vector((bounds_min[INDEX_X] + (local_bounds_object.dimensions[INDEX_X] / 2),
-                               bounds_min[INDEX_Y] + (local_bounds_object.dimensions[INDEX_Y] / 2),
-                               bounds_min[INDEX_Z] + (local_bounds_object.dimensions[INDEX_Z] / 2)))
-
-        return Vector((world_vector[INDEX_X] - local_center[INDEX_X],
-                       world_vector[INDEX_Y] - local_center[INDEX_Y],
-                       world_vector[INDEX_Z] - local_center[INDEX_Z]))
-
-    def vector_z_to_plates(vec_xyz):
+    def recenter(world_position, local_bounds_object=None):
         """
-        Returns a new Vector(X,Y,Z) where the Z component of the given vector is scaled to match Blockland plates.
-        If the given vector does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
+        Translates the given world space position so it is relative to the geometric center of the given local space bounds.
+        If no local_bounds_object is defined, data from bounds_data is used.
+        Returns a list of Decimal type local coordinates. (Performs round_values(array) on the resulting list.)
         """
 
-        if len(vec_xyz) == 3:
-            return Vector((vec_xyz[INDEX_X], vec_xyz[INDEX_Y], vec_xyz[INDEX_Z] / PLATE_HEIGHT))
+        if local_bounds_object is not None:
+            bounds_min = get_world_min(local_bounds_object)
+            dimensions = local_bounds_object.dimensions
         else:
-            return vec_xyz
+            # Use the bounds object data.
+            bounds_min = bounds_data["world_coords_min"]
+            dimensions = bounds_data["dimensions"]
 
-    def brick_grid_obj_to_index_ranges(obj, bounds_object):
+        local_center = round_values((bounds_min[INDEX_X] + (dimensions[INDEX_X] / 2),
+                                     bounds_min[INDEX_Y] + (dimensions[INDEX_Y] / 2),
+                                     bounds_min[INDEX_Z] + (dimensions[INDEX_Z] / 2)))
+
+        return round_values((world_position[INDEX_X] - local_center[INDEX_X],
+                             world_position[INDEX_Y] - local_center[INDEX_Y],
+                             world_position[INDEX_Z] - local_center[INDEX_Z]))
+
+    def array_z_to_plates(xyz):
         """
+        Performs round_values(array) on the given array and scales the Z component to match Blockland plates.
+        If the given array does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
+        """
+
+        if len(xyz) == 3:
+            array = round_values(xyz)
+            array[INDEX_Z] /= PLATE_HEIGHT
+            return array
+        else:
+            return xyz
+
+    def brick_grid_obj_to_index_ranges(obj):
+        """
+        Note: This function assumes that it is called after the bounds object has been defined.
         Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the given object.
-        The indices represent a three dimensional volume in the local space of the given bounds object.
+        The indices represent a three dimensional volume in the local space of the bounds object.
         Returns a tuple in the following format: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
         """
 
@@ -181,80 +214,65 @@ def export(context, props, logger, filepath=""):
         grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         set_world_min_max(grid_min, grid_max, obj)
 
-        # TODO: The calculations done with the bounds object can be optimized by doing them only once earlier when the bounds object is found because the object does not change.
-
-        # Find the minimum and maximum coordinates for the bounds object.
-        bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-        bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-        set_world_min_max(bounds_min, bounds_max, bounds_object)
+        # Round everything and use Decimals.
+        grid_min = round_values(grid_min)
+        grid_max = round_values(grid_max)
 
         for index, value in enumerate(grid_min):
-            if value < bounds_min[index]:
+            if value < bounds_data["world_coords_min"][index]:
                 out_of_bounds = True
                 break
 
         if not out_of_bounds:
             for index, value in enumerate(grid_max):
-                if value > bounds_max[index]:
+                if value > bounds_data["world_coords_max"][index]:
                     out_of_bounds = True
                     break
 
         if out_of_bounds:
-            logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, bounds_object.name))
+            logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, bounds_data["name"]))
             raise OutOfBoundsException()
         else:
-            # Recenter the coordinates to the bounding box.
-            grid_min = recenter(grid_min, bounds_object)
-            grid_max = recenter(grid_max, bounds_object)
+            # Recenter the coordinates to the bounding box. (Also rounds the values.)
+            grid_min = recenter(grid_min)
+            grid_max = recenter(grid_max)
 
-            dimensions = bounds_object.dimensions
+            dimensions = bounds_data["dimensions"]
 
-            # Convert the coordinates into brick grid array indices. (Floating point error still present.)
-            grid_min.x = grid_min.x + (dimensions.x / 2)  # Translate coordinates to positive X axis.
-            grid_min.y = grid_min.y - (dimensions.y / 2)  # Translate coordinates to negative Y axis.
-            grid_min.z = (grid_min.z - (dimensions.z / 2)) / PLATE_HEIGHT  # Translate coordinates to negative Z axis.
+            # Convert the coordinates into brick grid array indices.
+            grid_min[INDEX_X] = grid_min[INDEX_X] + (dimensions[INDEX_X] / 2)  # Translate coordinates to positive X axis.
+            grid_min[INDEX_Y] = grid_min[INDEX_Y] - (dimensions[INDEX_Y] / 2)  # Translate coordinates to negative Y axis.
+            grid_min[INDEX_Z] = (grid_min[INDEX_Z] - (dimensions[INDEX_Z] / 2)) / PLATE_HEIGHT  # Translate coordinates to negative Z axis.
 
-            grid_max.x = grid_max.x + (dimensions.x / 2)
-            grid_max.y = grid_max.y - (dimensions.y / 2)
-            grid_max.z = (grid_max.z - (dimensions.z / 2)) / PLATE_HEIGHT
+            grid_max[INDEX_X] = grid_max[INDEX_X] + (dimensions[INDEX_X] / 2)
+            grid_max[INDEX_Y] = grid_max[INDEX_Y] - (dimensions[INDEX_Y] / 2)
+            grid_max[INDEX_Z] = (grid_max[INDEX_Z] - (dimensions[INDEX_Z] / 2)) / PLATE_HEIGHT
 
             # Swap min/max Z index and make it positive. Index 0 = top of the brick.
-            temp = grid_min.z
-            grid_min.z = abs(grid_max.z)
-            grid_max.z = abs(temp)
+            temp = grid_min[INDEX_Z]
+            grid_min[INDEX_Z] = abs(grid_max[INDEX_Z])
+            grid_max[INDEX_Z] = abs(temp)
 
             # Swap min/max Y index and make it positive. Index 0 = back of the brick.
-            temp = grid_min.y
-            grid_min.y = abs(grid_max.y)
-            grid_max.y = abs(temp)
-
-            # Floating point error eliminated.
-            grid_min = round_vector_to_list(grid_min)
-            grid_max = round_vector_to_list(grid_max)
-
-            non_int = False
+            temp = grid_min[INDEX_Y]
+            grid_min[INDEX_Y] = abs(grid_max[INDEX_Y])
+            grid_max[INDEX_Y] = abs(temp)
 
             # Are the minimum and maximum indices of the grid object integers?
-            for value in grid_min:
-                if value != int(value):
-                    non_int = True
-                    break
-            else:
-                for value in grid_max:
-                    if value != int(value):
-                        non_int = True
-                        break
+            non_int = are_not_ints(grid_min)
+
+            if not non_int:
+                non_int = are_not_ints(grid_max)
 
             if non_int:
                 logger.warning("Warning: '{}' has a non-integer coordinates, rounding to a precision of {}.".format(obj.name, HUMAN_ERROR))
-                # FIXME: Temporarily making a Decimal out of the human error value. Fix later when bounds calculation and detection has been converted to use Decimals as well.
 
-                # Round indices up the nearest integer. (Floating point error fixed.)
+                # Round indices up the nearest integer.
                 for index, value in enumerate(grid_min):
-                    grid_min[index] = round(HUMAN_ERROR * round(value / Decimal(HUMAN_ERROR)))
+                    grid_min[index] = round(HUMAN_ERROR * round(value / HUMAN_ERROR))
 
                 for index, value in enumerate(grid_max):
-                    grid_max[index] = round(HUMAN_ERROR * round(value / Decimal(HUMAN_ERROR)))
+                    grid_max[index] = round(HUMAN_ERROR * round(value / HUMAN_ERROR))
 
             # The value type must be int because you can't have partial plates. Returns a list.
             grid_min = force_to_int(grid_min)
@@ -262,8 +280,8 @@ def export(context, props, logger, filepath=""):
 
             # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
             return ((grid_min[INDEX_X], grid_max[INDEX_X]),
-                     (grid_min[INDEX_Y], grid_max[INDEX_Y]),
-                     (grid_min[INDEX_Z], grid_max[INDEX_Z]))
+                    (grid_min[INDEX_Y], grid_max[INDEX_Y]),
+                    (grid_min[INDEX_Z], grid_max[INDEX_Z]))
 
     def write_file(filepath, quads, definitions):
         """Write the BLB file."""
@@ -275,22 +293,24 @@ def export(context, props, logger, filepath=""):
 
         ### BEGIN WRITE_FILE FUNCTION NESTED FUNCTIONS ###
 
-        def write_vector(file, vec, new_line=True):
+        def write_array(file, array, new_line=True):
             """
-            Writes the values of the given vector separated with spaces into the given file.
+            Writes the values of the given array separated with spaces into the given file.
             An optional new line character is printed at the end of the line by default.
             """
 
-            for i, dim in enumerate(vec):
-                if i:
+            for index, value in enumerate(array):
+                if index != 0:
+                    # Write a space before each value except the first one.
                     file.write(" ")
-                if dim == 0:
+                if value == 0:
+                    # Handle zeros.
                     file.write("0")
-                elif dim == int(dim):
-                    file.write(str(int(dim)))
                 else:
-                    file.write(str(dim))
+                    # Format the value into string, remove all zeros from the end, then remove all periods.
+                    file.write("{}".format(value).rstrip('0').rstrip('.'))
             if new_line:
+                # Write a new line after all values.
                 file.write("\n")
 
         def write_brick_grid(grid=None):
@@ -354,7 +374,7 @@ def export(context, props, logger, filepath=""):
 
         with open(filepath, "w") as file:
             # Write brick size.
-            write_vector(file, definitions[BOUNDS_NAME_PREFIX])
+            write_array(file, definitions[BOUNDS_NAME_PREFIX])
 
             # Write brick type.
             file.write("SPECIAL\n\n")
@@ -382,8 +402,8 @@ def export(context, props, logger, filepath=""):
 
             for (center, size) in collision_cubes:
                 file.write("\n")
-                write_vector(file, center)
-                write_vector(file, size)
+                write_array(file, center)
+                write_array(file, size)
 
             # Write coverage.
             file.write("COVERAGE:\n")
@@ -415,23 +435,23 @@ def export(context, props, logger, filepath=""):
                     # Write vertex positions.
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
-                        write_vector(file, position)
+                        write_array(file, position)
 
                     # Write face UV coordinates.
                     file.write("UV COORDS:\n")  # Optional.
                     for uv_vector in uvs:
-                        write_vector(file, uv_vector)
+                        write_array(file, uv_vector)
 
                     # Write vertex normals.
                     file.write("NORMALS:\n")  # Optional.
                     for normal in normals:
-                        write_vector(file, normal)
+                        write_array(file, normal)
 
                     # Write vertex colors if any.
                     if colors is not None:
                         file.write("COLORS:\n")  # Optional.
                         for color in colors:
-                            write_vector(file, color)
+                            write_array(file, color)
 
     ### END EXPORT FUNTION NESTED FUNCTIONS ###
 
@@ -496,17 +516,25 @@ def export(context, props, logger, filepath=""):
                 # Continue searching in case mesh bounds is found.
             else:
                 bounds_object = obj
+                bounds_data["name"] = obj.name
+                bounds_data["dimensions"] = round_values(obj.dimensions)
+
+                # Find the minimum and maximum world coordinates for the bounds object.
+                bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+                bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+                set_world_min_max(bounds_min, bounds_max, bounds_object)
+
+                bounds_data["world_coords_min"] = round_values(bounds_min)
+                bounds_data["world_coords_max"] = round_values(bounds_max)
 
                 # Get the dimensions of the Blender object and convert the height to plates.
-                bounds_size = Vector((obj.dimensions[INDEX_X],
-                                      obj.dimensions[INDEX_Y],
-                                      obj.dimensions[INDEX_Z] / PLATE_HEIGHT))
+                bounds_size = array_z_to_plates(obj.dimensions)
 
                 # Are the dimensions of the bounds object integers?
-                if bounds_size[INDEX_X] != int(bounds_size[INDEX_X]) or bounds_size[INDEX_Y] != int(bounds_size[INDEX_Y]) or bounds_size[INDEX_Z] != int(bounds_size[INDEX_Z]):
-                    logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size.x,
-                                                                                                                                    bounds_size.y,
-                                                                                                                                    bounds_size.z,
+                if are_not_ints(bounds_size):
+                    logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[INDEX_X],
+                                                                                                                                    bounds_size[INDEX_Y],
+                                                                                                                                    bounds_size[INDEX_Z],
                                                                                                                                     HUMAN_ERROR))
                     for index, value in enumerate(bounds_size):
                         # Round to the specified error amount and force to int.
@@ -528,7 +556,7 @@ def export(context, props, logger, filepath=""):
 
     for obj in objects:
         # Ignore all non-mesh objects and the bounds object.
-        if obj.type != "MESH" or obj is bounds_object:
+        if obj.type != "MESH" or obj == bounds_object:
             continue
         elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
             # Object name starts with one of the brick grid definition object name prefixes.
@@ -538,7 +566,7 @@ def export(context, props, logger, filepath=""):
             if bounds_object is not None:
                 try:
                     # All brick grid definition object names are exactly 5 characters long and lower case.
-                    definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj, bounds_object))
+                    definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj))
                     brick_grid_objects_processed += 1
                 except OutOfBoundsException:
                     # Do nothing, definition is ignored.
@@ -565,8 +593,11 @@ def export(context, props, logger, filepath=""):
             uv_data = None
 
         def index_to_position(index):
-            vec = obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co
-            return vector_z_to_plates(vec)
+            """
+            Returns the world coordinates for the vertex whose index was given in the current polygon loop.
+            Additionally rounds the coordinates to Decimal and converts the height to plates with array_z_to_plates(array).
+            """
+            return array_z_to_plates(obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co)
 
         def index_to_normal(index):
             return (obj.matrix_world.to_3x3() * current_data.vertices[current_data.loops[index].vertex_index].normal).normalized()
@@ -575,22 +606,37 @@ def export(context, props, logger, filepath=""):
         for poly in current_data.polygons:
             # Vertex positions
             if poly.loop_total == 4:
+                # Quad.
                 loop_indices = tuple(poly.loop_indices)
             elif poly.loop_total == 3:
+                # Tri.
                 loop_indices = tuple(poly.loop_indices) + (poly.loop_start,)
                 n_tris += 1
             else:
+                # N-gon.
                 n_ngon += 1
                 continue
 
-            positions = tuple(map(index_to_position, loop_indices))
-            # Blender seems to keep opposite winding order
-            positions = tuple(reversed(positions))
+            positions = []
 
-            # Smooth shading
+            # Reverse the loop_indices tuple. (Blender seems to keep opposite winding order.)
+            for index in reversed(loop_indices):
+                # Get the world position from the index. (This rounds it and converts the height to plates.)
+                # Center the position to the current bounds object.
+                positions.append(recenter(index_to_position(index)))
+
+            # FIXME: Object rotation affects normals.
+
+            # Normals.
+            # They are kept as floats for maximum accuracy.
+            # Use smooth shading?
             if poly.use_smooth:
+                # For every element in the loop_indices tuple.
+                # Run it through the index_to_normal(index) function. (This rounds it and converts the height to plates.)
+                # And assign the result to the normals tuple.
                 normals = tuple(map(index_to_normal, loop_indices))
             else:
+                # No smooth shading, every vertex in this loop has the same normal.
                 normals = (poly.normal,) * 4
 
             # UVs
@@ -632,12 +678,13 @@ def export(context, props, logger, filepath=""):
         else:
             logger.warning("Warning: {} brick grid definitions found but were not processed because bounds definition was missing.".format(brick_grid_objects_found))
 
-    # No manually created bounds object was found, calculate brick size according to the minimum and maximum vertex coordinates.
+    # No manually created bounds object was found, calculate brick size according to the combined minimum and maximum vertex positions of all processed meshes.
     if bounds_object is None:
         # Get the dimensions defined by the vectors and convert height to plates.
-        bounds_size = Vector((vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
-                              vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
-                              (vec_bounding_box_max[INDEX_Z] - vec_bounding_box_min[INDEX_Z]) / PLATE_HEIGHT))
+        bounds_size = round_values((vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
+                                    vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
+                                    (vec_bounding_box_max[INDEX_Z] - vec_bounding_box_min[INDEX_Z])))
+        bounds_size = array_z_to_plates(bounds_size)
 
         # Are the dimensions of the bounds object integers?
         if bounds_size[INDEX_X] != int(bounds_size[INDEX_X]) or bounds_size[INDEX_Y] != int(bounds_size[INDEX_Y]) or bounds_size[INDEX_Z] != int(bounds_size[INDEX_Z]):
@@ -656,8 +703,8 @@ def export(context, props, logger, filepath=""):
                                              definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
 
     # Plate adjustment.
-    vec_bounding_box_min = vector_z_to_plates(vec_bounding_box_min)
-    vec_bounding_box_max = vector_z_to_plates(vec_bounding_box_max)
+    vec_bounding_box_min = array_z_to_plates(vec_bounding_box_min)
+    vec_bounding_box_max = array_z_to_plates(vec_bounding_box_max)
 
     # Group quads into sections.
     quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, vec_bounding_box_min, vec_bounding_box_max)), a_quads))
