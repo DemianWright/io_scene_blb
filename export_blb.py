@@ -108,6 +108,12 @@ def export(context, props, logger, filepath=""):
                                GRID_D_PREFIX: GRID_DOWN,
                                GRID_B_PREFIX: GRID_BOTH }
 
+    # Bounds object data needed in several functions.
+    bounds_data = { "name": None,
+                    "dimensions": [],
+                    "world_coords_min": [],
+                    "world_coords_max": [] }
+
     ### BEGIN EXPORT FUNCTION NESTED FUNCTIONS ###
 
     def calc_quad_section(quad, bounds_min, bounds_max):
@@ -154,17 +160,23 @@ def export(context, props, logger, filepath=""):
             vec_max[INDEX_Y] = max(vec_max[INDEX_Y], coord[INDEX_Y])
             vec_max[INDEX_Z] = max(vec_max[INDEX_Z], coord[INDEX_Z])
 
-    def recenter(world_vector, local_bounds_object):
+    def recenter(world_vector, local_bounds_object=None):
         """
         Performs round_values(array) on the resulting list.
+        If no local_bounds_object is defined, the bounds object is used.
         Returns a list of Decimal values where the coordinates of the given world space vector have been translated so they are relative to the geometric center of the given local space bounds.
         """
+        if local_bounds_object is not None:
+            bounds_min = get_world_min(local_bounds_object)
+            dimensions = local_bounds_object.dimensions
+        else:
+            # Use the bounds object data.
+            bounds_min = bounds_data["world_coord_min"]
+            dimensions = bounds_data["dimensions"]
 
-        bounds_min = get_world_min(local_bounds_object)
-
-        local_center = round_values((bounds_min[INDEX_X] + (local_bounds_object.dimensions[INDEX_X] / 2),
-                                     bounds_min[INDEX_Y] + (local_bounds_object.dimensions[INDEX_Y] / 2),
-                                     bounds_min[INDEX_Z] + (local_bounds_object.dimensions[INDEX_Z] / 2)))
+        local_center = round_values((bounds_min[INDEX_X] + (dimensions[INDEX_X] / 2),
+                                     bounds_min[INDEX_Y] + (dimensions[INDEX_Y] / 2),
+                                     bounds_min[INDEX_Z] + (dimensions[INDEX_Z] / 2)))
 
         return round_values((world_vector[INDEX_X] - local_center[INDEX_X],
                              world_vector[INDEX_Y] - local_center[INDEX_Y],
@@ -183,12 +195,14 @@ def export(context, props, logger, filepath=""):
         else:
             return xyz
 
-    def brick_grid_obj_to_index_ranges(obj, bounds_object):
+    def brick_grid_obj_to_index_ranges(obj):
         """
         Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the given object.
         The indices represent a three dimensional volume in the local space of the given bounds object.
         Returns a tuple in the following format: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
         """
+
+        # Note: This function assumes that it is called after the bounds object has been defined.
 
         out_of_bounds = False
 
@@ -197,40 +211,31 @@ def export(context, props, logger, filepath=""):
         grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         set_world_min_max(grid_min, grid_max, obj)
 
-        # TODO: The calculations done with the bounds object can be optimized by doing them only once earlier when the bounds object is found because the object does not change.
-
-        # Find the minimum and maximum coordinates for the bounds object.
-        bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-        bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-        set_world_min_max(bounds_min, bounds_max, bounds_object)
-
         # Round everything and use Decimals.
         grid_min = round_values(grid_min)
         grid_max = round_values(grid_max)
-        bounds_min = round_values(bounds_min)
-        bounds_max = round_values(bounds_max)
 
         for index, value in enumerate(grid_min):
-            if value < bounds_min[index]:
+            if value < bounds_data["world_coord_min"][index]:
                 out_of_bounds = True
                 break
 
         if not out_of_bounds:
             for index, value in enumerate(grid_max):
-                if value > bounds_max[index]:
+                if value > bounds_data["world_coord_max"][index]:
                     out_of_bounds = True
                     break
 
         if out_of_bounds:
-            logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, bounds_object.name))
+            logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, bounds_data["name"]))
             raise OutOfBoundsException()
         else:
             # Recenter the coordinates to the bounding box.
             # Round the values and use Decimal numbers.
-            grid_min = round_values(recenter(grid_min, bounds_object))
-            grid_max = round_values(recenter(grid_max, bounds_object))
+            grid_min = round_values(recenter(grid_min))
+            grid_max = round_values(recenter(grid_max))
 
-            dimensions = round_values(bounds_object.dimensions)
+            dimensions = bounds_data["dimensions"]
 
             # Convert the coordinates into brick grid array indices.
             grid_min[INDEX_X] = grid_min[INDEX_X] + (dimensions[INDEX_X] / 2)  # Translate coordinates to positive X axis.
@@ -259,9 +264,8 @@ def export(context, props, logger, filepath=""):
 
             if non_int:
                 logger.warning("Warning: '{}' has a non-integer coordinates, rounding to a precision of {}.".format(obj.name, HUMAN_ERROR))
-                # FIXME: Temporarily making a Decimal out of the human error value. Fix later when bounds calculation and detection has been converted to use Decimals as well.
 
-                # Round indices up the nearest integer. (Floating point error fixed.)
+                # Round indices up the nearest integer.
                 for index, value in enumerate(grid_min):
                     grid_min[index] = round(HUMAN_ERROR * round(value / HUMAN_ERROR))
 
@@ -274,8 +278,8 @@ def export(context, props, logger, filepath=""):
 
             # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
             return ((grid_min[INDEX_X], grid_max[INDEX_X]),
-                     (grid_min[INDEX_Y], grid_max[INDEX_Y]),
-                     (grid_min[INDEX_Z], grid_max[INDEX_Z]))
+                    (grid_min[INDEX_Y], grid_max[INDEX_Y]),
+                    (grid_min[INDEX_Z], grid_max[INDEX_Z]))
 
     def write_file(filepath, quads, definitions):
         """Write the BLB file."""
@@ -508,6 +512,16 @@ def export(context, props, logger, filepath=""):
                 # Continue searching in case mesh bounds is found.
             else:
                 bounds_object = obj
+                bounds_data["name"] = obj.name
+                bounds_data["dimensions"] = round_values(obj.dimensions)
+
+                # Find the minimum and maximum coordinates for the bounds object.
+                bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+                bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+                set_world_min_max(bounds_min, bounds_max, bounds_object)
+
+                bounds_data["world_coord_min"] = round_values(bounds_min)
+                bounds_data["world_coord_max"] = round_values(bounds_max)
 
                 # Get the dimensions of the Blender object and convert the height to plates.
                 bounds_size = array_z_to_plates(obj.dimensions)
@@ -548,7 +562,7 @@ def export(context, props, logger, filepath=""):
             if bounds_object is not None:
                 try:
                     # All brick grid definition object names are exactly 5 characters long and lower case.
-                    definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj, bounds_object))
+                    definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj))
                     brick_grid_objects_processed += 1
                 except OutOfBoundsException:
                     # Do nothing, definition is ignored.
