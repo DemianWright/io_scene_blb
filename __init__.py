@@ -27,6 +27,53 @@ bl_info = {
     "wiki_url": "",
     "category": "Import-Export"}
 
+class Logger(object):
+    """Logger class for printing messages to the console and optionally writing the messages to a log file."""
+    __log_lines = []
+
+    def __init__(self, write_file, warnings_only=True, logpath=""):
+        """Initializes the logger with the specified options and an appropriate log path."""
+        self.__write_file = write_file
+        self.__warnings_only = warnings_only
+        self.__logpath = logpath
+
+    def log(self, message, is_warning=False):
+        """Prints the given message to the console and additionally to a log file if so specified at object creation."""
+        print(message)
+
+        # Only write to a log if specified.
+        if self.__write_file:
+            if self.__warnings_only:
+                # If only writing a log when a warning is encountered, ensure that current log message is a warning.
+                if is_warning:
+                    self.__log_lines.append(message)
+            else:
+                # Alternatively write to a log if writing all messages.
+                self.__log_lines.append(message)
+
+    def warning(self, message):
+        """Shorthand for log(message, True) to improve clarity."""
+        self.log(message, True)
+
+    def error(self, message):
+        """Shorthand for log(message, True) to improve clarity."""
+        self.log(message, True)
+
+    def write_log(self):
+        """Writes a log file only if so specified at object creation."""
+        # Write a log file? Anything to write?
+        if self.__write_file and len(self.__log_lines) > 0:
+            if self.__warnings_only:
+                print("Writing log (warnings only) to:", self.__logpath)
+            else:
+                print("Writing log to:", self.__logpath)
+
+            # Write the log file.
+            with open(self.__logpath, "w") as file:
+                for line in self.__log_lines:
+                    file.write(line)
+                    file.write("\n")
+
 import bpy
 from bpy.props import StringProperty, BoolProperty
 from bpy_extras.io_utils import ExportHelper
@@ -64,15 +111,14 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         """Export the scene."""
 
         from . import export_blb
-        from . import logger
 
         print("\n____STARTING BLB EXPORT____")
+
         props = self.properties
-        filepath = self.filepath
-        filepath = bpy.path.ensure_ext(filepath, self.filename_ext)
+        filepath = bpy.path.ensure_ext(self.filepath, self.filename_ext)
         logpath = bpy.path.ensure_ext(bpy.path.display_name_from_filepath(self.filepath), self.logfile_ext)
 
-        logger = logger.Logger(props.write_log, props.write_log_warnings, logpath)
+        logger = Logger(props.write_log, props.write_log_warnings, logpath)
 
         export_blb.export(context, props, logger, filepath)
 
