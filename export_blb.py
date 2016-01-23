@@ -528,7 +528,7 @@ def export(context, props, logger, filepath=""):
 
     for obj in objects:
         # Ignore all non-mesh objects and the bounds object.
-        if obj.type != "MESH" or obj is bounds_object:
+        if obj.type != "MESH" or obj == bounds_object:
             continue
         elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
             # Object name starts with one of the brick grid definition object name prefixes.
