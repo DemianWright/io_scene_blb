@@ -296,17 +296,18 @@ def export(context, props, logger, filepath=""):
             Writes the values of the given array separated with spaces into the given file.
             An optional new line character is printed at the end of the line by default.
             """
-
             for index, value in enumerate(array):
-                if index:
+                if index != 0:
+                    # Write a space before each value except the first one.
                     file.write(" ")
                 if value == 0:
+                    # Handle zeros.
                     file.write("0")
-                elif value == int(value):
-                    file.write(str(int(value)))
                 else:
-                    file.write(str(value))
+                    # Format the value into string, remove all zeros from the end, then remove all periods.
+                    file.write("{}".format(value).rstrip('0').rstrip('.'))
             if new_line:
+                # Write a new line after all values.
                 file.write("\n")
 
         def write_brick_grid(grid=None):
