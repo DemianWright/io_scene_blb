@@ -16,6 +16,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from mathutils import Vector
+from math import ceil
+from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
+
 class OutOfBoundsException(Exception):
     """An exception thrown when a vertex position is outside of brick bounds."""
     pass
@@ -23,10 +27,6 @@ class OutOfBoundsException(Exception):
 class ZeroSizeException(Exception):
     """An exception thrown when a definition object has zero brick size on at least one axis."""
     pass
-
-from mathutils import Vector
-from math import ceil
-from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
 
 # Number of decimal places to round floating point numbers.
 FLOATING_POINT_DECIMALS = 6
@@ -358,7 +358,7 @@ def export(context, props, logger, filepath=""):
         def write_array(file, array, new_line=True):
             """
             Writes the values of the given array separated with spaces into the given file.
-            An optional new line character is printed at the end of the line by default.
+            An optional new line character is added at the end of the line by default.
             """
 
             for index, value in enumerate(array):
@@ -663,7 +663,7 @@ def export(context, props, logger, filepath=""):
             Returns the world coordinates for the vertex whose index was given in the current polygon loop.
             Additionally rounds the coordinates to Decimal and converts the height to plates with array_z_to_plates(array).
             """
-            return array_z_to_plates(obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co)
+            return obj.matrix_world * current_data.vertices[current_data.loops[index].vertex_index].co
 
         def index_to_normal(index):
             return (obj.matrix_world.to_3x3() * current_data.vertices[current_data.loops[index].vertex_index].normal).normalized()
@@ -689,7 +689,7 @@ def export(context, props, logger, filepath=""):
             for index in reversed(loop_indices):
                 # Get the world position from the index. (This rounds it and converts the height to plates.)
                 # Center the position to the current bounds object.
-                positions.append(world_to_local(index_to_position(index)))
+                positions.append(array_z_to_plates(world_to_local(index_to_position(index))))
 
             # FIXME: Object rotation affects normals.
 
