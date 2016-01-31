@@ -305,23 +305,18 @@ def export(context, props, logger, filepath=""):
             raise OutOfBoundsException()
         else:
             # Convert the coordinates into brick grid array indices.
-            grid_min[INDEX_X] = grid_min[INDEX_X] + halved_dimensions[INDEX_X]  # Translate coordinates to positive X axis.
-            grid_min[INDEX_Y] = grid_min[INDEX_Y] - halved_dimensions[INDEX_Y]  # Translate coordinates to negative Y axis.
+            grid_min[INDEX_X] = grid_min[INDEX_X] + halved_dimensions[INDEX_X]  # Translate coordinates to positive X axis. Index 0 = left of the brick.
+            grid_min[INDEX_Y] = grid_min[INDEX_Y] + halved_dimensions[INDEX_Y]  # Translate coordinates to positive Y axis. Index 0 = front of the brick.
             grid_min[INDEX_Z] = (grid_min[INDEX_Z] - halved_dimensions[INDEX_Z]) / PLATE_HEIGHT  # Translate coordinates to negative Z axis, height to plates.
 
             grid_max[INDEX_X] = grid_max[INDEX_X] + halved_dimensions[INDEX_X]
-            grid_max[INDEX_Y] = grid_max[INDEX_Y] - halved_dimensions[INDEX_Y]
+            grid_max[INDEX_Y] = grid_max[INDEX_Y] + halved_dimensions[INDEX_Y]
             grid_max[INDEX_Z] = (grid_max[INDEX_Z] - halved_dimensions[INDEX_Z]) / PLATE_HEIGHT
 
             # Swap min/max Z index and make it positive. Index 0 = top of the brick.
             temp = grid_min[INDEX_Z]
             grid_min[INDEX_Z] = abs(grid_max[INDEX_Z])
             grid_max[INDEX_Z] = abs(temp)
-
-            # Swap min/max Y index and make it positive. Index 0 = back of the brick.
-            temp = grid_min[INDEX_Y]
-            grid_min[INDEX_Y] = abs(grid_max[INDEX_Y])
-            grid_max[INDEX_Y] = abs(temp)
 
             grid_min = force_to_int(grid_min)
             grid_max = force_to_int(grid_max)
@@ -340,6 +335,7 @@ def export(context, props, logger, filepath=""):
                 logger.error("Error: Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
                 raise ZeroSizeException()
             else:
+                # Note that the volumes are not written in this orientation. They are later rotated by 90 degrees.
                 # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
                 return ((grid_min[INDEX_X], grid_max[INDEX_X]),
                         (grid_min[INDEX_Y], grid_max[INDEX_Y]),
@@ -349,11 +345,28 @@ def export(context, props, logger, filepath=""):
         """Write the BLB file."""
 
         # For clarity.
-        size_x = definitions[BOUNDS_NAME_PREFIX][INDEX_X]
-        size_y = definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
+        # In the BLB format the order of coordinates is YXZ for some reason.
+        size_x = definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
+        size_y = definitions[BOUNDS_NAME_PREFIX][INDEX_X]
         size_z = definitions[BOUNDS_NAME_PREFIX][INDEX_Z]
 
         ### BEGIN WRITE_FILE FUNCTION NESTED FUNCTIONS ###
+
+        def rotate90(xyz, swizzle_only=False):
+            """
+            Returns a new list of XYZ values copied from the given XYZ array where given coordinates are rotated 90 degrees clockwise.
+            By default the function performs a rotation but it can also be used to swizzle the given XYZ coordinates to YXZ.
+            """
+
+            rotated = []
+            rotated.append(xyz[INDEX_Y])
+            if swizzle_only:
+                rotated.append(xyz[INDEX_X])
+            else:
+                rotated.append(-xyz[INDEX_X])
+            rotated.append(xyz[INDEX_Z])
+
+            return rotated
 
         def write_array(file, array, new_line=True):
             """
@@ -379,16 +392,18 @@ def export(context, props, logger, filepath=""):
             """Writes the given brick grid to the file or if no parameter is given, writes the default brick grid according to the size of the brick."""
 
             if grid is not None:
-                for y_slice in grid:
-                    for x_row in y_slice:
-                        # Join each X row of data without a separator.
-                        file.write("".join(x_row))
+                for x_slice in grid:
+                    for y_row in x_slice:
+                        # Join each Y-axis of data without a separator.
+                        file.write("".join(y_row))
                         file.write("\n")
 
                     # A new line after each Y slice.
                     file.write("\n")
             else:
-                for y in range(size_y):
+                # These are actually slices of the brick on the X axis but size_y and size_x were swapped at the start of the function.
+                for x_slice in range(size_y):
+                    # The rows from top to bottom.
                     for z in range(size_z):
                         # Current Z index is 0 which is the top of the brick?
                         is_top = (z == 0)
@@ -405,7 +420,7 @@ def export(context, props, logger, filepath=""):
                         else:
                             symbol = GRID_INSIDE
 
-                        # Write the symbol X size times.
+                        # Write the symbol X size times which is actually the depth of the brick on the Y axis in Blender.
                         file.write(symbol * size_x)
                         file.write("\n")
 
@@ -415,20 +430,36 @@ def export(context, props, logger, filepath=""):
         def modify_brick_grid(brick_grid, volume, symbol):
             """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
 
+            # Ranges are in Blender coordinates.
             x_range = volume[INDEX_X]
             y_range = volume[INDEX_Y]
             z_range = volume[INDEX_Z]
 
-            # y_index is the index of list of X row data.
-            for y_index in range(y_range[0], y_range[1]):
-                # z_index is the index of the X row data in y_index list.
+            # Example data for a cuboid brick that is:
+            # - 2 plates wide (Blender X axis)
+            # - 3 plates deep (Blender Y axis)
+            # - 4 plates tall (Blender Z axis)
+            #
+            # uuu
+            # xxx
+            # xxx
+            # ddd
+            #
+            # uuu
+            # xxx
+            # xxx
+            # ddd
+
+            # x_index is the index of the two dimensional list that contains the rows of Y-axis data.
+            for x_index in range(x_range[0], x_range[1]):
+                # z_index is the index of the Y-axis data in x_index list.
                 for z_index in range(z_range[0], z_range[1]):
-                    # x_index is the index of the character in the X row data.
-                    for x_index in range(x_range[0], x_range[1]):
+                    # y_index is the index of the symbol in the Y-axis data.
+                    for y_index in range(y_range[0], y_range[1]):
                         # From this Y slice.
                         # Select the appropriate Z row.
                         # And for every X index, assign the correct symbol.
-                        brick_grid[y_index][z_index][x_index] = symbol
+                        brick_grid[x_index][z_index][y_index] = symbol
 
         ### END WRITE_FILE FUNCTION NESTED FUNCTIONS ###
 
@@ -436,13 +467,17 @@ def export(context, props, logger, filepath=""):
 
         with open(filepath, "w") as file:
             # Write brick size.
-            write_array(file, definitions[BOUNDS_NAME_PREFIX])
+            # Swap X and Y size. (Does not rotate.)
+            write_array(file, rotate90(definitions[BOUNDS_NAME_PREFIX], True))
 
             # Write brick type.
             file.write("SPECIAL\n\n")
 
+            # TODO: Log message about only having dash or x grid definitions.
+
             # Write brick grid.
-            if len(definitions[GRID_B_PREFIX]) == 0 and len(definitions[GRID_D_PREFIX]) == 0 and len(definitions[GRID_U_PREFIX]) == 0 and len(definitions[GRID_X_PREFIX]) == 0:
+            # GRID_DASH_PREFIX and GRID_X_PREFIX are ignored on purpose, if they were the only definitions the brick could not be placed in the game making it useless.
+            if len(definitions[GRID_B_PREFIX]) == 0 and len(definitions[GRID_D_PREFIX]) == 0 and len(definitions[GRID_U_PREFIX]) == 0:
                 # No brick grid definitions, write default grid.
                 write_brick_grid()
             else:
@@ -492,12 +527,11 @@ def export(context, props, logger, filepath=""):
                     file.write("\nTEX:")  # Optional.
                     file.write(texture)
 
-                    # TODO: Fix incorrect model rotation. -Y in Blender is +X in-game.
-
                     # Write vertex positions.
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
-                        write_array(file, position)
+                        # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
+                        write_array(file, rotate90(position))
 
                     # Write face UV coordinates.
                     file.write("UV COORDS:\n")  # Optional.
@@ -507,7 +541,8 @@ def export(context, props, logger, filepath=""):
                     # Write vertex normals.
                     file.write("NORMALS:\n")  # Optional.
                     for normal in normals:
-                        write_array(file, normal)
+                        # Normals also need to rotated.
+                        write_array(file, rotate90(normal))
 
                     # Write vertex colors if any.
                     if colors is not None:
@@ -764,9 +799,9 @@ def export(context, props, logger, filepath=""):
         # The value type must be int because you can't have partial plates. Returns a list.
         definition_data[BOUNDS_NAME_PREFIX] = force_to_int(bounds_size)
 
-    logger.log("Brick size: {} {} {}".format(definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
-                                             definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
-                                             definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
+    logger.log("Brick size: {} {} {} (XYZ) plates".format(definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
+                                                          definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
+                                                          definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
 
     # Plate adjustment.
     vec_bounding_box_min = array_z_to_plates(vec_bounding_box_min)
