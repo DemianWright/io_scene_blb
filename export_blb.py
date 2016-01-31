@@ -20,52 +20,73 @@ class OutOfBoundsException(Exception):
     """An exception thrown when a vertex position is outside of brick bounds."""
     pass
 
+class ZeroSizeException(Exception):
+    """An exception thrown when a definition object has zero brick size on at least one axis."""
+    pass
+
 from mathutils import Vector
 from math import ceil
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
 
 # Number of decimal places to round floating point numbers.
 FLOATING_POINT_DECIMALS = 6
+FLOATING_POINT_PRECISION = Decimal("0.000001")
 
 # Set the Decimal number context: 6 decimal points and 0.5 is rounded up.
 setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
 
-def to_decimal(f, decimals=FLOATING_POINT_DECIMALS):
-    """Converts the given float to a Decimal value with up to 6 decimal places of precision."""
+def is_even(value):
+    """Returns True if given value is divisible by 2."""
+    return value % 2 == 0
+
+def to_decimal(value, decimals=FLOATING_POINT_DECIMALS):
+    """Converts the given value to a Decimal value with up to 6 decimal places of precision."""
 
     if decimals > FLOATING_POINT_DECIMALS:
         decimals = FLOATING_POINT_DECIMALS
 
     # First convert float to string with n decimal digits and then make a Decimal out of it.
-    return Decimal(("{0:." + str(decimals) + "f}").format(f))
+    return Decimal(("{0:." + str(decimals) + "f}").format(value))
 
-def round_values(array, decimals=FLOATING_POINT_DECIMALS):
-    """Returns a new list of Decimal values with the values of the given array rounded to the specified number of decimal places."""
+def round_value(value, precision=1.0, decimals=FLOATING_POINT_DECIMALS):
+    """Returns the given value as Decimal rounded to the given precision (default 1.0) and decimal places (default FLOATING_POINT_DECIMALS)."""
+
+    # Creating decimals through strings is more accurate than floating point numbers.
+    fraction = Decimal("1.0") / to_decimal(precision, decimals)
+    # I'm not entirely sure what the Decimal("1.0") bit does but it works.
+    return to_decimal((value * fraction).quantize(Decimal("1")) / fraction)
+
+def round_values(values, precision=None, decimals=FLOATING_POINT_DECIMALS):
+    """Returns a new list of Decimal values with the values of the given array rounded to the given precision (default no rounding) and decimal places (default FLOATING_POINT_DECIMALS)."""
 
     result = []
 
-    for value in array:
-        result.append(to_decimal(value, decimals))
+    if precision is None:
+        for val in values:
+            result.append(to_decimal(val, decimals))
+    else:
+        for val in values:
+            result.append(round_value(val, precision, decimals))
 
     return result
 
-def force_to_int(array):
+def force_to_int(values):
     """Returns a new list of array values casted to integers."""
     result = []
 
-    for value in array:
-        result.append(int(value))
+    for val in values:
+        result.append(int(val))
 
     return result
 
-def are_not_ints(array):
+def are_not_ints(values):
     """
     Returns True if at least one value in the given list is not numerically equal to its integer counterparts.
     '1.000' is numerically equal to '1' while '1.001' is not.
     """
 
-    for value in array:
-        if value != int(value):
+    for val in values:
+        if val != int(val):
             return True
 
 ### EXPORT FUNCTION ###
@@ -112,6 +133,7 @@ def export(context, props, logger, filepath=""):
 
     # Bounds object data needed in several functions.
     bounds_data = { "name": None,
+                    "brick_size": [],
                     "dimensions": [],
                     "world_coords_min": [],
                     "world_coords_max": [] }
@@ -163,11 +185,11 @@ def export(context, props, logger, filepath=""):
             array_max[INDEX_Y] = max(array_max[INDEX_Y], coord[INDEX_Y])
             array_max[INDEX_Z] = max(array_max[INDEX_Z], coord[INDEX_Z])
 
-    def recenter(world_position, local_bounds_object=None):
+    def world_to_local(world_position, local_bounds_object=None):
         """
         Translates the given world space position so it is relative to the geometric center of the given local space bounds.
         If no local_bounds_object is defined, data from bounds_data is used.
-        Returns a list of Decimal type local coordinates. (Performs round_values(array) on the resulting list.)
+        Returns a list of rounded Decimal type local coordinates.
         """
 
         if local_bounds_object is not None:
@@ -182,9 +204,19 @@ def export(context, props, logger, filepath=""):
                                      bounds_min[INDEX_Y] + (dimensions[INDEX_Y] / 2),
                                      bounds_min[INDEX_Z] + (dimensions[INDEX_Z] / 2)))
 
-        return round_values((world_position[INDEX_X] - local_center[INDEX_X],
-                             world_position[INDEX_Y] - local_center[INDEX_Y],
-                             world_position[INDEX_Z] - local_center[INDEX_Z]))
+        # If given position is in Decimals do nothing.
+        if isinstance(world_position[0], Decimal):
+            world = world_position
+        else:
+            # Otherwise convert to Decimal.
+            world = round_values(world_position)
+
+        local = []
+
+        for index, value in enumerate(world):
+            local.append(value - local_center[index])
+
+        return round_values(local)
 
     def array_z_to_plates(xyz):
         """
@@ -199,33 +231,72 @@ def export(context, props, logger, filepath=""):
         else:
             return xyz
 
+    def round_to_plate_coordinates(coordinates, brick_dimensions):
+        """
+        Rounds the given array of XYZ coordinates to the nearest valid plate coordinates in a brick with the specified dimensions.
+        Returns a list of rounded Decimal values.
+        """
+
+        result = []
+        # 1 plate is 1.0 Blender units wide and deep.
+        # Plates can only be 1.0 units long on the X and Y axes.
+        # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
+        if is_even(brick_dimensions[INDEX_X]):
+            result.append(round_value(coordinates[INDEX_X], 1.0))
+        else:
+            result.append(round_value(coordinates[INDEX_X], 0.5))
+
+        if is_even(brick_dimensions[INDEX_Y]):
+            result.append(round_value(coordinates[INDEX_Y], 1.0))
+        else:
+            result.append(round_value(coordinates[INDEX_Y], 0.5))
+
+        # Round to the nearest full plate height. (Half is rounded up)
+        if is_even(brick_dimensions[INDEX_Z] / PLATE_HEIGHT):
+            result.append(round_value(coordinates[INDEX_Z], PLATE_HEIGHT))
+        else:
+            result.append(round_value(coordinates[INDEX_Z], (PLATE_HEIGHT / Decimal("2.0"))))
+
+        return result
+
     def brick_grid_obj_to_index_ranges(obj):
         """
         Note: This function assumes that it is called after the bounds object has been defined.
         Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the given object.
         The indices represent a three dimensional volume in the local space of the bounds object.
         Returns a tuple in the following format: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
+        Can raise OutOfBoundsException and ZeroSizeException.
         """
 
         out_of_bounds = False
+
+        halved_dimensions = [value / 2 for value in bounds_data["dimensions"]]
 
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         set_world_min_max(grid_min, grid_max, obj)
 
-        # Round everything and use Decimals.
-        grid_min = round_values(grid_min)
-        grid_max = round_values(grid_max)
+        # Recenter the coordinates to the bounds. (Also rounds the values.)
+        grid_min = world_to_local(grid_min)
+        grid_max = world_to_local(grid_max)
 
+        # Round coordinates to the nearest plate.
+        grid_min = round_to_plate_coordinates(grid_min, bounds_data["dimensions"])
+        grid_max = round_to_plate_coordinates(grid_max, bounds_data["dimensions"])
+
+        # Check if any coordinates are beyond the local brick bounds.
+        # Local brick bounds can be calculated from the bounds dimensions:
+        # dimension / 2 = local max coordinate
+        # -dimension / 2 = local min coordinate
         for index, value in enumerate(grid_min):
-            if value < bounds_data["world_coords_min"][index]:
+            if value < -(halved_dimensions[index]):
                 out_of_bounds = True
                 break
 
         if not out_of_bounds:
             for index, value in enumerate(grid_max):
-                if value > bounds_data["world_coords_max"][index]:
+                if value > halved_dimensions[index]:
                     out_of_bounds = True
                     break
 
@@ -233,20 +304,14 @@ def export(context, props, logger, filepath=""):
             logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, bounds_data["name"]))
             raise OutOfBoundsException()
         else:
-            # Recenter the coordinates to the bounding box. (Also rounds the values.)
-            grid_min = recenter(grid_min)
-            grid_max = recenter(grid_max)
-
-            dimensions = bounds_data["dimensions"]
-
             # Convert the coordinates into brick grid array indices.
-            grid_min[INDEX_X] = grid_min[INDEX_X] + (dimensions[INDEX_X] / 2)  # Translate coordinates to positive X axis.
-            grid_min[INDEX_Y] = grid_min[INDEX_Y] - (dimensions[INDEX_Y] / 2)  # Translate coordinates to negative Y axis.
-            grid_min[INDEX_Z] = (grid_min[INDEX_Z] - (dimensions[INDEX_Z] / 2)) / PLATE_HEIGHT  # Translate coordinates to negative Z axis.
+            grid_min[INDEX_X] = grid_min[INDEX_X] + halved_dimensions[INDEX_X]  # Translate coordinates to positive X axis.
+            grid_min[INDEX_Y] = grid_min[INDEX_Y] - halved_dimensions[INDEX_Y]  # Translate coordinates to negative Y axis.
+            grid_min[INDEX_Z] = (grid_min[INDEX_Z] - halved_dimensions[INDEX_Z]) / PLATE_HEIGHT  # Translate coordinates to negative Z axis, height to plates.
 
-            grid_max[INDEX_X] = grid_max[INDEX_X] + (dimensions[INDEX_X] / 2)
-            grid_max[INDEX_Y] = grid_max[INDEX_Y] - (dimensions[INDEX_Y] / 2)
-            grid_max[INDEX_Z] = (grid_max[INDEX_Z] - (dimensions[INDEX_Z] / 2)) / PLATE_HEIGHT
+            grid_max[INDEX_X] = grid_max[INDEX_X] + halved_dimensions[INDEX_X]
+            grid_max[INDEX_Y] = grid_max[INDEX_Y] - halved_dimensions[INDEX_Y]
+            grid_max[INDEX_Z] = (grid_max[INDEX_Z] - halved_dimensions[INDEX_Z]) / PLATE_HEIGHT
 
             # Swap min/max Z index and make it positive. Index 0 = top of the brick.
             temp = grid_min[INDEX_Z]
@@ -258,30 +323,27 @@ def export(context, props, logger, filepath=""):
             grid_min[INDEX_Y] = abs(grid_max[INDEX_Y])
             grid_max[INDEX_Y] = abs(temp)
 
-            # Are the minimum and maximum indices of the grid object integers?
-            non_int = are_not_ints(grid_min)
-
-            if not non_int:
-                non_int = are_not_ints(grid_max)
-
-            if non_int:
-                logger.warning("Warning: '{}' has a non-integer coordinates, rounding to a precision of {}.".format(obj.name, HUMAN_ERROR))
-
-                # Round indices up the nearest integer.
-                for index, value in enumerate(grid_min):
-                    grid_min[index] = round(HUMAN_ERROR * round(value / HUMAN_ERROR))
-
-                for index, value in enumerate(grid_max):
-                    grid_max[index] = round(HUMAN_ERROR * round(value / HUMAN_ERROR))
-
-            # The value type must be int because you can't have partial plates. Returns a list.
             grid_min = force_to_int(grid_min)
             grid_max = force_to_int(grid_max)
 
-            # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
-            return ((grid_min[INDEX_X], grid_max[INDEX_X]),
-                    (grid_min[INDEX_Y], grid_max[INDEX_Y]),
-                    (grid_min[INDEX_Z], grid_max[INDEX_Z]))
+            zero_size = False
+
+            # Convert min/max ranges to size.
+            for index, value in enumerate(grid_max):
+                size = (value - grid_min[index])
+
+                if size == 0:
+                    zero_size = True
+                    break
+
+            if zero_size:
+                logger.error("Error: Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
+                raise ZeroSizeException()
+            else:
+                # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
+                return ((grid_min[INDEX_X], grid_max[INDEX_X]),
+                        (grid_min[INDEX_Y], grid_max[INDEX_Y]),
+                        (grid_min[INDEX_Z], grid_max[INDEX_Z]))
 
     def write_file(filepath, quads, definitions):
         """Write the BLB file."""
@@ -542,6 +604,7 @@ def export(context, props, logger, filepath=""):
 
                 # The value type must be int because you can't have partial plates. Returns a list.
                 definition_data[BOUNDS_NAME_PREFIX] = force_to_int(bounds_size)
+                bounds_data["brick_size"] = definition_data[BOUNDS_NAME_PREFIX]
 
                 # Bounds object found and processed, break the loop.
                 break
@@ -569,6 +632,9 @@ def export(context, props, logger, filepath=""):
                     definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj))
                     brick_grid_objects_processed += 1
                 except OutOfBoundsException:
+                    # Do nothing, definition is ignored.
+                    pass
+                except ZeroSizeException:
                     # Do nothing, definition is ignored.
                     pass
 
@@ -623,7 +689,7 @@ def export(context, props, logger, filepath=""):
             for index in reversed(loop_indices):
                 # Get the world position from the index. (This rounds it and converts the height to plates.)
                 # Center the position to the current bounds object.
-                positions.append(recenter(index_to_position(index)))
+                positions.append(world_to_local(index_to_position(index)))
 
             # FIXME: Object rotation affects normals.
 
