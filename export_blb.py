@@ -106,7 +106,7 @@ def export(context, props, logger, filepath=""):
     # Numerical constants.
     PLATE_HEIGHT = Decimal("0.4")  # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
 
-    # Object name constants.
+    # Definition object name constants.
     BOUNDS_NAME_PREFIX = "bounds"
     COLLISION_PREFIX = "collision"
     GRID_X_PREFIX = "gridx"
@@ -410,7 +410,7 @@ def export(context, props, logger, filepath=""):
                     file.write("\n")
             else:
                 # These are actually slices of the brick on the X axis but size_y and size_x were swapped at the start of the function.
-                for x_slice in range(size_y):
+                for x_slice in range(size_x):
                     # The rows from top to bottom.
                     for z in range(size_z):
                         # Current Z index is 0 which is the top of the brick?
@@ -429,7 +429,7 @@ def export(context, props, logger, filepath=""):
                             symbol = GRID_INSIDE
 
                         # Write the symbol X size times which is actually the depth of the brick on the Y axis in Blender.
-                        file.write(symbol * size_x)
+                        file.write(symbol * size_y)
                         file.write("\n")
 
                     # A new line after each Y slice.
@@ -500,7 +500,7 @@ def export(context, props, logger, filepath=""):
                 write_brick_grid(brick_grid)
 
             # Write collisions.
-            
+
             # Write default collision.
             # Swap X and Y sizes.
             collision_cubes = (((0, 0, 0), swizzle_xy(definitions[BOUNDS_NAME_PREFIX])),)
@@ -565,8 +565,11 @@ def export(context, props, logger, filepath=""):
 
     ### EXPORT FUNCTION BEGIN ###
 
-    definition_data = {BOUNDS_NAME_PREFIX: None,
-                       COLLISION_PREFIX: None,
+    # TODO: Layer support.
+    # TODO: Exporting multiple bricks from a single file.
+
+    definition_data = {BOUNDS_NAME_PREFIX: [],
+                       COLLISION_PREFIX: [],
                        GRID_X_PREFIX: [],
                        GRID_DASH_PREFIX: [],
                        GRID_U_PREFIX: [],
@@ -576,13 +579,14 @@ def export(context, props, logger, filepath=""):
     vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
     vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
 
-    a_quads = []
-    n_tris = 0
-    n_ngon = 0
-    bounds_object = None
+    brick_grid_definitions_found = 0
+    brick_grid_definitions_processed = 0
+    brick_grid_definition_objects = []
+    meshes = []
 
-    # TODO: Layer support.
-    # TODO: Exporting multiple bricks from a single file.
+    quads = []
+    count_tris = 0
+    count_ngon = 0
 
     # Use selected objects?
     if props.use_selection:
@@ -591,14 +595,13 @@ def export(context, props, logger, filepath=""):
 
         object_count = len(objects)
 
-        if object_count != 1:
-            logger.log("Found {} objects".format(len(objects)))
-
-            if object_count == 0:
-                logger.log("No objects selected.")
-                props.use_selection = False
-        else:
+        if object_count == 0:
+            logger.log("No objects selected.")
+            props.use_selection = False
+        elif object_count == 1:
             logger.log("Found {} object.".format(len(objects)))
+        else:
+            logger.log("Found {} objects.".format(len(objects)))
 
     # Get all scene objects.
     if not props.use_selection:
@@ -607,103 +610,143 @@ def export(context, props, logger, filepath=""):
 
         object_count = len(objects)
 
-        if object_count != 1:
+        if object_count == 0:
+            logger.log("No objects in the scene.")
+        if object_count == 1:
+            logger.log("Found {} object.".format(len(objects)))
+        else:
             logger.log("Found {} objects.".format(len(objects)))
 
-            if object_count == 0:
-                logger.log("No objects in the scene.")
-        else:
-            logger.log("Found {} object.".format(len(objects)))
-
-    # Search for the bounds object.
+    # Process the definition objects first.
+    # Separate exportable meshes and brick grid definitions into their own list because the bounds need to be defined first.
     for obj in objects:
-        # Object name starts with the bounds object definition name?
-        if obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
-            if obj.type != "MESH":
+        # Ignore non-mesh objects
+        if obj.type != "MESH":
+            if obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
                 logger.warning("Warning: Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
-                # Continue searching in case mesh bounds is found.
-            else:
-                bounds_object = obj
-                bounds_data["name"] = obj.name
-                bounds_data["dimensions"] = round_values(obj.dimensions)
-
-                # Find the minimum and maximum world coordinates for the bounds object.
-                bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-                bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-                set_world_min_max(bounds_min, bounds_max, bounds_object)
-
-                bounds_data["world_coords_min"] = round_values(bounds_min)
-                bounds_data["world_coords_max"] = round_values(bounds_max)
-
-                # Get the dimensions of the Blender object and convert the height to plates.
-                bounds_size = array_z_to_plates(obj.dimensions)
-
-                # Are the dimensions of the bounds object integers?
-                if are_not_ints(bounds_size):
-                    logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[INDEX_X],
-                                                                                                                                    bounds_size[INDEX_Y],
-                                                                                                                                    bounds_size[INDEX_Z],
-                                                                                                                                    HUMAN_ERROR))
-                    for index, value in enumerate(bounds_size):
-                        # Round to the specified error amount and force to int.
-                        bounds_size[index] = round(HUMAN_ERROR * round(value / HUMAN_ERROR))
-
-                # The value type must be int because you can't have partial plates. Returns a list.
-                definition_data[BOUNDS_NAME_PREFIX] = force_to_int(bounds_size)
-                bounds_data["brick_size"] = definition_data[BOUNDS_NAME_PREFIX]
-
-                # Bounds object found and processed, break the loop.
-                break
-    else:
-        logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size and brick grid may be undesirable.")
-        # Brick size calculation must be performed after all other objects are processed.
-
-    # TODO: Check that every vertex is within manually defined bounds.
-
-    brick_grid_objects_found = 0
-    brick_grid_objects_processed = 0
-
-    for obj in objects:
-        # Ignore all non-mesh objects and the bounds object.
-        if obj.type != "MESH" or obj == bounds_object:
             continue
+
+        # Is the current object the bounds definition object?
+        elif obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
+            bounds_data["name"] = obj.name
+            bounds_data["dimensions"] = round_values(obj.dimensions)
+
+            # Find the minimum and maximum world coordinates for the bounds object.
+            bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+            bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+            set_world_min_max(bounds_min, bounds_max, obj)
+
+            bounds_data["world_coords_min"] = round_values(bounds_min)
+            bounds_data["world_coords_max"] = round_values(bounds_max)
+
+            # Get the dimensions of the Blender object and convert the height to plates.
+            bounds_size = array_z_to_plates(obj.dimensions)
+
+            # Are the dimensions of the bounds object not integers?
+            if are_not_ints(bounds_size):
+                logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[INDEX_X],
+                                                                                                                                bounds_size[INDEX_Y],
+                                                                                                                                bounds_size[INDEX_Z],
+                                                                                                                                HUMAN_ERROR))
+                for index, value in enumerate(bounds_size):
+                    # Round to the specified error amount and force to int.
+                    bounds_size[index] = round(HUMAN_ERROR * round(value / HUMAN_ERROR))
+
+            # The value type must be int because you can't have partial plates. Returns a list.
+            definition_data[BOUNDS_NAME_PREFIX] = force_to_int(bounds_size)
+            bounds_data["brick_size"] = definition_data[BOUNDS_NAME_PREFIX]
+
+        # Is the current object a brick grid definition object?
         elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
             # Object name starts with one of the brick grid definition object name prefixes.
-            brick_grid_objects_found += 1
+            brick_grid_definitions_found += 1
 
-            # Brick grid can only be defined if the brick bounds have been defined.
-            if bounds_object is not None:
-                try:
-                    # All brick grid definition object names are exactly 5 characters long and lower case.
-                    definition_data[obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(obj))
-                    brick_grid_objects_processed += 1
-                except OutOfBoundsException:
-                    # Do nothing, definition is ignored.
-                    pass
-                except ZeroSizeException:
-                    # Do nothing, definition is ignored.
-                    pass
+            # Brick grid objects cannot be processed until after the bounds have been defined.
+            # Store for later use.
+            brick_grid_definition_objects.append(obj)
 
-            # Skip the rest of the loop as definition objects are not to be exported as models.
+        # Is the current object a collision definition object?
+        elif obj.name.lower().startswith(COLLISION_PREFIX):
+            # Not a visible object, ignore bounds.
             continue
 
-        logger.log("Exporting mesh: {}".format(obj.name))
-
-        # Record the minimum and maximum vertex coordinates only if no bounds was defined.
-        if bounds_object is None:
+        # Thus the object must be a regular mesh that is exported as a 3D model.
+        else:
+            # Record bounds.
             set_world_min_max(vec_bounding_box_min, vec_bounding_box_max, obj)
 
-        current_data = obj.data
+            # And store for later use to make the looping more efficient at the cost of a few extra bytes.
+            meshes.append(obj)
 
-        # UV layers exist.
-        if current_data.uv_layers:
-            if len(current_data.uv_layers) > 1:
-                logger.warning("Warning: Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
+    # No manually created bounds object was found, calculate brick size according to the combined minimum and maximum vertex positions of all processed meshes.
+    if len(definition_data[BOUNDS_NAME_PREFIX]) == 0:
+        logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size may be undesirable.")
 
-            uv_data = current_data.uv_layers[0].data
+        # Get the dimensions defined by the vectors.
+        bounds_size = round_values((vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
+                                    vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
+                                    (vec_bounding_box_max[INDEX_Z] - vec_bounding_box_min[INDEX_Z])))
+
+        bounds_object = None
+        bounds_data["name"] = None
+        bounds_data["dimensions"] = bounds_size
+
+        # The minimum and maximum calculated world coordinates.
+        bounds_data["world_coords_min"] = round_values(vec_bounding_box_min)
+        bounds_data["world_coords_max"] = round_values(vec_bounding_box_max)
+
+        # Convert height to plates.
+        bounds_size = array_z_to_plates(bounds_size)
+
+        # Are the dimensions of the bounds object not integers?
+        if are_not_ints(bounds_size):
+            logger.warning("Warning: Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[INDEX_X],
+                                                                                                             bounds_size[INDEX_Y],
+                                                                                                             bounds_size[INDEX_Z]))
+
+            # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
+            for index, value in enumerate(bounds_size):
+                bounds_size[index] = ceil(value)
+
+        # The value type must be int because you can't have partial plates. Returns a list.
+        definition_data[BOUNDS_NAME_PREFIX] = force_to_int(bounds_size)
+        bounds_data["brick_size"] = definition_data[BOUNDS_NAME_PREFIX]
+
+    # A bounds definition now exists.
+    logger.log("Brick size: {} {} {} (XYZ) plates".format(definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
+                                                          definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
+                                                          definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
+
+    # Process brick grid definitions
+    for grid_obj in brick_grid_definition_objects:
+        try:
+            # All brick grid definition object names are exactly 5 characters long and lower case.
+            definition_data[grid_obj.name.lower()[:5]].append(brick_grid_obj_to_index_ranges(grid_obj))
+            brick_grid_definitions_processed += 1
+        except OutOfBoundsException:
+            # Do nothing, definition is ignored.
+            pass
+        except ZeroSizeException:
+            # Do nothing, definition is ignored.
+            pass
+
+    # Log messages for brick grid definitions.
+    if brick_grid_definitions_found == 0:
+        logger.warning("Warning: No brick grid definitions found. Generated brick grid may be undesirable.")
+    elif brick_grid_definitions_found == 1:
+        if brick_grid_definitions_processed == 0:
+            logger.warning("Warning: {} brick grid definition found but was not processed.".format(brick_grid_definitions_found))
         else:
-            uv_data = None
+            logger.log("Processed {} of {} brick grid definition.".format(brick_grid_definitions_processed, brick_grid_definitions_found))
+    else:
+        # brick_grid_definitions_found > 1
+        if brick_grid_definitions_processed == 0:
+            logger.warning("Warning: {} brick grid definitions found but were not processed.".format(brick_grid_definitions_found))
+        else:
+            logger.log("Processed {} of {} brick grid definitions.".format(brick_grid_definitions_processed, brick_grid_definitions_found))
 
+    # It is guaranteed that all Blender objects in the meshes list are indeed of the mesh type and are not definition objects.
+    for obj in meshes:
         def index_to_position(index):
             """
             Returns the world coordinates for the vertex whose index was given in the current polygon loop.
@@ -714,6 +757,19 @@ def export(context, props, logger, filepath=""):
         def index_to_normal(index):
             return (obj.matrix_world.to_3x3() * current_data.vertices[current_data.loops[index].vertex_index].normal).normalized()
 
+        logger.log("Exporting mesh: {}".format(obj.name))
+
+        current_data = obj.data
+
+        # UV layers exist?
+        if current_data.uv_layers:
+            if len(current_data.uv_layers) > 1:
+                logger.warning("Warning: Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
+
+            uv_data = current_data.uv_layers[0].data
+        else:
+            uv_data = None
+
         # Faces.
         for poly in current_data.polygons:
             # Vertex positions
@@ -723,10 +779,10 @@ def export(context, props, logger, filepath=""):
             elif poly.loop_total == 3:
                 # Tri.
                 loop_indices = tuple(poly.loop_indices) + (poly.loop_start,)
-                n_tris += 1
+                count_tris += 1
             else:
                 # N-gon.
-                n_ngon += 1
+                count_ngon += 1
                 continue
 
             positions = []
@@ -768,64 +824,20 @@ def export(context, props, logger, filepath=""):
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
                 texture = "SIDE"
 
-            a_quads.append((positions, normals, uvs, colors, texture))
-
-    # Log messages for brick grid definitions.
-    if brick_grid_objects_found == 0:
-        logger.warning("Warning: No brick grid definitions found. Default brick grid may be undesirable.")
-    else:
-        if bounds_object is not None:
-            if brick_grid_objects_found == 1:
-                if brick_grid_objects_processed == 0:
-                    logger.warning("Warning: {} brick grid definition found but was not processed.".format(brick_grid_objects_found))
-            else:
-                if brick_grid_objects_processed == 0:
-                    logger.warning("Warning: {} brick grid definitions found but were not processed.".format(brick_grid_objects_found))
-            if brick_grid_objects_found == 1:
-                logger.log("Processed {} of {} brick grid definition.".format(brick_grid_objects_processed, brick_grid_objects_found))
-            else:
-                logger.log("Processed {} of {}  brick grid definitions.".format(brick_grid_objects_processed, brick_grid_objects_found))
-        elif brick_grid_objects_found == 1:
-            logger.warning("Warning: {} brick grid definition found but was not processed because bounds definition was missing.".format(brick_grid_objects_found))
-        else:
-            logger.warning("Warning: {} brick grid definitions found but were not processed because bounds definition was missing.".format(brick_grid_objects_found))
-
-    # No manually created bounds object was found, calculate brick size according to the combined minimum and maximum vertex positions of all processed meshes.
-    if bounds_object is None:
-        # Get the dimensions defined by the vectors and convert height to plates.
-        bounds_size = round_values((vec_bounding_box_max[INDEX_X] - vec_bounding_box_min[INDEX_X],
-                                    vec_bounding_box_max[INDEX_Y] - vec_bounding_box_min[INDEX_Y],
-                                    (vec_bounding_box_max[INDEX_Z] - vec_bounding_box_min[INDEX_Z])))
-        bounds_size = array_z_to_plates(bounds_size)
-
-        # Are the dimensions of the bounds object integers?
-        if bounds_size[INDEX_X] != int(bounds_size[INDEX_X]) or bounds_size[INDEX_Y] != int(bounds_size[INDEX_Y]) or bounds_size[INDEX_Z] != int(bounds_size[INDEX_Z]):
-            logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[INDEX_X],
-                                                                                                          bounds_size[INDEX_Y],
-                                                                                                          bounds_size[INDEX_Z]))
-            # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
-            for index, value in enumerate(bounds_size):
-                bounds_size[index] = ceil(value)
-
-        # The value type must be int because you can't have partial plates. Returns a list.
-        definition_data[BOUNDS_NAME_PREFIX] = force_to_int(bounds_size)
-
-    logger.log("Brick size: {} {} {} (XYZ) plates".format(definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
-                                                          definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
-                                                          definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
+            quads.append((positions, normals, uvs, colors, texture))
 
     # Plate adjustment.
     vec_bounding_box_min = array_z_to_plates(vec_bounding_box_min)
     vec_bounding_box_max = array_z_to_plates(vec_bounding_box_max)
 
-    # Group quads into sections.
-    quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, vec_bounding_box_min, vec_bounding_box_max)), a_quads))
+    # Sort quads into sections.
+    quads_with_sections = tuple(map(lambda q: (q, calc_quad_section(q, vec_bounding_box_min, vec_bounding_box_max)), quads))
 
-    if n_tris:
-        logger.warning("Warning: {} triangles degenerated to quads.".format(n_tris))
+    if count_tris > 0:
+        logger.warning("Warning: {} triangles degenerated to quads.".format(count_tris))
 
-    if n_ngon:
-        logger.warning("Warning: {} n-gons skipped.".format(n_ngon))
+    if count_ngon > 0:
+        logger.warning("Warning: {} n-gons skipped.".format(count_ngon))
 
     # Write the data to a file.
     write_file(filepath, quads_with_sections, definition_data)
