@@ -345,14 +345,13 @@ def export(context, props, logger, filepath=""):
         """Write the BLB file."""
 
         # For clarity.
-        # In the BLB format the order of coordinates is YXZ for some reason.
-        size_x = definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
-        size_y = definitions[BOUNDS_NAME_PREFIX][INDEX_X]
+        size_x = definitions[BOUNDS_NAME_PREFIX][INDEX_X]
+        size_y = definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
         size_z = definitions[BOUNDS_NAME_PREFIX][INDEX_Z]
 
         ### BEGIN WRITE_FILE FUNCTION NESTED FUNCTIONS ###
 
-        def rotate90(xyz, swizzle_only=False):
+        def rotate_90_cw(xyz):
             """
             Returns a new list of XYZ values copied from the given XYZ array where given coordinates are rotated 90 degrees clockwise.
             By default the function performs a rotation but it can also be used to swizzle the given XYZ coordinates to YXZ.
@@ -360,13 +359,22 @@ def export(context, props, logger, filepath=""):
 
             rotated = []
             rotated.append(xyz[INDEX_Y])
-            if swizzle_only:
-                rotated.append(xyz[INDEX_X])
-            else:
-                rotated.append(-xyz[INDEX_X])
+            rotated.append(-xyz[INDEX_X])
             rotated.append(xyz[INDEX_Z])
 
             return rotated
+
+        def swizzle_xy(xyz):
+            """
+            Returns a new list of YXZ values copied from the given XYZ array.
+            """
+
+            swizzled = []
+            swizzled.append(xyz[INDEX_Y])
+            swizzled.append(xyz[INDEX_X])
+            swizzled.append(xyz[INDEX_Z])
+
+            return swizzled
 
         def write_array(file, array, new_line=True):
             """
@@ -468,7 +476,7 @@ def export(context, props, logger, filepath=""):
         with open(filepath, "w") as file:
             # Write brick size.
             # Swap X and Y size. (Does not rotate.)
-            write_array(file, rotate90(definitions[BOUNDS_NAME_PREFIX], True))
+            write_array(file, swizzle_xy(definitions[BOUNDS_NAME_PREFIX]))
 
             # Write brick type.
             file.write("SPECIAL\n\n")
@@ -482,7 +490,7 @@ def export(context, props, logger, filepath=""):
                 write_brick_grid()
             else:
                 # Initialize the brick grid with the empty symbol with the dimensions of the brick.
-                brick_grid = [[[GRID_OUTSIDE for x in range(size_x)] for z in range(size_z)] for y in range(size_y)]
+                brick_grid = [[[GRID_OUTSIDE for y in range(size_y)] for z in range(size_z)] for x in range(size_x)]
 
                 for name_prefix in BRICK_GRID_DEFINITIONS_PRIORITY:
                     if len(definitions[name_prefix]) > 0:
@@ -492,7 +500,10 @@ def export(context, props, logger, filepath=""):
                 write_brick_grid(brick_grid)
 
             # Write collisions.
-            collision_cubes = (((0, 0, 0), (size_x, size_y, size_z)),)
+            
+            # Write default collision.
+            # Swap X and Y sizes.
+            collision_cubes = (((0, 0, 0), swizzle_xy(definitions[BOUNDS_NAME_PREFIX])),)
 
             file.write(str(len(collision_cubes)))
             file.write("\n")
@@ -531,7 +542,7 @@ def export(context, props, logger, filepath=""):
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
                         # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
-                        write_array(file, rotate90(position))
+                        write_array(file, rotate_90_cw(position))
 
                     # Write face UV coordinates.
                     file.write("UV COORDS:\n")  # Optional.
@@ -542,7 +553,7 @@ def export(context, props, logger, filepath=""):
                     file.write("NORMALS:\n")  # Optional.
                     for normal in normals:
                         # Normals also need to rotated.
-                        write_array(file, rotate90(normal))
+                        write_array(file, rotate_90_cw(normal))
 
                     # Write vertex colors if any.
                     if colors is not None:
