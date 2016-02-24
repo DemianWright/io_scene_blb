@@ -63,7 +63,7 @@ class BLBWriter(object):
     """Handles writing sorted quads and definitions to a BLB file."""
 
     def __init__(self, filepath, sorted_quads, definition_data):
-        """Initializes the logger with the specified options and an appropriate log path."""
+        """Initializes the private class variables."""
         self.__filepath = filepath
         self.__quads = sorted_quads
         self.__definitions = definition_data
@@ -120,6 +120,26 @@ class BLBWriter(object):
         if new_line:
             # Write a new line after all values.
             file.write("\n")
+
+    @classmethod
+    def __mirror(cls, xyz, *axes):
+        """
+        Mirrors the given XYZ sequence in the given axes, in the order they are given.
+        Specify the axes to mirror in with "x", "y", and "z" strings.
+        Returns a new list of XYZ values.
+        """
+
+        mirrored = xyz
+
+        for axis in axes:
+            if axis == "x":
+                mirrored[INDEX_X] = -mirrored[INDEX_X]
+            elif axis == "y":
+                mirrored[INDEX_Y] = -mirrored[INDEX_Y]
+            elif axis == "z":
+                mirrored[INDEX_Z] = -mirrored[INDEX_Z]
+
+        return mirrored
 
     @classmethod
     def __modify_brick_grid(cls, brick_grid, volume, symbol):
@@ -225,18 +245,31 @@ class BLBWriter(object):
                 self.__write_brick_grid(file, brick_grid)
 
             # Write collisions.
+            if len(self.__definitions[COLLISION_PREFIX]) == 0:
+                # Write default collision.
 
-            # Write default collision.
-            # Swap X and Y sizes.
-            collision_cubes = (((0, 0, 0), self.__swizzle_xy(self.__definitions[BOUNDS_NAME_PREFIX])),)
-
-            file.write(str(len(collision_cubes)))
-            file.write("\n")
-
-            for (center, size) in collision_cubes:
+                file.write("1\n")
                 file.write("\n")
-                self.__write_sequence(file, center)
-                self.__write_sequence(file, size)
+
+                # Center of the cuboid is at the middle of the brick.
+                file.write("0 0 0\n")
+
+                # The size of the cuboid is the size of the bounds.
+                # Swap X and Y sizes.
+                self.__write_sequence(file, self.__swizzle_xy(self.__definitions[BOUNDS_NAME_PREFIX]))
+            else:
+                # Write defined collisions.
+
+                # Write the number of collision cuboids.
+                file.write(str(len(self.__definitions[COLLISION_PREFIX])))
+                file.write("\n")
+
+                for (center, dimensions) in self.__definitions[COLLISION_PREFIX]:
+                    file.write("\n")
+                    # Mirror center on the X axis.
+                    # Swap X and Y coordinates for both.
+                    self.__write_sequence(file, self.__swizzle_xy(self.__mirror(center, "x")))
+                    self.__write_sequence(file, self.__swizzle_xy(dimensions))
 
             # Write coverage.
             file.write("COVERAGE:\n")
@@ -420,6 +453,30 @@ class BLBProcessor(object):
     def __index_to_normal(cls, obj, index):
         return (obj.matrix_world.to_3x3() * obj.data.vertices[obj.data.loops[index].vertex_index].normal).normalized()
 
+    @classmethod
+    def __all_within_bounds(cls, sequence, bounding_dimensions):
+        """
+        Checks if all the values in the given sequence are within the given bounding values.
+        Assumes that both sequences have the same number of elements.
+        Returns True only if all values are within the bounding dimensions.
+        """
+        # Divide all dimension values by 2.
+        halved_dimensions = [value / 2 for value in bounding_dimensions]
+
+        # Check if any values in the given sequence are beyond the given bounding_dimensions.
+        # bounding_dimensions / 2 = max value
+        # -bounding_dimensions / 2 = min value
+
+        for index, value in enumerate(sequence):
+            if value > halved_dimensions[index]:
+                return False
+
+        for index, value in enumerate(sequence):
+            if value < -(halved_dimensions[index]):
+                return False
+
+        return True
+
     def __round_value(self, value, precision=1.0, decimals=FLOATING_POINT_DECIMALS):
         """Returns the given value as Decimal rounded to the given precision (default 1.0) and decimal places (default FLOATING_POINT_DECIMALS)."""
 
@@ -446,7 +503,7 @@ class BLBProcessor(object):
         """
         Translates the given world space position so it is relative to the geometric center of the given local space bounds.
         If no local_bounds_object is defined, data from bounds_data is used.
-        Returns a list of rounded Decimal type local coordinates.
+        Returns a list of Decimal type local coordinates rounded to eliminate floating point errors.
         """
 
         if local_bounds_object is not None:
@@ -518,14 +575,12 @@ class BLBProcessor(object):
 
     def __grid_obj_to_index_ranges(self, obj):
         """
-        Note: This function assumes that it is called after the bounds object has been defined.
+        Note: This function requires that it is called after the bounds object has been defined.
         Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the given object.
         The indices represent a three dimensional volume in the local space of the bounds object.
         Returns a tuple in the following format: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
         Can raise OutOfBoundsException and ZeroSizeException.
         """
-
-        out_of_bounds = False
 
         halved_dimensions = [value / 2 for value in self.__bounds_data["dimensions"]]
 
@@ -542,28 +597,7 @@ class BLBProcessor(object):
         grid_min = self.__round_to_plate_coordinates(grid_min, self.__bounds_data["dimensions"])
         grid_max = self.__round_to_plate_coordinates(grid_max, self.__bounds_data["dimensions"])
 
-        # Check if any coordinates are beyond the local brick bounds.
-        # Local brick bounds can be calculated from the bounds dimensions:
-        # dimension / 2 = local max coordinate
-        # -dimension / 2 = local min coordinate
-        for index, value in enumerate(grid_min):
-            if value < -(halved_dimensions[index]):
-                out_of_bounds = True
-                break
-
-        if not out_of_bounds:
-            for index, value in enumerate(grid_max):
-                if value > halved_dimensions[index]:
-                    out_of_bounds = True
-                    break
-
-        if out_of_bounds:
-            if self.__bounds_data["name"] is None:
-                self.__logger.error("Error: Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
-            else:
-                self.__logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
-            raise self.OutOfBoundsException()
-        else:
+        if self.__all_within_bounds(grid_min, self.__bounds_data["dimensions"]) and self.__all_within_bounds(grid_max, self.__bounds_data["dimensions"]):
             # Convert the coordinates into brick grid sequence indices.
             grid_min[INDEX_X] = grid_min[INDEX_X] + halved_dimensions[INDEX_X]  # Translate coordinates to positive X axis. Index 0 = left of the brick.
             grid_min[INDEX_Y] = grid_min[INDEX_Y] + halved_dimensions[INDEX_Y]  # Translate coordinates to positive Y axis. Index 0 = front of the brick.
@@ -600,6 +634,12 @@ class BLBProcessor(object):
                 return ((grid_min[INDEX_X], grid_max[INDEX_X]),
                         (grid_min[INDEX_Y], grid_max[INDEX_Y]),
                         (grid_min[INDEX_Z], grid_max[INDEX_Z]))
+        else:
+            if self.__bounds_data["name"] is None:
+                self.__logger.error("Error: Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
+            else:
+                self.__logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
+            raise self.OutOfBoundsException()
 
     def __get_object_sequence(self):
         """Returns the sequence of objects to use when exporting."""
@@ -703,7 +743,10 @@ class BLBProcessor(object):
         self.__bounds_data["brick_size"] = self.__definition_data[BOUNDS_NAME_PREFIX]
 
     def __process_grid_definitions(self, definition_objects):
-        """Processes the given brick grid definitions and saves the results to the definition data sequence."""
+        """
+        Note: This function requires that it is called after the bounds object has been defined.
+        Processes the given brick grid definitions and saves the results to the definition data sequence.
+        """
 
         processed = 0
 
@@ -734,6 +777,70 @@ class BLBProcessor(object):
             else:
                 self.__logger.log("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
 
+    def __process_collision_definitions(self, definition_objects):
+        """
+        Note: This function requires that it is called after the bounds object has been defined.
+        Processes the given collision definitions and saves the results to the definition data sequence.
+        """
+
+        processed = 0
+
+        for obj in definition_objects:
+            vert_count = len(obj.data.vertices)
+
+            # At least two vertices are required for a valid bounding box.
+            if vert_count < 2:
+                self.__logger.error("Error: Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name))
+                # Skip the rest of the loop and return to the beginning.
+                continue
+            elif vert_count > 8:
+                self.__logger.warning("Warning: Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. Bounding box of this mesh will be used.".format(obj.name))
+                # The mesh is still valid.
+
+            # Find the minimum and maximum coordinates for the collision object.
+            col_min = Vector((float("+inf"), float("+inf"), float("+inf")))
+            col_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+            self.__set_world_min_max(col_min, col_max, obj)
+
+            # Recenter the coordinates to the bounds. (Also rounds the values.)
+            col_min = self.__world_to_local(col_min)
+            col_max = self.__world_to_local(col_max)
+
+            if self.__all_within_bounds(col_min, self.__bounds_data["dimensions"]) and self.__all_within_bounds(col_max, self.__bounds_data["dimensions"]):
+                center = []
+                dimensions = []
+
+                # Find the center coordinates and dimensions of the cuboid.
+                for index, value in enumerate(col_max):
+                    center.append((value + col_min[index]) / Decimal("2.0"))
+                    dimensions.append(value - col_min[index])
+
+                processed += 1
+
+                # Add the center and dimensions to the definition data as a tuple.
+                # The coordinates and dimensions are in plates.
+                self.__definition_data[COLLISION_PREFIX].append((self.__sequence_z_to_plates(center), self.__sequence_z_to_plates(dimensions)))
+            else:
+                if self.__bounds_data["name"] is None:
+                    self.__logger.error("Error: Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
+                else:
+                    self.__logger.error("Error: Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
+
+        # Log messages for collision definitions.
+        if len(definition_objects) == 0:
+            self.__logger.warning("Warning: No collision definitions found. Default collision may be undesirable.")
+        elif len(definition_objects) == 1:
+            if processed == 0:
+                self.__logger.warning("Warning: {} collision definition found but was not processed.".format(len(definition_objects)))
+            else:
+                self.__logger.log("Processed {} of {} collision definition.".format(processed, len(definition_objects)))
+        else:
+            # Found more than one.
+            if processed == 0:
+                self.__logger.warning("Warning: {} collision definitions found but were not processed.".format(len(definition_objects)))
+            else:
+                self.__logger.log("Processed {} of {} collision definitions.".format(processed, len(definition_objects)))
+
     def __process_definition_objects(self, objects):
         """"
         Processes all non-visible definition objects.
@@ -741,6 +848,7 @@ class BLBProcessor(object):
         """
 
         brick_grid_objects = []
+        collision_objects = []
         mesh_objects = []
 
         # Loop through all objects in the sequence.
@@ -755,18 +863,19 @@ class BLBProcessor(object):
             elif obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
                 self.__process_bounds_object(obj)
                 self.__logger.log("Defined brick size: {} {} {} (XYZ) plates".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
-                                                                                        self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
-                                                                                        self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
-
+                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
+                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
             # Is the current object a brick grid definition object?
             elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
-                # Brick grid objects cannot be processed until after the bounds have been defined.
+                # Brick grid definition objects cannot be processed until after the bounds have been defined.
                 # Store for later use.
                 brick_grid_objects.append(obj)
 
             # Is the current object a collision definition object?
             elif obj.name.lower().startswith(COLLISION_PREFIX):
-                continue
+                # Collision definition objects cannot be processed until after the bounds have been defined.
+                # Store for later use.
+                collision_objects.append(obj)
 
             # Thus the object must be a regular mesh that is exported as a 3D model.
             else:
@@ -783,9 +892,9 @@ class BLBProcessor(object):
             self.__logger.log("Calculated brick size: {} {} {} (XYZ) plates".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
-
-        # Process brick grid definitions now that a bounds definition exists.
+        # Process brick grid and collision definitions now that a bounds definition exists.
         self.__process_grid_definitions(brick_grid_objects)
+        self.__process_collision_definitions(collision_objects)
 
         # Return the meshes to be exported to be processed elsewhere.
         return mesh_objects
