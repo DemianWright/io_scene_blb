@@ -290,11 +290,11 @@ class BLBWriter(object):
 
 class BLBProcessor(object):
     """A class that handles processing Blender data and preparing it for writing to a BLB file."""
-    
+
     class OutOfBoundsException(Exception):
         """An exception thrown when a vertex position is outside of brick bounds."""
         pass
-    
+
     class ZeroSizeException(Exception):
         """An exception thrown when a definition object has zero brick size on at least one axis."""
         pass
@@ -327,9 +327,6 @@ class BLBProcessor(object):
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-
-        self.__brick_grid_def_found = 0
-        self.__brick_grid_def_objects = []
 
     @classmethod
     def __is_even(cls, value):
@@ -641,7 +638,7 @@ class BLBProcessor(object):
                 return objects
 
     def __process_bounds_object(self, obj):
-        """Processes a manually defined bounds object and saves the data to bounds_data."""
+        """Processes a manually defined bounds object and saves the data to the bounds data and definition data sequences."""
 
         self.__bounds_data["name"] = obj.name
         self.__bounds_data["dimensions"] = self.__round_values(obj.dimensions)
@@ -672,7 +669,7 @@ class BLBProcessor(object):
         self.__bounds_data["brick_size"] = self.__definition_data[BOUNDS_NAME_PREFIX]
 
     def __process_bounds_range(self):
-        """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to bounds_data."""
+        """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
 
         self.__logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size may be undesirable.")
 
@@ -705,16 +702,16 @@ class BLBProcessor(object):
         self.__definition_data[BOUNDS_NAME_PREFIX] = self.__force_to_int(bounds_size)
         self.__bounds_data["brick_size"] = self.__definition_data[BOUNDS_NAME_PREFIX]
 
-    def __process_grid_definitions(self):
-        """Processes the brick grid definitions."""
+    def __process_grid_definitions(self, definition_objects):
+        """Processes the given brick grid definitions and saves the results to the definition data sequence."""
 
-        brick_grid_def_processed = 0
+        processed = 0
 
-        for grid_obj in self.__brick_grid_def_objects:
+        for grid_obj in definition_objects:
             try:
                 # All brick grid definition object names are exactly 5 characters long and lower case.
                 self.__definition_data[grid_obj.name.lower()[:5]].append(self.__grid_obj_to_index_ranges(grid_obj))
-                brick_grid_def_processed += 1
+                processed += 1
             except self.OutOfBoundsException:
                 # Do nothing, definition is ignored.
                 pass
@@ -722,20 +719,20 @@ class BLBProcessor(object):
                 # Do nothing, definition is ignored.
                 pass
 
-            # Log messages for brick grid definitions.
-            if self.__brick_grid_def_found == 0:
-                self.__logger.warning("Warning: No brick grid definitions found. Generated brick grid may be undesirable.")
-            elif self.__brick_grid_def_found == 1:
-                if brick_grid_def_processed == 0:
-                    self.__logger.warning("Warning: {} brick grid definition found but was not processed.".format(self.__brick_grid_def_found))
-                else:
-                    self.__logger.log("Processed {} of {} brick grid definition.".format(brick_grid_def_processed, self.__brick_grid_def_found))
+        # Log messages for brick grid definitions.
+        if len(definition_objects) == 0:
+            self.__logger.warning("Warning: No brick grid definitions found. Generated brick grid may be undesirable.")
+        elif len(definition_objects) == 1:
+            if processed == 0:
+                self.__logger.warning("Warning: {} brick grid definition found but was not processed.".format(len(definition_objects)))
             else:
-                # brick_grid_def_found > 1
-                if brick_grid_def_processed == 0:
-                    self.__logger.warning("Warning: {} brick grid definitions found but were not processed.".format(self.__brick_grid_def_found))
-                else:
-                    self.__logger.log("Processed {} of {} brick grid definitions.".format(brick_grid_def_processed, self.__brick_grid_def_found))
+                self.__logger.log("Processed {} of {} brick grid definition.".format(processed, len(definition_objects)))
+        else:
+            # Found more than one.
+            if processed == 0:
+                self.__logger.warning("Warning: {} brick grid definitions found but were not processed.".format(len(definition_objects)))
+            else:
+                self.__logger.log("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
 
     def __process_definition_objects(self, objects):
         """"
@@ -743,6 +740,7 @@ class BLBProcessor(object):
         Returns a sequence of meshes (non-definition objects) that will be exported as visible 3D models.
         """
 
+        brick_grid_objects = []
         mesh_objects = []
 
         # Loop through all objects in the sequence.
@@ -762,11 +760,9 @@ class BLBProcessor(object):
 
             # Is the current object a brick grid definition object?
             elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
-                self.__brick_grid_def_found += 1
-
                 # Brick grid objects cannot be processed until after the bounds have been defined.
                 # Store for later use.
-                self.__brick_grid_def_objects.append(obj)
+                brick_grid_objects.append(obj)
 
             # Is the current object a collision definition object?
             elif obj.name.lower().startswith(COLLISION_PREFIX):
@@ -789,7 +785,7 @@ class BLBProcessor(object):
                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
 
         # Process brick grid definitions now that a bounds definition exists.
-        self.__process_grid_definitions()
+        self.__process_grid_definitions(brick_grid_objects)
 
         # Return the meshes to be exported to be processed elsewhere.
         return mesh_objects
