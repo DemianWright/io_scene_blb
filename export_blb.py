@@ -762,16 +762,16 @@ class BLBProcessor(object):
 
         # Log messages for brick grid definitions.
         if len(definition_objects) == 0:
-            self.__logger.warning("Warning: No brick grid definitions found. Generated brick grid may be undesirable.")
+            self.__logger.warning("Warning: No brick grid definitions found. Automatically generated brick grid may be undesirable.")
         elif len(definition_objects) == 1:
             if processed == 0:
-                self.__logger.warning("Warning: {} brick grid definition found but was not processed.".format(len(definition_objects)))
+                self.__logger.warning("Warning: {} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} brick grid definition.".format(processed, len(definition_objects)))
         else:
             # Found more than one.
             if processed == 0:
-                self.__logger.warning("Warning: {} brick grid definitions found but were not processed.".format(len(definition_objects)))
+                self.__logger.warning("Warning: {} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
 
@@ -846,16 +846,16 @@ class BLBProcessor(object):
 
         # Log messages for collision definitions.
         if len(definition_objects) == 0:
-            self.__logger.warning("Warning: No collision definitions found. Default collision may be undesirable.")
+            self.__logger.warning("Warning: No collision definitions found. Default generated collision may be undesirable.")
         elif len(definition_objects) == 1:
             if processed == 0:
-                self.__logger.warning("Warning: {} collision definition found but was not processed.".format(len(definition_objects)))
+                self.__logger.warning("Warning: {} collision definition found but was not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} collision definition.".format(processed, len(definition_objects)))
         else:
             # Found more than one.
             if processed == 0:
-                self.__logger.warning("Warning: {} collision definitions found but were not processed.".format(len(definition_objects)))
+                self.__logger.warning("Warning: {} collision definitions found but were not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} collision definitions.".format(processed, len(definition_objects)))
 
