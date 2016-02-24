@@ -785,7 +785,14 @@ class BLBProcessor(object):
 
         processed = 0
 
+        if len(definition_objects) > 10:
+            self.__logger.error("Error: {} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)))
+
         for obj in definition_objects:
+            # Break the loop as soon as 10 definitions have been processed.
+            if processed > 9:
+                break
+
             vert_count = len(obj.data.vertices)
 
             # At least two vertices are required for a valid bounding box.
@@ -852,7 +859,9 @@ class BLBProcessor(object):
         mesh_objects = []
 
         # Loop through all objects in the sequence.
-        for obj in objects:
+        # The objects in the sequence are sorted so that the oldest created object is last.
+        # Process the objects from oldest to newest.
+        for obj in reversed(objects):
             # Ignore non-mesh objects
             if obj.type != "MESH":
                 if obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
