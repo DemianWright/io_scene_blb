@@ -617,11 +617,9 @@ class BLBProcessor(object):
 
             zero_size = False
 
-            # Convert min/max ranges to size.
+            # Check for zero size.
             for index, value in enumerate(grid_max):
-                size = (value - grid_min[index])
-
-                if size == 0:
+                if (value - grid_min[index]) == 0:
                     zero_size = True
                     break
 
@@ -814,6 +812,19 @@ class BLBProcessor(object):
             col_max = self.__world_to_local(col_max)
 
             if self.__all_within_bounds(col_min, self.__bounds_data["dimensions"]) and self.__all_within_bounds(col_max, self.__bounds_data["dimensions"]):
+                zero_size = False
+
+                # Check for zero size.
+                for index, value in enumerate(col_max):
+                    if (value - col_min[index]) == 0:
+                        zero_size = True
+                        break
+
+                if zero_size:
+                    self.__logger.error("Error: Collision definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
+                    # Skip the rest of the loop.
+                    continue
+
                 center = []
                 dimensions = []
 
