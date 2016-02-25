@@ -57,6 +57,8 @@ BRICK_GRID_DEFINITIONS = { GRID_X_PREFIX: GRID_INSIDE,
                            GRID_D_PREFIX: GRID_DOWN,
                            GRID_B_PREFIX: GRID_BOTH }
 
+QUAD_SECTION_ORDER = ["TOP","BOTTOM","NORTH","EAST","SOUTH","WEST","OMNI"]
+
 ######## BLB WRITER ########
 
 class BLBWriter(object):
@@ -220,7 +222,7 @@ class BLBWriter(object):
 
         with open(self.__filepath, "w") as file:
             # Write brick size.
-            # Swap X and Y size. (Does not rotate.)
+            # Swap X and Y size.
             self.__write_sequence(file, self.__swizzle_xy(self.__definitions[BOUNDS_NAME_PREFIX]))
 
             # Write brick type.
@@ -279,19 +281,17 @@ class BLBWriter(object):
                 file.write("0 : 999\n")
 
             # Write quad data.
-            # Section names must be in lower case for some reason.
-            for section_name in ("top", "bottom", "north", "east", "south", "west", "omni"):
-                section_quads = tuple(map(lambda t: t[0], filter(lambda t: t[1] == section_name, self.__quads)))
+            for index, section_name in enumerate(QUAD_SECTION_ORDER):
 
                 # TODO: Terse mode where optional stuff is excluded.
 
                 # Write section name.
-                file.write("--{} QUADS--\n".format(section_name.upper()))  # Optional.
+                file.write("--{} QUADS--\n".format(section_name))  # Optional.
 
                 # Write section length.
-                file.write("{}\n".format(str(len(section_quads))))
+                file.write("{}\n".format(str(len(self.__quads[index]))))
 
-                for (positions, normals, uvs, colors, texture) in section_quads:
+                for (positions, normals, uvs, colors, texture) in self.__quads[index]:
                     # Write face texture name.
                     file.write("\nTEX:")  # Optional.
                     file.write(texture)
@@ -300,6 +300,7 @@ class BLBWriter(object):
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
                         # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
+                        # I.e. -X is facing you when the brick is planted and +X is the brick north instead of +Y.
                         self.__write_sequence(file, self.__rotate_90_cw(position))
 
                     # Write face UV coordinates.
@@ -399,19 +400,19 @@ class BLBProcessor(object):
     @classmethod
     def __calc_quad_section(cls, quad, bounds_min, bounds_max):
         if all(map(lambda q: q[2] == bounds_max[2], quad[0])):
-            return "top"
+            return "TOP"
         if all(map(lambda q: q[2] == bounds_min[2], quad[0])):
-            return "bottom"
+            return "BOTTOM"
         if all(map(lambda q: q[1] == bounds_max[1], quad[0])):
-            return "north"
+            return "NORTH"
         if all(map(lambda q: q[1] == bounds_min[1], quad[0])):
-            return "south"
+            return "SOUTH"
         if all(map(lambda q: q[0] == bounds_max[0], quad[0])):
-            return "east"
+            return "EAST"
         if all(map(lambda q: q[0] == bounds_min[0], quad[0])):
-            return "west"
+            return "WEST"
 
-        return "omni"
+        return "OMNI"
 
     @classmethod
     def __get_world_min(cls, obj):
@@ -1006,8 +1007,19 @@ class BLBProcessor(object):
         if count_ngon > 0:
             self.__logger.warning("Warning: {} n-gons skipped.".format(count_ngon))
 
+        # Create an empty list for each quad section.
+        # This is my workaround to making a sort of dictionary where the keys are in insertion order.
+        # The quads must be written in a specific order.
+        sorted_quads = tuple([[] for i in range(len(QUAD_SECTION_ORDER))])
+
         # Sort quads into sections.
-        return tuple(map(lambda q: (q, self.__calc_quad_section(q, self.__vec_bounding_box_min, self.__vec_bounding_box_max)), quads))
+        for quad in quads:
+            # Calculate the section name the quad belongs to.
+            # Get the index of that section name in the QUAD_SECTION_ORDER list.
+            # Append the quad data to the list in the tuple at that index.
+            sorted_quads[QUAD_SECTION_ORDER.index(self.__calc_quad_section(quad, self.__vec_bounding_box_min, self.__vec_bounding_box_max))].append(quad)
+
+        return sorted_quads
 
     def process(self):
         """
