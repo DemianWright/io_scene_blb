@@ -77,10 +77,7 @@ class BLBWriter(object):
 
     @classmethod
     def __rotate_90_cw(cls, xyz):
-        """
-        Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated 90 degrees clockwise.
-        By default the function performs a rotation but it can also be used to swizzle the given XYZ coordinates to YXZ.
-        """
+        """Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated 90 degrees clockwise."""
 
         rotated = []
         rotated.append(xyz[INDEX_Y])
@@ -91,9 +88,7 @@ class BLBWriter(object):
 
     @classmethod
     def __swizzle_xy(cls, xyz):
-        """
-        Returns a new list of YXZ values copied from the given XYZ sequence.
-        """
+        """Returns a new list of YXZ values copied from the given XYZ sequence."""
 
         swizzled = []
         swizzled.append(xyz[INDEX_Y])
