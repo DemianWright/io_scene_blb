@@ -282,7 +282,6 @@ class BLBWriter(object):
 
             # Write quad data.
             for index, section_name in enumerate(QUAD_SECTION_ORDER):
-
                 # TODO: Terse mode where optional stuff is excluded.
 
                 # Write section name.
@@ -397,22 +396,6 @@ class BLBProcessor(object):
         for val in values:
             if val != int(val):
                 return True
-    @classmethod
-    def __calc_quad_section(cls, quad, bounds_min, bounds_max):
-        if all(map(lambda q: q[2] == bounds_max[2], quad[0])):
-            return "TOP"
-        if all(map(lambda q: q[2] == bounds_min[2], quad[0])):
-            return "BOTTOM"
-        if all(map(lambda q: q[1] == bounds_max[1], quad[0])):
-            return "NORTH"
-        if all(map(lambda q: q[1] == bounds_min[1], quad[0])):
-            return "SOUTH"
-        if all(map(lambda q: q[0] == bounds_max[0], quad[0])):
-            return "EAST"
-        if all(map(lambda q: q[0] == bounds_min[0], quad[0])):
-            return "WEST"
-
-        return "OMNI"
 
     @classmethod
     def __get_world_min(cls, obj):
@@ -463,7 +446,7 @@ class BLBProcessor(object):
         Returns True only if all values are within the bounding dimensions.
         """
         # Divide all dimension values by 2.
-        halved_dimensions = [value / 2 for value in bounding_dimensions]
+        halved_dimensions = [value / Decimal("2.0") for value in bounding_dimensions]
 
         # Check if any values in the given sequence are beyond the given bounding_dimensions.
         # bounding_dimensions / 2 = max value
@@ -516,9 +499,9 @@ class BLBProcessor(object):
             bounds_min = self.__bounds_data["world_coords_min"]
             dimensions = self.__bounds_data["dimensions"]
 
-        local_center = self.__round_values((bounds_min[INDEX_X] + (dimensions[INDEX_X] / 2),
-                                            bounds_min[INDEX_Y] + (dimensions[INDEX_Y] / 2),
-                                            bounds_min[INDEX_Z] + (dimensions[INDEX_Z] / 2)))
+        local_center = self.__round_values((bounds_min[INDEX_X] + (dimensions[INDEX_X] / Decimal("2.0")),
+                                            bounds_min[INDEX_Y] + (dimensions[INDEX_Y] / Decimal("2.0")),
+                                            bounds_min[INDEX_Z] + (dimensions[INDEX_Z] / Decimal("2.0"))))
 
         # If given position is in Decimals do nothing.
         if isinstance(world_position[0], Decimal):
@@ -575,6 +558,58 @@ class BLBProcessor(object):
 
         return result
 
+    def __calculate_quad_section(self, quad, bounds_data):
+        """
+        Calculates the section for the given quad within the given bounds.
+        The quad section is determined by whether the quad is in the same plane as one the planes defined by the bounds.
+        Returns the index of the section name in QUAD_SECTION_ORDER sequence.
+        """
+
+        # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
+        positions = quad[0]
+
+        # Divide all dimension values by 2 to get the local bounding values.
+        # The dimensions are in Blender units so Z height needs to be converted to plates.
+        local_bounds = self.__sequence_z_to_plates([value / Decimal("2.0") for value in bounds_data["dimensions"]])
+
+        # Each position list has exactly 3 values.
+        # 0 = X
+        # 1 = Y
+        # 2 = Z
+        for axis in range(3):
+            # If the vertex coordinate is the same on an axis for all 4 vertices, this face is parallel to the plane perpendicular to that axis.
+            if positions[0][axis] == positions[1][axis] == positions[2][axis] == positions[3][axis]:
+                # Is the common value equal to one of the bounding values?
+                # I.e. the quad is on the same plane as one of the edges of the brick.
+                # Stop searching as soon as the first plane is found.
+                # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
+                if positions[0][axis] == local_bounds[axis]:
+                    # Positive values.
+
+                    # +X = East
+                    if axis == 0:
+                        return 3
+                    # +Y = North
+                    elif axis == 1:
+                        return 2
+                    # +Z = Top
+                    else:
+                        return 0
+                elif positions[0][axis] == -local_bounds[axis]:
+                    # Negative values.
+                    # -X = WEST
+                    if axis == 0:
+                        return 5
+                    # -Y = South
+                    elif axis == 1:
+                        return 4
+                    # -Z = Bottom
+                    else:
+                        return 1
+
+        # The quad is either not planar or is not on the same plane with one of the bounding planes = Omni
+        return 6
+
     def __grid_obj_to_index_ranges(self, obj):
         """
         Note: This function requires that it is called after the bounds object has been defined.
@@ -584,7 +619,7 @@ class BLBProcessor(object):
         Can raise OutOfBoundsException and ZeroSizeException.
         """
 
-        halved_dimensions = [value / 2 for value in self.__bounds_data["dimensions"]]
+        halved_dimensions = [value / Decimal("2.0") for value in self.__bounds_data["dimensions"]]
 
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
@@ -708,7 +743,7 @@ class BLBProcessor(object):
         self.__definition_data[BOUNDS_NAME_PREFIX] = self.__force_to_int(bounds_size)
         self.__bounds_data["brick_size"] = self.__definition_data[BOUNDS_NAME_PREFIX]
 
-    def __process_bounds_range(self):
+    def __calculate_bounds(self):
         """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
 
         self.__logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size may be undesirable.")
@@ -909,8 +944,7 @@ class BLBProcessor(object):
 
         # No manually created bounds object was found, calculate brick size according to the combined minimum and maximum vertex positions of all processed meshes.
         if len(self.__definition_data[BOUNDS_NAME_PREFIX]) == 0:
-            self.__process_bounds_range()
-
+            self.__calculate_bounds()
             self.__logger.log("Calculated brick size: {} {} {} (XYZ) plates".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
@@ -997,10 +1031,6 @@ class BLBProcessor(object):
 
                 quads.append((positions, normals, uvs, colors, texture))
 
-        # Plate adjustment.
-        self.__vec_bounding_box_min = self.__sequence_z_to_plates(self.__vec_bounding_box_min)
-        self.__vec_bounding_box_max = self.__sequence_z_to_plates(self.__vec_bounding_box_max)
-
         if count_tris > 0:
             self.__logger.warning("Warning: {} triangles degenerated to quads.".format(count_tris))
 
@@ -1017,7 +1047,7 @@ class BLBProcessor(object):
             # Calculate the section name the quad belongs to.
             # Get the index of that section name in the QUAD_SECTION_ORDER list.
             # Append the quad data to the list in the tuple at that index.
-            sorted_quads[QUAD_SECTION_ORDER.index(self.__calc_quad_section(quad, self.__vec_bounding_box_min, self.__vec_bounding_box_max))].append(quad)
+            sorted_quads[self.__calculate_quad_section(quad, self.__bounds_data)].append(quad)
 
         return sorted_quads
 
