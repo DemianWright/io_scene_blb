@@ -51,11 +51,13 @@ GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
 # Brick grid definition object names in priority order.
 BRICK_GRID_DEFINITIONS_PRIORITY = (GRID_X_PREFIX, GRID_DASH_PREFIX, GRID_U_PREFIX, GRID_D_PREFIX, GRID_B_PREFIX)
 
-BRICK_GRID_DEFINITIONS = { GRID_X_PREFIX: GRID_INSIDE,
-                           GRID_DASH_PREFIX: GRID_OUTSIDE,
-                           GRID_U_PREFIX: GRID_UP,
-                           GRID_D_PREFIX: GRID_DOWN,
-                           GRID_B_PREFIX: GRID_BOTH }
+BRICK_GRID_DEFINITIONS = {GRID_X_PREFIX: GRID_INSIDE,
+                          GRID_DASH_PREFIX: GRID_OUTSIDE,
+                          GRID_U_PREFIX: GRID_UP,
+                          GRID_D_PREFIX: GRID_DOWN,
+                          GRID_B_PREFIX: GRID_BOTH}
+
+QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
 
 ######## BLB WRITER ########
 
@@ -220,7 +222,7 @@ class BLBWriter(object):
 
         with open(self.__filepath, "w") as file:
             # Write brick size.
-            # Swap X and Y size. (Does not rotate.)
+            # Swap X and Y size.
             self.__write_sequence(file, self.__swizzle_xy(self.__definitions[BOUNDS_NAME_PREFIX]))
 
             # Write brick type.
@@ -279,19 +281,16 @@ class BLBWriter(object):
                 file.write("0 : 999\n")
 
             # Write quad data.
-            # Section names must be in lower case for some reason.
-            for section_name in ("top", "bottom", "north", "east", "south", "west", "omni"):
-                section_quads = tuple(map(lambda t: t[0], filter(lambda t: t[1] == section_name, self.__quads)))
-
+            for index, section_name in enumerate(QUAD_SECTION_ORDER):
                 # TODO: Terse mode where optional stuff is excluded.
 
                 # Write section name.
-                file.write("--{} QUADS--\n".format(section_name.upper()))  # Optional.
+                file.write("--{} QUADS--\n".format(section_name))  # Optional.
 
                 # Write section length.
-                file.write("{}\n".format(str(len(section_quads))))
+                file.write("{}\n".format(str(len(self.__quads[index]))))
 
-                for (positions, normals, uvs, colors, texture) in section_quads:
+                for (positions, normals, uvs, colors, texture) in self.__quads[index]:
                     # Write face texture name.
                     file.write("\nTEX:")  # Optional.
                     file.write(texture)
@@ -300,6 +299,7 @@ class BLBWriter(object):
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
                         # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
+                        # I.e. -X is facing you when the brick is planted and +X is the brick north instead of +Y.
                         self.__write_sequence(file, self.__rotate_90_cw(position))
 
                     # Write face UV coordinates.
@@ -344,19 +344,19 @@ class BLBProcessor(object):
         self.__logger = logger
         self.__properties = properties
 
-        self.__bounds_data = { "name": None,
-                                "brick_size": [],
-                                "dimensions": [],
-                                "world_coords_min": [],
-                                "world_coords_max": [] }
+        self.__bounds_data = {"name": None,
+                              "brick_size": [],
+                              "dimensions": [],
+                              "world_coords_min": [],
+                              "world_coords_max": []}
 
         self.__definition_data = {BOUNDS_NAME_PREFIX: [],
-                           COLLISION_PREFIX: [],
-                           GRID_X_PREFIX: [],
-                           GRID_DASH_PREFIX: [],
-                           GRID_U_PREFIX: [],
-                           GRID_D_PREFIX: [],
-                           GRID_B_PREFIX: []}
+                                  COLLISION_PREFIX: [],
+                                  GRID_X_PREFIX: [],
+                                  GRID_DASH_PREFIX: [],
+                                  GRID_U_PREFIX: [],
+                                  GRID_D_PREFIX: [],
+                                  GRID_B_PREFIX: []}
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
@@ -396,22 +396,6 @@ class BLBProcessor(object):
         for val in values:
             if val != int(val):
                 return True
-    @classmethod
-    def __calc_quad_section(cls, quad, bounds_min, bounds_max):
-        if all(map(lambda q: q[2] == bounds_max[2], quad[0])):
-            return "top"
-        if all(map(lambda q: q[2] == bounds_min[2], quad[0])):
-            return "bottom"
-        if all(map(lambda q: q[1] == bounds_max[1], quad[0])):
-            return "north"
-        if all(map(lambda q: q[1] == bounds_min[1], quad[0])):
-            return "south"
-        if all(map(lambda q: q[0] == bounds_max[0], quad[0])):
-            return "east"
-        if all(map(lambda q: q[0] == bounds_min[0], quad[0])):
-            return "west"
-
-        return "omni"
 
     @classmethod
     def __get_world_min(cls, obj):
@@ -450,7 +434,8 @@ class BLBProcessor(object):
         return obj.matrix_world * obj.data.vertices[obj.data.loops[index].vertex_index].co
 
     @classmethod
-    def __index_to_normal(cls, obj, index):
+    def __vertex_index_to_normal(cls, obj, index):
+        """Calculates the normalized vertex normal for the specified vertex in the given object."""
         return (obj.matrix_world.to_3x3() * obj.data.vertices[obj.data.loops[index].vertex_index].normal).normalized()
 
     @classmethod
@@ -461,7 +446,7 @@ class BLBProcessor(object):
         Returns True only if all values are within the bounding dimensions.
         """
         # Divide all dimension values by 2.
-        halved_dimensions = [value / 2 for value in bounding_dimensions]
+        halved_dimensions = [value / Decimal("2.0") for value in bounding_dimensions]
 
         # Check if any values in the given sequence are beyond the given bounding_dimensions.
         # bounding_dimensions / 2 = max value
@@ -514,9 +499,9 @@ class BLBProcessor(object):
             bounds_min = self.__bounds_data["world_coords_min"]
             dimensions = self.__bounds_data["dimensions"]
 
-        local_center = self.__round_values((bounds_min[INDEX_X] + (dimensions[INDEX_X] / 2),
-                                            bounds_min[INDEX_Y] + (dimensions[INDEX_Y] / 2),
-                                            bounds_min[INDEX_Z] + (dimensions[INDEX_Z] / 2)))
+        local_center = self.__round_values((bounds_min[INDEX_X] + (dimensions[INDEX_X] / Decimal("2.0")),
+                                            bounds_min[INDEX_Y] + (dimensions[INDEX_Y] / Decimal("2.0")),
+                                            bounds_min[INDEX_Z] + (dimensions[INDEX_Z] / Decimal("2.0"))))
 
         # If given position is in Decimals do nothing.
         if isinstance(world_position[0], Decimal):
@@ -573,6 +558,58 @@ class BLBProcessor(object):
 
         return result
 
+    def __calculate_quad_section(self, quad, bounds_data):
+        """
+        Calculates the section for the given quad within the given bounds.
+        The quad section is determined by whether the quad is in the same plane as one the planes defined by the bounds.
+        Returns the index of the section name in QUAD_SECTION_ORDER sequence.
+        """
+
+        # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
+        positions = quad[0]
+
+        # Divide all dimension values by 2 to get the local bounding values.
+        # The dimensions are in Blender units so Z height needs to be converted to plates.
+        local_bounds = self.__sequence_z_to_plates([value / Decimal("2.0") for value in bounds_data["dimensions"]])
+
+        # Each position list has exactly 3 values.
+        # 0 = X
+        # 1 = Y
+        # 2 = Z
+        for axis in range(3):
+            # If the vertex coordinate is the same on an axis for all 4 vertices, this face is parallel to the plane perpendicular to that axis.
+            if positions[0][axis] == positions[1][axis] == positions[2][axis] == positions[3][axis]:
+                # Is the common value equal to one of the bounding values?
+                # I.e. the quad is on the same plane as one of the edges of the brick.
+                # Stop searching as soon as the first plane is found.
+                # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
+                if positions[0][axis] == local_bounds[axis]:
+                    # Positive values.
+
+                    # +X = East
+                    if axis == 0:
+                        return 3
+                    # +Y = North
+                    elif axis == 1:
+                        return 2
+                    # +Z = Top
+                    else:
+                        return 0
+                elif positions[0][axis] == -local_bounds[axis]:
+                    # Negative values.
+                    # -X = WEST
+                    if axis == 0:
+                        return 5
+                    # -Y = South
+                    elif axis == 1:
+                        return 4
+                    # -Z = Bottom
+                    else:
+                        return 1
+
+        # The quad is either not planar or is not on the same plane with one of the bounding planes = Omni
+        return 6
+
     def __grid_obj_to_index_ranges(self, obj):
         """
         Note: This function requires that it is called after the bounds object has been defined.
@@ -582,7 +619,7 @@ class BLBProcessor(object):
         Can raise OutOfBoundsException and ZeroSizeException.
         """
 
-        halved_dimensions = [value / 2 for value in self.__bounds_data["dimensions"]]
+        halved_dimensions = [value / Decimal("2.0") for value in self.__bounds_data["dimensions"]]
 
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
@@ -695,9 +732,9 @@ class BLBProcessor(object):
         # Are the dimensions of the bounds object not integers?
         if self.__are_not_ints(bounds_size):
             self.__logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[INDEX_X],
-                                                                                                                            bounds_size[INDEX_Y],
-                                                                                                                            bounds_size[INDEX_Z],
-                                                                                                                            self.__HUMAN_ERROR))
+                                                                                                                                   bounds_size[INDEX_Y],
+                                                                                                                                   bounds_size[INDEX_Z],
+                                                                                                                                   self.__HUMAN_ERROR))
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount and force to int.
                 bounds_size[index] = round(self.__HUMAN_ERROR * round(value / self.__HUMAN_ERROR))
@@ -706,7 +743,7 @@ class BLBProcessor(object):
         self.__definition_data[BOUNDS_NAME_PREFIX] = self.__force_to_int(bounds_size)
         self.__bounds_data["brick_size"] = self.__definition_data[BOUNDS_NAME_PREFIX]
 
-    def __process_bounds_range(self):
+    def __calculate_bounds(self):
         """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
 
         self.__logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size may be undesirable.")
@@ -729,8 +766,8 @@ class BLBProcessor(object):
         # Are the dimensions of the bounds object not integers?
         if self.__are_not_ints(bounds_size):
             self.__logger.warning("Warning: Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[INDEX_X],
-                                                                                                             bounds_size[INDEX_Y],
-                                                                                                             bounds_size[INDEX_Z]))
+                                                                                                                    bounds_size[INDEX_Y],
+                                                                                                                    bounds_size[INDEX_Z]))
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
             for index, value in enumerate(bounds_size):
@@ -907,8 +944,7 @@ class BLBProcessor(object):
 
         # No manually created bounds object was found, calculate brick size according to the combined minimum and maximum vertex positions of all processed meshes.
         if len(self.__definition_data[BOUNDS_NAME_PREFIX]) == 0:
-            self.__process_bounds_range()
-
+            self.__calculate_bounds()
             self.__logger.log("Calculated brick size: {} {} {} (XYZ) plates".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
@@ -966,21 +1002,20 @@ class BLBProcessor(object):
                 # FIXME: Object rotation affects normals.
 
                 # Normals.
-                # They are kept as floats for maximum accuracy.
-                # Use smooth shading?
                 if poly.use_smooth:
-                    # For every element in the loop_indices tuple.
-                    # Run it through the index_to_normal(index) function. (This rounds it and converts the height to plates.)
-                    # And assign the result to the normals tuple.
-                    normals = tuple(map(self.__index_to_normal, obj, loop_indices))
+                    # Smooth shading.
+                    # For every vertex index in the loop_indices, calculate the vertex normal and add it to the list.
+                    normals = [self.__vertex_index_to_normal(obj, index) for index in reversed(loop_indices)]
                 else:
                     # No smooth shading, every vertex in this loop has the same normal.
                     normals = (poly.normal,) * 4
 
                 # UVs
                 if uv_data:
-                    uvs = tuple(map(lambda index: uv_data[index].uv, loop_indices))
+                    # Get the UV coordinate for every vertex in the face loop.
+                    uvs = [uv_data[index].uv for index in reversed(loop_indices)]
                 else:
+                    # No UVs present, use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
                     uvs = (Vector((0.5, 0.5)),) * 4
 
@@ -996,18 +1031,25 @@ class BLBProcessor(object):
 
                 quads.append((positions, normals, uvs, colors, texture))
 
-        # Plate adjustment.
-        self.__vec_bounding_box_min = self.__sequence_z_to_plates(self.__vec_bounding_box_min)
-        self.__vec_bounding_box_max = self.__sequence_z_to_plates(self.__vec_bounding_box_max)
-
         if count_tris > 0:
             self.__logger.warning("Warning: {} triangles degenerated to quads.".format(count_tris))
 
         if count_ngon > 0:
             self.__logger.warning("Warning: {} n-gons skipped.".format(count_ngon))
 
+        # Create an empty list for each quad section.
+        # This is my workaround to making a sort of dictionary where the keys are in insertion order.
+        # The quads must be written in a specific order.
+        sorted_quads = tuple([[] for i in range(len(QUAD_SECTION_ORDER))])
+
         # Sort quads into sections.
-        return tuple(map(lambda q: (q, self.__calc_quad_section(q, self.__vec_bounding_box_min, self.__vec_bounding_box_max)), quads))
+        for quad in quads:
+            # Calculate the section name the quad belongs to.
+            # Get the index of that section name in the QUAD_SECTION_ORDER list.
+            # Append the quad data to the list in the tuple at that index.
+            sorted_quads[self.__calculate_quad_section(quad, self.__bounds_data)].append(quad)
+
+        return sorted_quads
 
     def process(self):
         """
