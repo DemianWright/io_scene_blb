@@ -451,7 +451,8 @@ class BLBProcessor(object):
         return obj.matrix_world * obj.data.vertices[obj.data.loops[index].vertex_index].co
 
     @classmethod
-    def __index_to_normal(cls, obj, index):
+    def __vertex_index_to_normal(cls, obj, index):
+        """Calculates the normalized vertex normal for the specified vertex in the given object."""
         return (obj.matrix_world.to_3x3() * obj.data.vertices[obj.data.loops[index].vertex_index].normal).normalized()
 
     @classmethod
@@ -967,20 +968,17 @@ class BLBProcessor(object):
                 # FIXME: Object rotation affects normals.
 
                 # Normals.
-                # They are kept as floats for maximum accuracy.
-                # Use smooth shading?
                 if poly.use_smooth:
-                    # For every element in the loop_indices tuple.
-                    # Run it through the index_to_normal(index) function. (This rounds it and converts the height to plates.)
-                    # And assign the result to the normals tuple.
-                    normals = tuple(map(self.__index_to_normal, obj, loop_indices))
+                    # Smooth shading.
+                    # For every vertex index in the loop_indices, calculate the vertex normal and add it to the list.
+                    normals = [self.__vertex_index_to_normal(obj, index) for index in reversed(loop_indices)]
                 else:
                     # No smooth shading, every vertex in this loop has the same normal.
                     normals = (poly.normal,) * 4
 
                 # UVs
                 if uv_data:
-                    uvs = tuple(map(lambda index: uv_data[index].uv, loop_indices))
+                    uvs = tuple(map(lambda index: uv_data[index].uv, reversed(loop_indices)))
                 else:
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
                     uvs = (Vector((0.5, 0.5)),) * 4
