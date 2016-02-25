@@ -75,7 +75,7 @@ class Logger(object):
                     file.write("\n")
 
 import bpy
-from bpy.props import StringProperty, BoolProperty
+from bpy.props import BoolProperty, EnumProperty, StringProperty
 from bpy_extras.io_utils import ExportHelper
 
 ### EXPORT ###
@@ -90,103 +90,112 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     filter_glob = StringProperty(default="*.blb", options={'HIDDEN'})
 
     # TODO: Scale.
-    # TODO: Define North.
 
     # TODO: Change this to enum: Selection, Layer, Scene
     use_selection = BoolProperty(
-        name="Selection Only",
-        description="Export selected objects only",
-        default=True,
+        name = "Selection Only",
+        description = "Export selected objects only",
+        default = True,
+        )
+
+    axis_blb_forward = EnumProperty(
+        items = [("POSITIVE_X", "+X", "The positive X axis"),
+                 ("POSITIVE_Y", "+Y", "The positive Y axis"),
+                 ("NEGATIVE_X", "-X", "The negative X axis"),
+                 ("NEGATIVE_Y", "-Y", "The negative Y axis")],
+        name = "Brick Forward Axis",
+        description = "Set the Blender axis that will point forwards in the game",
+        default = "POSITIVE_Y"
         )
 
     calculate_coverage = BoolProperty(
-        name="Coverage",
-        description="Calculate brick coverage",
-        default=False,
+        name = "Coverage",
+        description = "Calculate brick coverage",
+        default = False,
         )
 
     coverage_top_calculate = BoolProperty(
-        name="",
-        description="Hide the top faces of this brick when the entire top side of this brick is covered",
-        default=False,
+        name = "Hide Own Top Faces",
+        description = "Hide the top faces of this brick when the entire top side of this brick is covered",
+        default = False,
         )
 
     coverage_top_hide = BoolProperty(
-        name="",
-        description="Hide the faces of the adjacent bricks covering the top side of this brick",
-        default=False,
+        name = "Hide Adjacent Top Faces",
+        description = "Hide the faces of the adjacent bricks covering the top side of this brick",
+        default = False,
         )
 
     coverage_bottom_calculate = BoolProperty(
-        name="",
-        description="Hide the bottom faces of this brick when the entire bottom side of this brick is covered",
-        default=False,
+        name = "Hide Own Bottom Faces",
+        description = "Hide the bottom faces of this brick when the entire bottom side of this brick is covered",
+        default = False,
         )
 
     coverage_bottom_hide = BoolProperty(
-        name="",
-        description="Hide the faces of the adjacent bricks covering the bottom side of this brick",
-        default=False,
+        name = "Hide Adjacent Bottom Faces",
+        description = "Hide the faces of the adjacent bricks covering the bottom side of this brick",
+        default = False,
         )
 
     coverage_north_calculate = BoolProperty(
-        name="",
-        description="Hide the north faces of this brick when the entire north side of this brick is covered",
-        default=False,
+        name = "Hide Own North Faces",
+        description = "Hide the north faces of this brick when the entire north side of this brick is covered",
+        default = False,
         )
 
     coverage_north_hide = BoolProperty(
-        name="",
-        description="Hide the faces of the adjacent bricks covering the north side of this brick",
-        default=False,
+        name = "Hide Adjacent North Faces",
+        description = "Hide the faces of the adjacent bricks covering the north side of this brick",
+        default = False,
         )
 
     coverage_east_calculate = BoolProperty(
-        name="",
-        description="Hide the east faces of this brick when the entire east side of this brick is covered",
-        default=False,
+        name = "Hide Own East Faces",
+        description = "Hide the east faces of this brick when the entire east side of this brick is covered",
+        default = False,
         )
 
     coverage_east_hide = BoolProperty(
-        name="",
-        description="Hide the faces of the adjacent bricks covering the east side of this brick",
-        default=False,
+        name = "Hide Adjacent East Faces",
+        description = "Hide the faces of the adjacent bricks covering the east side of this brick",
+        default = False,
         )
 
     coverage_south_calculate = BoolProperty(
-        name="",
-        description="Hide the south faces of this brick when the entire south side of this brick is covered",
-        default=False,
+        name = "Hide Own South Faces",
+        description = "Hide the south faces of this brick when the entire south side of this brick is covered",
+        default = False,
         )
 
     coverage_south_hide = BoolProperty(
-        name="",
-        description="Hide the faces of the adjacent bricks covering the south side of this brick",
-        default=False,
+        name = "Hide Adjacent South Faces",
+        description = "Hide the faces of the adjacent bricks covering the south side of this brick",
+        default = False,
         )
 
     coverage_west_calculate = BoolProperty(
-        name="",
-        description="Hide the west faces of this brick when the entire west side of this brick is covered",
-        default=False,
+        name = "Hide Own West Faces",
+        description = "Hide the west faces of this brick when the entire west side of this brick is covered",
+        default = False,
         )
 
     coverage_west_hide = BoolProperty(
-        name="",
-        description="Hide the faces of the adjacent bricks covering the west side of this brick",
-        default=False,
+        name = "Hide Adjacent West Faces",
+        description = "Hide the faces of the adjacent bricks covering the west side of this brick",
+        default = False,
         )
 
     write_log = BoolProperty(
-        name="Write Log",
-        description="Write a log file after exporting",
-        default=True,
+        name = "Write Log",
+        description = "Write a log file after exporting",
+        default = True,
         )
 
     write_log_warnings = BoolProperty(
-        name="Only on Warnings",
-        description="Only write a log file if warnings were generated",
-        default=True,
+        name = "Only on Warnings",
+        description = "Only write a log file if warnings were generated",
+        default = True,
         )
 
     def execute(self, context):
@@ -235,12 +244,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
                 split = split.split(percentage=0.3)
                 col = split.column()
-                col.prop(self, "coverage_{}_calculate".format(prop_name))
+                col.prop(self, "coverage_{}_calculate".format(prop_name), "")
 
                 split = split.split()
                 col = split.column()
                 col.active = prop_toggler
-                col.prop(self, "coverage_{}_hide".format(prop_name))
+                col.prop(self, "coverage_{}_hide".format(prop_name), "")
 
             row = box.row()
             split = row.split(percentage=0.3)
@@ -279,6 +288,16 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             split.active = self.write_log
             col = split.column()
             col.prop(self, "write_log_warnings")
+
+        # Property: BLB Forward Axis
+        row = layout.row()
+        split = row.split(percentage=0.4)
+        row = split.row()
+        row.label("Forward Axis:")
+
+        split = split.split()
+        row = split.row()
+        row.prop(self, "axis_blb_forward", expand = True)
 
 def menu_export(self, context):
     """Adds the export option into the export menu."""
