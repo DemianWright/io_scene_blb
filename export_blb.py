@@ -275,10 +275,8 @@ class BLBWriter(object):
 
             # Write coverage.
             file.write("COVERAGE:\n")
-
-            # TBNESW
-            for i in range(6):
-                file.write("0 : 999\n")
+            for (hide_adjacent, plate_count) in self.__definitions["coverage"]:
+                file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
 
             # Write quad data.
             for index, section_name in enumerate(QUAD_SECTION_ORDER):
@@ -352,6 +350,7 @@ class BLBProcessor(object):
 
         self.__definition_data = {BOUNDS_NAME_PREFIX: [],
                                   COLLISION_PREFIX: [],
+                                  "coverage": [],
                                   GRID_X_PREFIX: [],
                                   GRID_DASH_PREFIX: [],
                                   GRID_U_PREFIX: [],
@@ -1051,6 +1050,69 @@ class BLBProcessor(object):
 
         return sorted_quads
 
+    def __calculate_coverage(self):
+        """Calculates the coverage based on the properties and the brick bounds and saves the data to the definition data."""
+
+        coverage = []
+
+        # Calculate coverage?
+        if self.__properties.calculate_coverage:
+            # Get the brick bounds in plates.
+            dimensions = self.__definition_data[BOUNDS_NAME_PREFIX]
+
+            # Top: +Z
+            if self.__properties.coverage_top_calculate:
+                # Calculate the area of the top face.
+                area = dimensions[INDEX_X] * dimensions[INDEX_Y]
+            else:
+                area = 9999
+
+            # Hide adjacent face: True/False
+            coverage.append((self.__properties.coverage_top_hide, area))
+
+            # Bottom: -Z
+            if self.__properties.coverage_bottom_calculate:
+                area = dimensions[INDEX_X] * dimensions[INDEX_Y]
+            else:
+                area = 9999
+            coverage.append((self.__properties.coverage_bottom_hide, area))
+
+            # North: +Y
+            if self.__properties.coverage_north_calculate:
+                area = dimensions[INDEX_X] * dimensions[INDEX_Z]
+            else:
+                area = 9999
+            coverage.append((self.__properties.coverage_north_hide, area))
+
+            # East: +X
+            if self.__properties.coverage_east_calculate:
+                area = dimensions[INDEX_Y] * dimensions[INDEX_Z]
+            else:
+                area = 9999
+            coverage.append((self.__properties.coverage_east_hide, area))
+
+            # South: -Y
+            if self.__properties.coverage_south_calculate:
+                area = dimensions[INDEX_X] * dimensions[INDEX_Z]
+            else:
+                area = 9999
+            coverage.append((self.__properties.coverage_south_hide, area))
+
+            # West: -X
+            if self.__properties.coverage_west_calculate:
+                area = dimensions[INDEX_Y] * dimensions[INDEX_Z]
+            else:
+                area = 9999
+            coverage.append((self.__properties.coverage_west_hide, area))
+        else:
+            # Use the default coverage.
+            # Do not hide adjacent face.
+            # Hide this face if it is covered by 9999 plates.
+            coverage = [(0, 9999)] * 6
+
+        # Save the coverage data to the definitions.
+        self.__definition_data["coverage"] = coverage
+
     def process(self):
         """
         Processes Blender data.
@@ -1064,6 +1126,9 @@ class BLBProcessor(object):
 
         # Process the definition objects first.
         meshes = self.__process_definition_objects(object_sequence)
+
+        # Calculate the coverage data.
+        self.__calculate_coverage()
 
         return (self.__process_mesh_data(meshes), self.__definition_data)
 
