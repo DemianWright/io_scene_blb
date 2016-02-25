@@ -51,13 +51,13 @@ GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
 # Brick grid definition object names in priority order.
 BRICK_GRID_DEFINITIONS_PRIORITY = (GRID_X_PREFIX, GRID_DASH_PREFIX, GRID_U_PREFIX, GRID_D_PREFIX, GRID_B_PREFIX)
 
-BRICK_GRID_DEFINITIONS = { GRID_X_PREFIX: GRID_INSIDE,
-                           GRID_DASH_PREFIX: GRID_OUTSIDE,
-                           GRID_U_PREFIX: GRID_UP,
-                           GRID_D_PREFIX: GRID_DOWN,
-                           GRID_B_PREFIX: GRID_BOTH }
+BRICK_GRID_DEFINITIONS = {GRID_X_PREFIX: GRID_INSIDE,
+                          GRID_DASH_PREFIX: GRID_OUTSIDE,
+                          GRID_U_PREFIX: GRID_UP,
+                          GRID_D_PREFIX: GRID_DOWN,
+                          GRID_B_PREFIX: GRID_BOTH}
 
-QUAD_SECTION_ORDER = ["TOP","BOTTOM","NORTH","EAST","SOUTH","WEST","OMNI"]
+QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
 
 ######## BLB WRITER ########
 
@@ -344,19 +344,19 @@ class BLBProcessor(object):
         self.__logger = logger
         self.__properties = properties
 
-        self.__bounds_data = { "name": None,
-                                "brick_size": [],
-                                "dimensions": [],
-                                "world_coords_min": [],
-                                "world_coords_max": [] }
+        self.__bounds_data = {"name": None,
+                              "brick_size": [],
+                              "dimensions": [],
+                              "world_coords_min": [],
+                              "world_coords_max": []}
 
         self.__definition_data = {BOUNDS_NAME_PREFIX: [],
-                           COLLISION_PREFIX: [],
-                           GRID_X_PREFIX: [],
-                           GRID_DASH_PREFIX: [],
-                           GRID_U_PREFIX: [],
-                           GRID_D_PREFIX: [],
-                           GRID_B_PREFIX: []}
+                                  COLLISION_PREFIX: [],
+                                  GRID_X_PREFIX: [],
+                                  GRID_DASH_PREFIX: [],
+                                  GRID_U_PREFIX: [],
+                                  GRID_D_PREFIX: [],
+                                  GRID_B_PREFIX: []}
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
@@ -732,9 +732,9 @@ class BLBProcessor(object):
         # Are the dimensions of the bounds object not integers?
         if self.__are_not_ints(bounds_size):
             self.__logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[INDEX_X],
-                                                                                                                            bounds_size[INDEX_Y],
-                                                                                                                            bounds_size[INDEX_Z],
-                                                                                                                            self.__HUMAN_ERROR))
+                                                                                                                                   bounds_size[INDEX_Y],
+                                                                                                                                   bounds_size[INDEX_Z],
+                                                                                                                                   self.__HUMAN_ERROR))
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount and force to int.
                 bounds_size[index] = round(self.__HUMAN_ERROR * round(value / self.__HUMAN_ERROR))
@@ -766,8 +766,8 @@ class BLBProcessor(object):
         # Are the dimensions of the bounds object not integers?
         if self.__are_not_ints(bounds_size):
             self.__logger.warning("Warning: Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[INDEX_X],
-                                                                                                             bounds_size[INDEX_Y],
-                                                                                                             bounds_size[INDEX_Z]))
+                                                                                                                    bounds_size[INDEX_Y],
+                                                                                                                    bounds_size[INDEX_Z]))
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
             for index, value in enumerate(bounds_size):
