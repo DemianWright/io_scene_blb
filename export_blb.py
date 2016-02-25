@@ -1060,6 +1060,8 @@ class BLBProcessor(object):
         # Determine which objects to export.
         object_sequence = self.__get_object_sequence()
 
+        # FIXME: Crash when there are no objects in the scene.
+
         # Process the definition objects first.
         meshes = self.__process_definition_objects(object_sequence)
 
