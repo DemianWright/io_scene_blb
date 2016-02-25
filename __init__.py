@@ -231,36 +231,30 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
                 split = row.split(percentage=0.3)
                 col = split.column()
-                col.alignment = 'LEFT'
                 col.label(label_text)
 
                 split = split.split(percentage=0.3)
                 col = split.column()
-                col.alignment = 'CENTER'
                 col.prop(self, "coverage_{}_calculate".format(prop_name))
 
                 split = split.split()
                 col = split.column()
-                col.alignment = 'CENTER'
                 col.active = prop_toggler
                 col.prop(self, "coverage_{}_hide".format(prop_name))
 
             row = box.row()
             split = row.split(percentage=0.3)
             col = split.column()
-            col.alignment = 'LEFT'
             col.label("")
             col.label("Side")
 
             split = split.split(percentage=0.3)
             col = split.column()
-            col.alignment = 'LEFT'
             col.label("Hide")
             col.label("Self")
 
             split = split.split()
             col = split.column()
-            col.alignment = 'LEFT'
             col.label("Hide")
             col.label("Adjacent")
 
