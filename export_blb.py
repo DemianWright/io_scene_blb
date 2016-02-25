@@ -978,8 +978,10 @@ class BLBProcessor(object):
 
                 # UVs
                 if uv_data:
-                    uvs = tuple(map(lambda index: uv_data[index].uv, reversed(loop_indices)))
+                    # Get the UV coordinate for every vertex in the face loop.
+                    uvs = [uv_data[index].uv for index in reversed(loop_indices)]
                 else:
+                    # No UVs present, use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
                     uvs = (Vector((0.5, 0.5)),) * 4
 
