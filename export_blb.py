@@ -64,38 +64,17 @@ QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
 class BLBWriter(object):
     """Handles writing sorted quads and definitions to a BLB file."""
 
-    def __init__(self, filepath, sorted_quads, definition_data):
+    def __init__(self, filepath, forward_axis, sorted_quads, definition_data):
         """Initializes the private class variables."""
         self.__filepath = filepath
         self.__quads = sorted_quads
         self.__definitions = definition_data
+        self.__forward_axis = forward_axis
 
         # For clarity.
         self.__size_x = self.__definitions[BOUNDS_NAME_PREFIX][INDEX_X]
         self.__size_y = self.__definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
         self.__size_z = self.__definitions[BOUNDS_NAME_PREFIX][INDEX_Z]
-
-    @classmethod
-    def __rotate_90_cw(cls, xyz):
-        """Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated 90 degrees clockwise."""
-
-        rotated = []
-        rotated.append(xyz[INDEX_Y])
-        rotated.append(-xyz[INDEX_X])
-        rotated.append(xyz[INDEX_Z])
-
-        return rotated
-
-    @classmethod
-    def __swizzle_xy(cls, xyz):
-        """Returns a new list of YXZ values copied from the given XYZ sequence."""
-
-        swizzled = []
-        swizzled.append(xyz[INDEX_Y])
-        swizzled.append(xyz[INDEX_X])
-        swizzled.append(xyz[INDEX_Z])
-
-        return swizzled
 
     @classmethod
     def __write_sequence(cls, file, sequence, new_line=True):
@@ -117,26 +96,6 @@ class BLBWriter(object):
         if new_line:
             # Write a new line after all values.
             file.write("\n")
-
-    @classmethod
-    def __mirror(cls, xyz, *axes):
-        """
-        Mirrors the given XYZ sequence in the given axes, in the order they are given.
-        Specify the axes to mirror in with "x", "y", and "z" strings.
-        Returns a new list of XYZ values.
-        """
-
-        mirrored = xyz
-
-        for axis in axes:
-            if axis == "x":
-                mirrored[INDEX_X] = -mirrored[INDEX_X]
-            elif axis == "y":
-                mirrored[INDEX_Y] = -mirrored[INDEX_Y]
-            elif axis == "z":
-                mirrored[INDEX_Z] = -mirrored[INDEX_Z]
-
-        return mirrored
 
     @classmethod
     def __modify_brick_grid(cls, brick_grid, volume, symbol):
@@ -173,8 +132,79 @@ class BLBWriter(object):
                     # And for every X index, assign the correct symbol.
                     brick_grid[x_index][z_index][y_index] = symbol
 
+    def __mirror(self, xyz):
+        """
+        Mirrors the given XYZ sequence according to the specified forward axis.
+        Returns a new list of XYZ values.
+        """
+
+        mirrored = xyz
+
+        if self.__forward_axis == "POSITIVE_X" or self.__forward_axis == "NEGATIVE_X":
+            mirrored[INDEX_Y] = -mirrored[INDEX_Y]
+        else:
+            mirrored[INDEX_X] = -mirrored[INDEX_X]
+
+        return mirrored
+
+    def __rotate(self, xyz, swizzle = False):
+        """
+        Either rotates or swizzles the given XYZ coordinate sequence.
+        Swizzling is used to "rotate" values that must always be positive (like dimensions), while rotation is perfomed with actual vertex coordinates.
+        If swizzle is true: Returns a new list of values copied from the given XYZ sequence where given coordinates are reordered according to the selected forward axis.
+        If swizzle is false: Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated according to the selected forward axis.
+        """
+
+        rotated = []
+
+        print("ROTSW",self.__forward_axis)
+
+        if self.__forward_axis == "POSITIVE_X":
+            # Rotate: 0 deg clockwise
+            # Swizzle: XYZ = XYZ
+            return xyz
+
+        elif self.__forward_axis == "POSITIVE_Y":
+            # Rotate: 90 deg clockwise = X Y Z -> Y -X Z
+            # Swizzle: XYZ = YXZ
+
+            rotated.append(xyz[INDEX_Y])
+
+            if not swizzle:
+                rotated.append(-xyz[INDEX_X])
+            else:
+                rotated.append(xyz[INDEX_X])
+
+        elif self.__forward_axis == "NEGATIVE_X":
+            # Rotate: 180 deg clockwise = X Y Z -> -X -Y Z
+            # Swizzle: XYZ = XYZ
+
+            if not swizzle:
+                rotated.append(-xyz[INDEX_X])
+                rotated.append(-xyz[INDEX_Y])
+            else:
+                rotated = xyz
+
+        elif self.__forward_axis == "NEGATIVE_Y":
+            # Rotate: 270 deg clockwise = X Y Z -> -Y X Z
+            # Swizzle: XYZ = YXZ
+
+            if not swizzle:
+                rotated.append(-xyz[INDEX_Y])
+            else:
+                rotated.append(xyz[INDEX_Y])
+
+            rotated.append(xyz[INDEX_X])
+
+        # The Z axis is not yet taken into account.
+        rotated.append(xyz[INDEX_Z])
+
+        return rotated
+
     def __write_brick_grid(self, file, grid=None):
         """Writes the given brick grid to the file or if no parameter is given, writes the default brick grid according to the size of the brick."""
+
+        # TODO: Brick grid does not respect forward axis remapping.
 
         if grid is not None:
             for x_slice in grid:
@@ -217,8 +247,8 @@ class BLBWriter(object):
 
         with open(self.__filepath, "w") as file:
             # Write brick size.
-            # Swap X and Y size.
-            self.__write_sequence(file, self.__swizzle_xy(self.__definitions[BOUNDS_NAME_PREFIX]))
+            # Swizzle the values according to the forward axis.
+            self.__write_sequence(file, self.__rotate(self.__definitions[BOUNDS_NAME_PREFIX], True))
 
             # Write brick type.
             file.write("SPECIAL\n\n")
@@ -252,8 +282,8 @@ class BLBWriter(object):
                 file.write("0 0 0\n")
 
                 # The size of the cuboid is the size of the bounds.
-                # Swap X and Y sizes.
-                self.__write_sequence(file, self.__swizzle_xy(self.__definitions[BOUNDS_NAME_PREFIX]))
+                # Swizzle the values according to the forward axis.
+                self.__write_sequence(file, self.__rotate(self.__definitions[BOUNDS_NAME_PREFIX], True))
             else:
                 # Write defined collisions.
 
@@ -263,10 +293,10 @@ class BLBWriter(object):
 
                 for (center, dimensions) in self.__definitions[COLLISION_PREFIX]:
                     file.write("\n")
-                    # Mirror center on the X axis.
-                    # Swap X and Y coordinates for both.
-                    self.__write_sequence(file, self.__swizzle_xy(self.__mirror(center, "x")))
-                    self.__write_sequence(file, self.__swizzle_xy(dimensions))
+                    # Mirror center according to the forward axis. No idea why but it works.
+                    # Swizzle the values according to the forward axis.
+                    self.__write_sequence(file, self.__rotate(self.__mirror(center), True))
+                    self.__write_sequence(file, self.__rotate(dimensions, True))
 
             # Write coverage.
             file.write("COVERAGE:\n")
@@ -291,9 +321,7 @@ class BLBWriter(object):
                     # Write vertex positions.
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
-                        # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
-                        # I.e. -X is facing you when the brick is planted and +X is the brick north instead of +Y.
-                        self.__write_sequence(file, self.__rotate_90_cw(position))
+                        self.__write_sequence(file, self.__rotate(position))
 
                     # Write face UV coordinates.
                     file.write("UV COORDS:\n")  # Optional.
@@ -304,7 +332,7 @@ class BLBWriter(object):
                     file.write("NORMALS:\n")  # Optional.
                     for normal in normals:
                         # Normals also need to rotated.
-                        self.__write_sequence(file, self.__rotate_90_cw(normal))
+                        self.__write_sequence(file, self.__rotate(normal))
 
                     # Write vertex colors if any.
                     if colors is not None:
@@ -1140,5 +1168,5 @@ def export(context, properties, logger, filepath=""):
     blb_data = processor.process()
 
     # Write the data to a file.
-    writer = BLBWriter(filepath, blb_data[0], blb_data[1])
+    writer = BLBWriter(filepath, properties.axis_blb_forward, blb_data[0], blb_data[1])
     writer.write_file()
