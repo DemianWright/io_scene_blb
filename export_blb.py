@@ -35,29 +35,60 @@ setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
 # Definition object name constants.
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"
-GRID_X_PREFIX = "gridx"
-GRID_DASH_PREFIX = "grid-"
-GRID_U_PREFIX = "gridu"
-GRID_D_PREFIX = "gridd"
-GRID_B_PREFIX = "gridb"
-
-# Brick grid constants.
-GRID_INSIDE = 'x'  # Disallow building inside brick.
-GRID_OUTSIDE = '-'  # Allow building in empty space.
-GRID_UP = 'u'  # Allow placing bricks above this plate.
-GRID_DOWN = 'd'  # Allow placing bricks below this plate.
-GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
-
-# Brick grid definition object names in priority order.
-BRICK_GRID_DEFINITIONS_PRIORITY = (GRID_X_PREFIX, GRID_DASH_PREFIX, GRID_U_PREFIX, GRID_D_PREFIX, GRID_B_PREFIX)
-
-BRICK_GRID_DEFINITIONS = {GRID_X_PREFIX: GRID_INSIDE,
-                          GRID_DASH_PREFIX: GRID_OUTSIDE,
-                          GRID_U_PREFIX: GRID_UP,
-                          GRID_D_PREFIX: GRID_DOWN,
-                          GRID_B_PREFIX: GRID_BOTH}
 
 QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
+
+def rotate(xyz, forward_axis, swizzle = False):
+    """
+    Either rotates or swizzles the given XYZ coordinate sequence.
+    Swizzling is used to "rotate" values that must always be positive (like dimensions), while rotation is perfomed with actual vertex coordinates.
+    If swizzle is true: Returns a new list of values copied from the given XYZ sequence where given coordinates are reordered according to the selected forward axis.
+    If swizzle is false: Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated according to the selected forward axis.
+    """
+
+    rotated = []
+
+    if forward_axis == "POSITIVE_X":
+        # Rotate: 0 deg clockwise
+        # Swizzle: XYZ = XYZ
+        return xyz
+
+    elif forward_axis == "POSITIVE_Y":
+        # Rotate: 90 deg clockwise = X Y Z -> Y -X Z
+        # Swizzle: XYZ = YXZ
+
+        rotated.append(xyz[INDEX_Y])
+
+        if not swizzle:
+            rotated.append(-xyz[INDEX_X])
+        else:
+            rotated.append(xyz[INDEX_X])
+
+    elif forward_axis == "NEGATIVE_X":
+        # Rotate: 180 deg clockwise = X Y Z -> -X -Y Z
+        # Swizzle: XYZ = XYZ
+
+        if not swizzle:
+            rotated.append(-xyz[INDEX_X])
+            rotated.append(-xyz[INDEX_Y])
+        else:
+            rotated = xyz
+
+    elif forward_axis == "NEGATIVE_Y":
+        # Rotate: 270 deg clockwise = X Y Z -> -Y X Z
+        # Swizzle: XYZ = YXZ
+
+        if not swizzle:
+            rotated.append(-xyz[INDEX_Y])
+        else:
+            rotated.append(xyz[INDEX_Y])
+
+        rotated.append(xyz[INDEX_X])
+
+    # The Z axis is not yet taken into account.
+    rotated.append(xyz[INDEX_Z])
+
+    return rotated
 
 ######## BLB WRITER ########
 
@@ -97,41 +128,6 @@ class BLBWriter(object):
             # Write a new line after all values.
             file.write("\n")
 
-    @classmethod
-    def __modify_brick_grid(cls, brick_grid, volume, symbol):
-        """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
-
-        # Ranges are in Blender coordinates.
-        x_range = volume[INDEX_X]
-        y_range = volume[INDEX_Y]
-        z_range = volume[INDEX_Z]
-
-        # Example data for a cuboid brick that is:
-        # - 2 plates wide (Blender X axis)
-        # - 3 plates deep (Blender Y axis)
-        # - 4 plates tall (Blender Z axis)
-        #
-        # uuu
-        # xxx
-        # xxx
-        # ddd
-        #
-        # uuu
-        # xxx
-        # xxx
-        # ddd
-
-        # x_index is the index of the two dimensional list that contains the rows of Y-axis data.
-        for x_index in range(x_range[0], x_range[1]):
-            # z_index is the index of the Y-axis data in x_index list.
-            for z_index in range(z_range[0], z_range[1]):
-                # y_index is the index of the symbol in the Y-axis data.
-                for y_index in range(y_range[0], y_range[1]):
-                    # From this Y slice.
-                    # Select the appropriate Z row.
-                    # And for every X index, assign the correct symbol.
-                    brick_grid[x_index][z_index][y_index] = symbol
-
     def __mirror(self, xyz):
         """
         Mirrors the given XYZ sequence according to the specified forward axis.
@@ -147,129 +143,25 @@ class BLBWriter(object):
 
         return mirrored
 
-    def __rotate(self, xyz, swizzle = False):
-        """
-        Either rotates or swizzles the given XYZ coordinate sequence.
-        Swizzling is used to "rotate" values that must always be positive (like dimensions), while rotation is perfomed with actual vertex coordinates.
-        If swizzle is true: Returns a new list of values copied from the given XYZ sequence where given coordinates are reordered according to the selected forward axis.
-        If swizzle is false: Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated according to the selected forward axis.
-        """
-
-        rotated = []
-
-        print("ROTSW",self.__forward_axis)
-
-        if self.__forward_axis == "POSITIVE_X":
-            # Rotate: 0 deg clockwise
-            # Swizzle: XYZ = XYZ
-            return xyz
-
-        elif self.__forward_axis == "POSITIVE_Y":
-            # Rotate: 90 deg clockwise = X Y Z -> Y -X Z
-            # Swizzle: XYZ = YXZ
-
-            rotated.append(xyz[INDEX_Y])
-
-            if not swizzle:
-                rotated.append(-xyz[INDEX_X])
-            else:
-                rotated.append(xyz[INDEX_X])
-
-        elif self.__forward_axis == "NEGATIVE_X":
-            # Rotate: 180 deg clockwise = X Y Z -> -X -Y Z
-            # Swizzle: XYZ = XYZ
-
-            if not swizzle:
-                rotated.append(-xyz[INDEX_X])
-                rotated.append(-xyz[INDEX_Y])
-            else:
-                rotated = xyz
-
-        elif self.__forward_axis == "NEGATIVE_Y":
-            # Rotate: 270 deg clockwise = X Y Z -> -Y X Z
-            # Swizzle: XYZ = YXZ
-
-            if not swizzle:
-                rotated.append(-xyz[INDEX_Y])
-            else:
-                rotated.append(xyz[INDEX_Y])
-
-            rotated.append(xyz[INDEX_X])
-
-        # The Z axis is not yet taken into account.
-        rotated.append(xyz[INDEX_Z])
-
-        return rotated
-
-    def __write_brick_grid(self, file, grid=None):
-        """Writes the given brick grid to the file or if no parameter is given, writes the default brick grid according to the size of the brick."""
-
-        # TODO: Brick grid does not respect forward axis remapping.
-
-        if grid is not None:
-            for x_slice in grid:
-                for y_row in x_slice:
-                    # Join each Y-axis of data without a separator.
-                    file.write("".join(y_row))
-                    file.write("\n")
-
-                # A new line after each Y slice.
-                file.write("\n")
-        else:
-            # These are actually slices of the brick on the X axis but size_y and size_x were swapped at the start of the function.
-            for x_slice in range(self.__size_x):
-                # The rows from top to bottom.
-                for z in range(self.__size_z):
-                    # Current Z index is 0 which is the top of the brick?
-                    is_top = (z == 0)
-
-                    # Current Z index is Z size - 1 which is the bottom of the brick?
-                    is_bottom = (z == self.__size_z - 1)
-
-                    if is_bottom and is_top:
-                        symbol = GRID_BOTH
-                    elif is_bottom:
-                        symbol = GRID_DOWN
-                    elif is_top:
-                        symbol = GRID_UP
-                    else:
-                        symbol = GRID_INSIDE
-
-                    # Write the symbol X size times which is actually the depth of the brick on the Y axis in Blender.
-                    file.write(symbol * self.__size_y)
-                    file.write("\n")
-
-                # A new line after each Y slice.
-                file.write("\n")
-
     def write_file(self):
         """Writes the BLB file."""
 
         with open(self.__filepath, "w") as file:
             # Write brick size.
             # Swizzle the values according to the forward axis.
-            self.__write_sequence(file, self.__rotate(self.__definitions[BOUNDS_NAME_PREFIX], True))
+            self.__write_sequence(file, rotate(self.__definitions[BOUNDS_NAME_PREFIX], self.__forward_axis, True))
 
             # Write brick type.
             file.write("SPECIAL\n\n")
 
-            # TODO: Log message about only having dash or x grid definitions.
-
             # Write brick grid.
-            # GRID_DASH_PREFIX and GRID_X_PREFIX are ignored on purpose, if they were the only definitions the brick could not be placed in the game making it useless.
-            if len(self.__definitions[GRID_B_PREFIX]) == 0 and len(self.__definitions[GRID_D_PREFIX]) == 0 and len(self.__definitions[GRID_U_PREFIX]) == 0:
-                # No brick grid definitions, write default grid.
-                self.__write_brick_grid(file)
-            else:
-                # Initialize the brick grid with the empty symbol with the dimensions of the brick.
-                brick_grid = [[[GRID_OUTSIDE for y in range(self.__size_y)] for z in range(self.__size_z)] for x in range(self.__size_x)]
+            for axis_slice in self.__definitions["brickgrid"]:
+                for row in axis_slice:
+                    # Join each Y-axis of data without a separator.
+                    file.write("".join(row) + "\n")
 
-                for name_prefix in BRICK_GRID_DEFINITIONS_PRIORITY:
-                    if len(self.__definitions[name_prefix]) > 0:
-                        for volume in self.__definitions[name_prefix]:
-                            self.__modify_brick_grid(brick_grid, volume, BRICK_GRID_DEFINITIONS.get(name_prefix))
-
-                self.__write_brick_grid(file, brick_grid)
+                # A new line after each axis slice.
+                file.write("\n")
 
             # Write collisions.
             if len(self.__definitions[COLLISION_PREFIX]) == 0:
@@ -283,7 +175,7 @@ class BLBWriter(object):
 
                 # The size of the cuboid is the size of the bounds.
                 # Swizzle the values according to the forward axis.
-                self.__write_sequence(file, self.__rotate(self.__definitions[BOUNDS_NAME_PREFIX], True))
+                self.__write_sequence(file, rotate(self.__definitions[BOUNDS_NAME_PREFIX], self.__forward_axis, True))
             else:
                 # Write defined collisions.
 
@@ -295,8 +187,8 @@ class BLBWriter(object):
                     file.write("\n")
                     # Mirror center according to the forward axis. No idea why but it works.
                     # Swizzle the values according to the forward axis.
-                    self.__write_sequence(file, self.__rotate(self.__mirror(center), True))
-                    self.__write_sequence(file, self.__rotate(dimensions, True))
+                    self.__write_sequence(file, rotate(self.__mirror(center), self.__forward_axis, True))
+                    self.__write_sequence(file, rotate(dimensions, self.__forward_axis, True))
 
             # Write coverage.
             file.write("COVERAGE:\n")
@@ -321,7 +213,7 @@ class BLBWriter(object):
                     # Write vertex positions.
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
-                        self.__write_sequence(file, self.__rotate(position))
+                        self.__write_sequence(file, rotate(position, self.__forward_axis))
 
                     # Write face UV coordinates.
                     file.write("UV COORDS:\n")  # Optional.
@@ -332,7 +224,7 @@ class BLBWriter(object):
                     file.write("NORMALS:\n")  # Optional.
                     for normal in normals:
                         # Normals also need to rotated.
-                        self.__write_sequence(file, self.__rotate(normal))
+                        self.__write_sequence(file, rotate(normal, self.__forward_axis))
 
                     # Write vertex colors if any.
                     if colors is not None:
@@ -365,6 +257,21 @@ class BLBProcessor(object):
         self.__logger = logger
         self.__properties = properties
 
+        # x : Disallow building inside brick.
+
+        # - : Allow building in empty space.
+        self.__grid_outside = "-"
+
+        # u : Allow placing bricks above this plate.
+        # d : Allow placing bricks below this plate.
+        # b : Allow placing bricks above and below this plate.
+
+        # Brick grid definition object name prefixes in reverse priority order.
+        self.__grid_def_obj_prefix_priority = ("gridx", "grid-", "gridu", "gridd", "gridb")
+
+        # Brick grid definitions in reverse priority order.
+        self.__grid_definitions_priority = ("x", "-", "u", "d", "b")
+
         self.__bounds_data = {"name": None,
                               "brick_size": [],
                               "dimensions": [],
@@ -373,12 +280,8 @@ class BLBProcessor(object):
 
         self.__definition_data = {BOUNDS_NAME_PREFIX: [],
                                   COLLISION_PREFIX: [],
-                                  "coverage": [],
-                                  GRID_X_PREFIX: [],
-                                  GRID_DASH_PREFIX: [],
-                                  GRID_U_PREFIX: [],
-                                  GRID_D_PREFIX: [],
-                                  GRID_B_PREFIX: []}
+                                  "brickgrid": [],
+                                  "coverage": []}
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
@@ -483,6 +386,35 @@ class BLBProcessor(object):
                 return False
 
         return True
+
+    @classmethod
+    def __modify_brick_grid(cls, brick_grid, volume, symbol):
+        """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
+
+        width_range = volume[INDEX_X]
+        depth_range = volume[INDEX_Y]
+        height_range = volume[INDEX_Z]
+
+        # Example data for a cuboid brick that is:
+        # - 2 plates wide
+        # - 3 plates deep
+        # - 4 plates tall
+        # Ie. a brick of size "3 2 4"
+        #
+        # uuu
+        # xxx
+        # xxx
+        # ddd
+        #
+        # uuu
+        # xxx
+        # xxx
+        # ddd
+
+        for w in range(width_range[0], width_range[1]):
+            for h in range(height_range[0], height_range[1]):
+                for d in range(depth_range[0], depth_range[1]):
+                    brick_grid[w][h][d] = symbol
 
     def __round_value(self, value, precision=1.0, decimals=FLOATING_POINT_DECIMALS):
         """Returns the given value as Decimal rounded to the given precision (default 1.0) and decimal places (default FLOATING_POINT_DECIMALS)."""
@@ -632,16 +564,19 @@ class BLBProcessor(object):
         # The quad is either not planar or is not on the same plane with one of the bounding planes = Omni
         return 6
 
-    def __grid_obj_to_index_ranges(self, obj):
+    def __grid_object_to_volume(self, obj):
         """
         Note: This function requires that it is called after the bounds object has been defined.
         Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the given object.
-        The indices represent a three dimensional volume in the local space of the bounds object.
-        Returns a tuple in the following format: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
+        The indices represent a three dimensional volume in the local space of the bounds object where the origin is in the -X +Y +Z corner.
+        Returns a tuple in the following format: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
         Can raise OutOfBoundsException and ZeroSizeException.
         """
 
-        halved_dimensions = [value / Decimal("2.0") for value in self.__bounds_data["dimensions"]]
+        # Swizzle the dimensions.
+        # Actually does nothing for POSITIVE_X forward axis.
+        swizzled_dimensions = rotate(self.__bounds_data["dimensions"], self.__properties.axis_blb_forward, True)
+        halved_dimensions = [value / Decimal("2.0") for value in swizzled_dimensions]
 
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
@@ -653,17 +588,17 @@ class BLBProcessor(object):
         grid_max = self.__world_to_local(grid_max)
 
         # Round coordinates to the nearest plate.
-        grid_min = self.__round_to_plate_coordinates(grid_min, self.__bounds_data["dimensions"])
-        grid_max = self.__round_to_plate_coordinates(grid_max, self.__bounds_data["dimensions"])
+        grid_min = self.__round_to_plate_coordinates(grid_min, swizzled_dimensions)
+        grid_max = self.__round_to_plate_coordinates(grid_max, swizzled_dimensions)
 
-        if self.__all_within_bounds(grid_min, self.__bounds_data["dimensions"]) and self.__all_within_bounds(grid_max, self.__bounds_data["dimensions"]):
+        if self.__all_within_bounds(grid_min, swizzled_dimensions) and self.__all_within_bounds(grid_max, swizzled_dimensions):
             # Convert the coordinates into brick grid sequence indices.
-            grid_min[INDEX_X] = grid_min[INDEX_X] + halved_dimensions[INDEX_X]  # Translate coordinates to positive X axis. Index 0 = left of the brick.
-            grid_min[INDEX_Y] = grid_min[INDEX_Y] + halved_dimensions[INDEX_Y]  # Translate coordinates to positive Y axis. Index 0 = front of the brick.
+            grid_min[INDEX_X] = grid_min[INDEX_X] + halved_dimensions[INDEX_X]  # Translate coordinates to positive X axis. Index 0 = front of the brick.
+            grid_min[INDEX_Y] = grid_min[INDEX_Y] - halved_dimensions[INDEX_Y]  # Translate coordinates to negative Y axis. Index 0 = left of the brick.
             grid_min[INDEX_Z] = (grid_min[INDEX_Z] - halved_dimensions[INDEX_Z]) / self.__PLATE_HEIGHT  # Translate coordinates to negative Z axis, height to plates.
 
             grid_max[INDEX_X] = grid_max[INDEX_X] + halved_dimensions[INDEX_X]
-            grid_max[INDEX_Y] = grid_max[INDEX_Y] + halved_dimensions[INDEX_Y]
+            grid_max[INDEX_Y] = grid_max[INDEX_Y] - halved_dimensions[INDEX_Y]
             grid_max[INDEX_Z] = (grid_max[INDEX_Z] - halved_dimensions[INDEX_Z]) / self.__PLATE_HEIGHT
 
             # Swap min/max Z index and make it positive. Index 0 = top of the brick.
@@ -673,6 +608,19 @@ class BLBProcessor(object):
 
             grid_min = self.__force_to_int(grid_min)
             grid_max = self.__force_to_int(grid_max)
+
+            # Swap min/max Y index and make it positive. Index 0 = left of the brick.
+            temp = grid_min[INDEX_Y]
+            grid_min[INDEX_Y] = abs(grid_max[INDEX_Y])
+            grid_max[INDEX_Y] = abs(temp)
+
+            # Swizzle XYZ > YXZ
+            temp = grid_min[INDEX_X]
+            grid_min[INDEX_X] = grid_min[INDEX_Y]
+            grid_min[INDEX_Y] = temp
+            temp = grid_max[INDEX_X]
+            grid_max[INDEX_X] = grid_max[INDEX_Y]
+            grid_max[INDEX_Y] = temp
 
             zero_size = False
 
@@ -686,8 +634,7 @@ class BLBProcessor(object):
                 self.__logger.error("Error: Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
                 raise self.ZeroSizeException()
             else:
-                # Note that the volumes are not written in this orientation. They are later rotated by 90 degrees.
-                # Return the index ranges as a tuple: ( (min_x, max_x), (min_y, max_y), (min_z, max_z) )
+                # Return the index ranges as a tuple: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
                 return ((grid_min[INDEX_X], grid_max[INDEX_X]),
                         (grid_min[INDEX_Y], grid_max[INDEX_Y]),
                         (grid_min[INDEX_Z], grid_max[INDEX_Z]))
@@ -805,12 +752,17 @@ class BLBProcessor(object):
         Processes the given brick grid definitions and saves the results to the definition data sequence.
         """
 
+        # Make one empty list for each brick grid definition.
+        definition_volumes = [[] for i in range(len(self.__grid_def_obj_prefix_priority))]
         processed = 0
 
         for grid_obj in definition_objects:
             try:
-                # All brick grid definition object names are exactly 5 characters long and lower case.
-                self.__definition_data[grid_obj.name.lower()[:5]].append(self.__grid_obj_to_index_ranges(grid_obj))
+                # The first 5 characters of the Blender object name must be the grid definition prefix.
+                # Get the index of the definition list.
+                # And append the definition data to the list.
+                index = self.__grid_def_obj_prefix_priority.index(grid_obj.name.lower()[:5])
+                definition_volumes[index].append(self.__grid_object_to_volume(grid_obj))
                 processed += 1
             except self.OutOfBoundsException:
                 # Do nothing, definition is ignored.
@@ -833,6 +785,29 @@ class BLBProcessor(object):
                 self.__logger.warning("Warning: {} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
+
+        # The brick grid is a special case where I do need to take the custom forward axis already into account when processing the data.
+        if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_X":
+            grid_width = self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X]
+            grid_depth = self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y]
+        else:
+            grid_width = self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y]
+            grid_depth = self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X]
+
+        grid_height = self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]
+
+        # Initialize the brick grid with the empty symbol with the dimensions of the brick.
+        brick_grid = [[[self.__grid_outside for x in range(grid_width)] for z in range(grid_height)] for y in range(grid_depth)]
+
+        # Write the calculated definition_volumes into the brick grid.
+        for index, volumes in enumerate(definition_volumes):
+            # Get the symbol for these volumes.
+            symbol = self.__grid_definitions_priority[index]
+            for volume in volumes:
+                # Modify the grid by adding the symbol to the correct locations.
+                self.__modify_brick_grid(brick_grid, volume, symbol)
+
+        self.__definition_data["brickgrid"] = brick_grid
 
     def __process_collision_definitions(self, definition_objects):
         """
@@ -945,7 +920,7 @@ class BLBProcessor(object):
                                                                                      self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
                                                                                      self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
             # Is the current object a brick grid definition object?
-            elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
+            elif obj.name.lower().startswith(self.__grid_def_obj_prefix_priority):
                 # Brick grid definition objects cannot be processed until after the bounds have been defined.
                 # Store for later use.
                 brick_grid_objects.append(obj)
