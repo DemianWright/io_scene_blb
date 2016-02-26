@@ -391,6 +391,7 @@ class BLBProcessor(object):
     def __modify_brick_grid(cls, brick_grid, volume, symbol):
         """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
 
+        # Ranges are in Blender coordinates.
         width_range = volume[INDEX_X]
         depth_range = volume[INDEX_Y]
         height_range = volume[INDEX_Z]
@@ -573,10 +574,8 @@ class BLBProcessor(object):
         Can raise OutOfBoundsException and ZeroSizeException.
         """
 
-        # Swizzle the dimensions.
-        # Actually does nothing for POSITIVE_X forward axis.
-        swizzled_dimensions = rotate(self.__bounds_data["dimensions"], self.__properties.axis_blb_forward, True)
-        halved_dimensions = [value / Decimal("2.0") for value in swizzled_dimensions]
+        bounds_dimensions = self.__bounds_data["dimensions"]
+        halved_dimensions = [value / Decimal("2.0") for value in bounds_dimensions]
 
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
@@ -588,17 +587,30 @@ class BLBProcessor(object):
         grid_max = self.__world_to_local(grid_max)
 
         # Round coordinates to the nearest plate.
-        grid_min = self.__round_to_plate_coordinates(grid_min, swizzled_dimensions)
-        grid_max = self.__round_to_plate_coordinates(grid_max, swizzled_dimensions)
+        grid_min = self.__round_to_plate_coordinates(grid_min, bounds_dimensions)
+        grid_max = self.__round_to_plate_coordinates(grid_max, bounds_dimensions)
 
-        if self.__all_within_bounds(grid_min, swizzled_dimensions) and self.__all_within_bounds(grid_max, swizzled_dimensions):
+        if self.__all_within_bounds(grid_min, bounds_dimensions) and self.__all_within_bounds(grid_max, bounds_dimensions):
             # Convert the coordinates into brick grid sequence indices.
+
+            # Minimum indices.
             grid_min[INDEX_X] = grid_min[INDEX_X] + halved_dimensions[INDEX_X]  # Translate coordinates to positive X axis. Index 0 = front of the brick.
-            grid_min[INDEX_Y] = grid_min[INDEX_Y] - halved_dimensions[INDEX_Y]  # Translate coordinates to negative Y axis. Index 0 = left of the brick.
+
+            if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_X":
+                grid_min[INDEX_Y] = grid_min[INDEX_Y] - halved_dimensions[INDEX_Y]  # Translate coordinates to negative Y axis. Index 0 = left of the brick.
+            else:
+                grid_min[INDEX_Y] = grid_min[INDEX_Y] + halved_dimensions[INDEX_Y]  # Translate coordinates to positive Y axis. Index 0 = left of the brick.
+
             grid_min[INDEX_Z] = (grid_min[INDEX_Z] - halved_dimensions[INDEX_Z]) / self.__PLATE_HEIGHT  # Translate coordinates to negative Z axis, height to plates.
 
+            # Maximum indices.
             grid_max[INDEX_X] = grid_max[INDEX_X] + halved_dimensions[INDEX_X]
-            grid_max[INDEX_Y] = grid_max[INDEX_Y] - halved_dimensions[INDEX_Y]
+
+            if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_X":
+                grid_max[INDEX_Y] = grid_max[INDEX_Y] - halved_dimensions[INDEX_Y]
+            else:
+                grid_max[INDEX_Y] = grid_max[INDEX_Y] + halved_dimensions[INDEX_Y]
+
             grid_max[INDEX_Z] = (grid_max[INDEX_Z] - halved_dimensions[INDEX_Z]) / self.__PLATE_HEIGHT
 
             # Swap min/max Z index and make it positive. Index 0 = top of the brick.
@@ -609,18 +621,21 @@ class BLBProcessor(object):
             grid_min = self.__force_to_int(grid_min)
             grid_max = self.__force_to_int(grid_max)
 
-            # Swap min/max Y index and make it positive. Index 0 = left of the brick.
-            temp = grid_min[INDEX_Y]
-            grid_min[INDEX_Y] = abs(grid_max[INDEX_Y])
-            grid_max[INDEX_Y] = abs(temp)
+            if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_X":
+                # Swap min/max Y index and make it positive. Index 0 = left of the brick.
+                temp = grid_min[INDEX_Y]
+                grid_min[INDEX_Y] = abs(grid_max[INDEX_Y])
+                grid_max[INDEX_Y] = abs(temp)
 
-            # Swizzle XYZ > YXZ
-            temp = grid_min[INDEX_X]
-            grid_min[INDEX_X] = grid_min[INDEX_Y]
-            grid_min[INDEX_Y] = temp
-            temp = grid_max[INDEX_X]
-            grid_max[INDEX_X] = grid_max[INDEX_Y]
-            grid_max[INDEX_Y] = temp
+                # Swizzle XYZ > YXZ
+                temp = grid_min[INDEX_X]
+                grid_min[INDEX_X] = grid_min[INDEX_Y]
+                grid_min[INDEX_Y] = temp
+                temp = grid_max[INDEX_X]
+                grid_max[INDEX_X] = grid_max[INDEX_Y]
+                grid_max[INDEX_Y] = temp
+
+            # Else do nothing.
 
             zero_size = False
 
