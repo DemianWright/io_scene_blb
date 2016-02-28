@@ -75,7 +75,7 @@ class Logger(object):
                     file.write("\n")
 
 import bpy
-from bpy.props import StringProperty, BoolProperty
+from bpy.props import BoolProperty, EnumProperty, StringProperty
 from bpy_extras.io_utils import ExportHelper
 
 ### EXPORT ###
@@ -89,22 +89,115 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     logfile_ext = ".log"
     filter_glob = StringProperty(default="*.blb", options={'HIDDEN'})
 
+    # TODO: Scale.
+
+    # TODO: Change this to enum: Selection, Layer, Scene
     use_selection = BoolProperty(
-        name="Selection Only",
-        description="Export selected objects only",
-        default=True,
+        name = "Selection Only",
+        description = "Export selected objects only",
+        default = True,
+        )
+
+    # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
+    # I.e. -X is facing you when the brick is planted and +X is the brick north instead of +Y which makes more sense to me.
+    axis_blb_forward = EnumProperty(
+        items = [("POSITIVE_X", "+X", "The positive X axis"),
+                 ("POSITIVE_Y", "+Y", "The positive Y axis"),
+                 ("NEGATIVE_X", "-X", "The negative X axis"),
+                 ("NEGATIVE_Y", "-Y", "The negative Y axis")],
+        name = "Brick Forward Axis",
+        description = "Set the Blender axis that will point forwards in the game",
+        default = "POSITIVE_Y"
+        )
+
+    calculate_coverage = BoolProperty(
+        name = "Coverage",
+        description = "Calculate brick coverage",
+        default = False,
+        )
+
+    coverage_top_calculate = BoolProperty(
+        name = "Hide Own Top Faces",
+        description = "Hide the top faces of this brick when the entire top side of this brick is covered",
+        default = False,
+        )
+
+    coverage_top_hide = BoolProperty(
+        name = "Hide Adjacent Top Faces",
+        description = "Hide the faces of the adjacent bricks covering the top side of this brick",
+        default = False,
+        )
+
+    coverage_bottom_calculate = BoolProperty(
+        name = "Hide Own Bottom Faces",
+        description = "Hide the bottom faces of this brick when the entire bottom side of this brick is covered",
+        default = False,
+        )
+
+    coverage_bottom_hide = BoolProperty(
+        name = "Hide Adjacent Bottom Faces",
+        description = "Hide the faces of the adjacent bricks covering the bottom side of this brick",
+        default = False,
+        )
+
+    coverage_north_calculate = BoolProperty(
+        name = "Hide Own North Faces",
+        description = "Hide the north faces of this brick when the entire north side of this brick is covered",
+        default = False,
+        )
+
+    coverage_north_hide = BoolProperty(
+        name = "Hide Adjacent North Faces",
+        description = "Hide the faces of the adjacent bricks covering the north side of this brick",
+        default = False,
+        )
+
+    coverage_east_calculate = BoolProperty(
+        name = "Hide Own East Faces",
+        description = "Hide the east faces of this brick when the entire east side of this brick is covered",
+        default = False,
+        )
+
+    coverage_east_hide = BoolProperty(
+        name = "Hide Adjacent East Faces",
+        description = "Hide the faces of the adjacent bricks covering the east side of this brick",
+        default = False,
+        )
+
+    coverage_south_calculate = BoolProperty(
+        name = "Hide Own South Faces",
+        description = "Hide the south faces of this brick when the entire south side of this brick is covered",
+        default = False,
+        )
+
+    coverage_south_hide = BoolProperty(
+        name = "Hide Adjacent South Faces",
+        description = "Hide the faces of the adjacent bricks covering the south side of this brick",
+        default = False,
+        )
+
+    coverage_west_calculate = BoolProperty(
+        name = "Hide Own West Faces",
+        description = "Hide the west faces of this brick when the entire west side of this brick is covered",
+        default = False,
+        )
+
+    coverage_west_hide = BoolProperty(
+        name = "Hide Adjacent West Faces",
+        description = "Hide the faces of the adjacent bricks covering the west side of this brick",
+        default = False,
         )
 
     write_log = BoolProperty(
-        name="Write Log",
-        description="Write a log file after exporting",
-        default=True,
+        name = "Write Log",
+        description = "Write a log file after exporting",
+        default = True,
         )
 
     write_log_warnings = BoolProperty(
-        name="Only on Warnings",
-        description="Only write a log file if warnings were generated",
-        default=True,
+        name = "Only on Warnings",
+        description = "Only write a log file if warnings were generated",
+        default = True,
         )
 
     def execute(self, context):
@@ -131,32 +224,95 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     def draw(self, context):
         """Draws the UI in the export menu."""
 
+        # Property: Use Selection
         layout = self.layout
-
         layout.prop(self, "use_selection")
 
-        layout.prop(self, "write_log")
+        # Properties: Coverage
+        layout.prop(self, "calculate_coverage")
 
-        # There might be a better way of doing this but I don't know how to.
+        if self.calculate_coverage:
+            box = layout.box()
+            box.active = self.calculate_coverage
+
+            def draw_coverage_property(label_text, prop_name, prop_toggler):
+                """A helper function for drawing the coverage properties."""
+
+                row = box.row()
+
+                split = row.split(percentage=0.3)
+                col = split.column()
+                col.label(label_text)
+
+                split = split.split(percentage=0.3)
+                col = split.column()
+                col.prop(self, "coverage_{}_calculate".format(prop_name), "")
+
+                split = split.split()
+                col = split.column()
+                col.active = prop_toggler
+                col.prop(self, "coverage_{}_hide".format(prop_name), "")
+
+            row = box.row()
+            split = row.split(percentage=0.3)
+            col = split.column()
+            col.label("")
+            col.label("Side")
+
+            split = split.split(percentage=0.3)
+            col = split.column()
+            col.label("Hide")
+            col.label("Self")
+
+            split = split.split()
+            col = split.column()
+            col.label("Hide")
+            col.label("Adjacent")
+
+            draw_coverage_property("Top", "top", self.coverage_top_calculate)
+            draw_coverage_property("Bottom", "bottom", self.coverage_bottom_calculate)
+            draw_coverage_property("North", "north", self.coverage_north_calculate)
+            draw_coverage_property("East", "east", self.coverage_east_calculate)
+            draw_coverage_property("South", "south", self.coverage_east_calculate)
+            draw_coverage_property("West", "west", self.coverage_west_calculate)
+
+        # Property: Write Log
         row = layout.row()
-        row.active = self.write_log
-        row.prop(self, "write_log_warnings")
+        split = row.split(percentage=0.4)
+        col = split.column()
+        col.prop(self, "write_log")
 
-### REGISTER ###
+        # Property: Write Log on Warnings
+        # Only show when Write Log is checked.
+        if self.write_log:
+            split = split.split()
+            # The "Only on Warnings" option is grayed out when "Write Log" is not enabled.
+            split.active = self.write_log
+            col = split.column()
+            col.prop(self, "write_log_warnings")
+
+        # Property: BLB Forward Axis
+        row = layout.row()
+        split = row.split(percentage=0.4)
+        row = split.row()
+        row.label("Forward Axis:")
+
+        split = split.split()
+        row = split.row()
+        row.prop(self, "axis_blb_forward", expand = True)
+
 def menu_export(self, context):
-    """Add the export option into the export menu."""
+    """Adds the export option into the export menu."""
     self.layout.operator(ExportBLB.bl_idname, text="Blockland Brick (.blb)")
 
 def register():
-    """Register this module into Blender."""
+    """Registers this module into Blender."""
     bpy.utils.register_module(__name__)
-
     bpy.types.INFO_MT_file_export.append(menu_export)
 
 def unregister():
-    """Unregister this module from Blender."""
+    """Unregisters this module from Blender."""
     bpy.utils.unregister_module(__name__)
-
     bpy.types.INFO_MT_file_export.remove(menu_export)
 
 if __name__ == "__main__":
