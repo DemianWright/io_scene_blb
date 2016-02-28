@@ -918,10 +918,14 @@ class BLBProcessor(object):
 
             # Is the current object the bounds definition object?
             elif obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
-                self.__process_bounds_object(obj)
-                self.__logger.log("Defined brick size: {} {} {} (XYZ) plates".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
-                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
-                                                                                     self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
+                if self.__bounds_data["name"] is None:
+                    self.__process_bounds_object(obj)
+                    self.__logger.log("Defined brick size: {} {} {} (XYZ) plates".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
+                                                                                         self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
+                                                                                         self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
+                else:
+                    self.__logger.warning("Warning: Multiple bounds definitions found. {} definition ignored.".format(obj.name))
+
             # Is the current object a brick grid definition object?
             elif obj.name.lower().startswith(BRICK_GRID_DEFINITIONS_PRIORITY):
                 # Brick grid definition objects cannot be processed until after the bounds have been defined.
