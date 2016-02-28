@@ -42,9 +42,10 @@ def swizzle(sequence, order):
     """
     Specify the new order of the given sequence using lowercase letters a-z of the English alphabet.
     I.e. "a" signifies the index 0 and "z" stands for index 25.
+    Allows duplicating values by specifying the the same letter multiple times.
     Returns a copy of the given sequence of up to 26 values in the specified order.
     """
-    letters = ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+    letters = ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
 
     # For every letter in the given order.
     # Get the index of the letter in the letters tuple.
@@ -565,16 +566,19 @@ class BLBProcessor(object):
                 # Stop searching as soon as the first plane is found.
                 # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
 
+                # Assuming that forward axis is Blender +X ("POSITIVE_X").
+                # Then in-game the brick north is to the left of the player, which is +Y in Blender.
+                # I know it makes no sense.
+
                 # Positive values.
                 if positions[0][axis] == local_bounds[axis]:
-                    # Assuming forward axis is "POSITIVE_X"
-                    # +X = North
+                    # +X = East
                     if axis == 0:
-                        direction = 2
+                        direction = 3
                         break
-                    # +Y = West
+                    # +Y = North
                     elif axis == 1:
-                        direction = 5
+                        direction = 2
                         break
                     # +Z = Top
                     else:
@@ -583,14 +587,13 @@ class BLBProcessor(object):
 
                 # Negative values.
                 elif positions[0][axis] == -local_bounds[axis]:
-                    # Assuming forward axis is "POSITIVE_X"
-                    # -X = South
+                    # -X = West
                     if axis == 0:
-                        direction = 4
+                        direction = 5
                         break
-                    # -Y = East
+                    # -Y = South
                     elif axis == 1:
-                        direction = 3
+                        direction = 4
                         break
                     # -Z = Bottom
                     else:
