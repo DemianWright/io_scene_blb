@@ -939,9 +939,9 @@ class BLBProcessor(object):
         # No manually created bounds object was found, calculate brick size according to the combined minimum and maximum vertex positions of all processed meshes.
         if len(self.__definition_data[BOUNDS_NAME_PREFIX]) == 0:
             self.__calculate_bounds()
-            self.__logger.log("Calculated brick size: {} {} {} (XYZ) plates".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
-                                                                                    self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
-                                                                                    self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
+            self.__logger.log("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_X],
+                                                                                                self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
+                                                                                                self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
         # Process brick grid and collision definitions now that a bounds definition exists.
         self.__process_grid_definitions(brick_grid_objects)
         self.__process_collision_definitions(collision_objects)
