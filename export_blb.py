@@ -38,9 +38,19 @@ COLLISION_PREFIX = "collision"
 
 QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
 
-def swizzle(xyz, order):
-    """Returns a copy of the given sequence of XYZ values in the specified order."""
-    return [xyz[("x", "y", "z").index(axis.lower())] for axis in order]
+def swizzle(sequence, order):
+    """
+    Specify the new order of the given sequence using lowercase letters a-z of the English alphabet.
+    I.e. "a" signifies the index 0 and "z" stands for index 25.
+    Returns a copy of the given sequence of up to 26 values in the specified order.
+    """
+    letters = ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+
+    # For every letter in the given order.
+    # Get the index of the letter in the letters tuple.
+    # Get the value of that index in the given sequence.
+    # And add it to the new list.
+    return [sequence[letters.index(letter)] for letter in order]
 
 def rotate(xyz, forward_axis, do_swizzle=False):
     """
@@ -1166,6 +1176,8 @@ class BLBProcessor(object):
             # Get the brick bounds in plates.
             dimensions = self.__definition_data[BOUNDS_NAME_PREFIX]
 
+            # Assuming forward axis is +X.
+
             # Top: +Z
             if self.__properties.coverage_top_calculate:
                 # Calculate the area of the top face.
@@ -1183,33 +1195,52 @@ class BLBProcessor(object):
                 area = 9999
             coverage.append((self.__properties.coverage_bottom_hide, area))
 
-            # North: +Y
+            # North: +X
             if self.__properties.coverage_north_calculate:
                 area = dimensions[INDEX_X] * dimensions[INDEX_Z]
             else:
                 area = 9999
             coverage.append((self.__properties.coverage_north_hide, area))
 
-            # East: +X
+            # East: -Y
             if self.__properties.coverage_east_calculate:
                 area = dimensions[INDEX_Y] * dimensions[INDEX_Z]
             else:
                 area = 9999
             coverage.append((self.__properties.coverage_east_hide, area))
 
-            # South: -Y
+            # South: -X
             if self.__properties.coverage_south_calculate:
                 area = dimensions[INDEX_X] * dimensions[INDEX_Z]
             else:
                 area = 9999
             coverage.append((self.__properties.coverage_south_hide, area))
 
-            # West: -X
+            # West: +Y
             if self.__properties.coverage_west_calculate:
                 area = dimensions[INDEX_Y] * dimensions[INDEX_Z]
             else:
                 area = 9999
             coverage.append((self.__properties.coverage_west_hide, area))
+
+            # Swizzle the coverage values around according to the defined forward axis.
+            # Coverage was calculated with forward axis at +X.
+            # The order of the values in the coverage is:
+            # 0 = a = +Z: Top
+            # 1 = b = -Z: Bottom
+            # 2 = c = +X: North
+            # 3 = d = -Y: East
+            # 4 = e = -X: South
+            # 5 = f = +Y: West
+
+            # Technically this is wrong as the order would be different for -Y forward, but since the bricks must be cuboidal in shape, they are symmetrical.
+            if self.__properties.axis_blb_forward == "POSITIVE_Y" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
+                # New North: +Y
+                # +X: New East
+                coverage = swizzle(coverage, "abfcde")
+
+            # Else self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "POSITIVE_X":
+            # No support for Z axis remapping yet.
         else:
             # Use the default coverage.
             # Do not hide adjacent face.
