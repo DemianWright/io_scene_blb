@@ -521,7 +521,7 @@ class BLBProcessor(object):
 
         return result
 
-    def __calculate_quad_section(self, quad, bounds_data):
+    def __sort_quad(self, quad, bounds_data):
         """
         Calculates the section for the given quad within the given bounds.
         The quad section is determined by whether the quad is in the same plane as one the planes defined by the bounds.
@@ -535,6 +535,9 @@ class BLBProcessor(object):
         # The dimensions are in Blender units so Z height needs to be converted to plates.
         local_bounds = self.__sequence_z_to_plates([value / Decimal("2.0") for value in bounds_data["dimensions"]])
 
+        # Assume omni direction until otherwise proven.
+        direction = 6
+
         # Each position list has exactly 3 values.
         # 0 = X
         # 1 = Y
@@ -546,32 +549,60 @@ class BLBProcessor(object):
                 # I.e. the quad is on the same plane as one of the edges of the brick.
                 # Stop searching as soon as the first plane is found.
                 # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
-                if positions[0][axis] == local_bounds[axis]:
-                    # Positive values.
 
-                    # +X = East
+                # Positive values.
+                if positions[0][axis] == local_bounds[axis]:
+                    # Assuming forward axis is "POSITIVE_X"
+                    # +X = North
                     if axis == 0:
-                        return 3
-                    # +Y = North
+                        direction = 2
+                        break
+                    # +Y = West
                     elif axis == 1:
-                        return 2
+                        direction = 5
+                        break
                     # +Z = Top
                     else:
-                        return 0
+                        direction = 0
+                        break
+
+                # Negative values.
                 elif positions[0][axis] == -local_bounds[axis]:
-                    # Negative values.
-                    # -X = WEST
+                    # Assuming forward axis is "POSITIVE_X"
+                    # -X = South
                     if axis == 0:
-                        return 5
-                    # -Y = South
+                        direction = 4
+                        break
+                    # -Y = East
                     elif axis == 1:
-                        return 4
+                        direction = 3
+                        break
                     # -Z = Bottom
                     else:
-                        return 1
+                        direction = 1
+                        break
+                # Else the quad is not on the same plane with one of the bounding planes = Omni
+            # Else the quad is not planar = Omni
 
-        # The quad is either not planar or is not on the same plane with one of the bounding planes = Omni
-        return 6
+        # Top, bottom, and omni are always the same.
+        # The initial values are according to POSITIVE_X forward axis.
+        if direction <= 1 or direction == 6 or self.__properties.axis_blb_forward == "POSITIVE_X":
+            return direction
+
+        # Rotate the direction according the defined forward axis.
+        elif self.__properties.axis_blb_forward == "POSITIVE_Y":
+            # [2] North -> [3] East: (2 - 2 + 1) % 4 + 2 = 3
+            # [5] West -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
+            return (direction - 1) % 4 + 2
+        elif self.__properties.axis_blb_forward == "NEGATIVE_X":
+            # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
+            # [4] South -> [2] North
+            return direction % 4 + 2
+        elif self.__properties.axis_blb_forward == "NEGATIVE_Y":
+            # [2] North -> [5] West: (2 - 2 + 3) % 4 + 2 = 5
+            # [5] West -> [4] South
+            return (direction + 1) % 4 + 2
+        # TODO: Does not support Z axis remapping yet.
 
     def __grid_object_to_volume(self, obj):
         """
@@ -1096,7 +1127,7 @@ class BLBProcessor(object):
             # Calculate the section name the quad belongs to.
             # Get the index of that section name in the QUAD_SECTION_ORDER list.
             # Append the quad data to the list in the tuple at that index.
-            sorted_quads[self.__calculate_quad_section(quad, self.__bounds_data)].append(quad)
+            sorted_quads[self.__sort_quad(quad, self.__bounds_data)].append(quad)
 
         return sorted_quads
 
