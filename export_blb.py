@@ -261,20 +261,25 @@ class BLBProcessor(object):
         self.__logger = logger
         self.__properties = properties
 
-        # x : Disallow building inside brick.
-
-        # - : Allow building in empty space.
-        self.__grid_outside = "-"
-
-        # u : Allow placing bricks above this plate.
-        # d : Allow placing bricks below this plate.
-        # b : Allow placing bricks above and below this plate.
+        self.__grid_inside = "x" # Disallow building inside brick.
+        self.__grid_outside = "-"  # Allow building in empty space.
+        self.__grid_up = "u" # Allow placing bricks above this plate.
+        self.__grid_down = "d" # Allow placing bricks below this plate.
+        self.__grid_both = "b" # Allow placing bricks above and below this plate.
 
         # Brick grid definition object name prefixes in reverse priority order.
-        self.__grid_def_obj_prefix_priority = ("gridx", "grid-", "gridu", "gridd", "gridb")
+        self.__grid_def_obj_prefix_priority = ("gridx",
+                                               "grid-",
+                                               "gridu",
+                                               "gridd",
+                                               "gridb")
 
         # Brick grid definitions in reverse priority order.
-        self.__grid_definitions_priority = ("x", "-", "u", "d", "b")
+        self.__grid_definitions_priority = (self.__grid_inside,
+                                            self.__grid_outside,
+                                            self.__grid_up,
+                                            self.__grid_down,
+                                            self.__grid_both)
 
         self.__bounds_data = {"name": None,
                               "brick_size": [],
@@ -882,13 +887,33 @@ class BLBProcessor(object):
         # Initialize the brick grid with the empty symbol with the dimensions of the brick.
         brick_grid = [[[self.__grid_outside for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
 
-        # Write the calculated definition_volumes into the brick grid.
-        for index, volumes in enumerate(definition_volumes):
-            # Get the symbol for these volumes.
-            symbol = self.__grid_definitions_priority[index]
-            for volume in volumes:
-                # Modify the grid by adding the symbol to the correct locations.
-                self.__modify_brick_grid(brick_grid, volume, symbol)
+        if len(definition_objects) == 0:
+            # Write the default brick grid.
+            for d in range(grid_depth):
+                for h in range(grid_height):
+                    is_top = (h == 0) # Current height is the top of the brick?
+                    is_bottom = (h == grid_height - 1) # Current height is the bottom of the brick?
+
+                    if is_bottom and is_top:
+                        symbol = self.__grid_both
+                    elif is_bottom:
+                        symbol = self.__grid_down
+                    elif is_top:
+                        symbol = self.__grid_up
+                    else:
+                        symbol = self.__grid_inside
+
+                    # Create a new list of the width of the grid filled with the selected symbol.
+                    # Assign it to the current height.
+                    brick_grid[d][h] = [symbol] * grid_width
+        else:
+            # Write the calculated definition_volumes into the brick grid.
+            for index, volumes in enumerate(definition_volumes):
+                # Get the symbol for these volumes.
+                symbol = self.__grid_definitions_priority[index]
+                for volume in volumes:
+                    # Modify the grid by adding the symbol to the correct locations.
+                    self.__modify_brick_grid(brick_grid, volume, symbol)
 
         self.__definition_data["brickgrid"] = brick_grid
 
