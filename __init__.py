@@ -213,9 +213,8 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         logger = Logger(props.write_log, props.write_log_warnings, logpath)
 
-        export_blb.export(context, props, logger, filepath)
-
-        logger.log("{}{}{}".format("Output file: ", bpy.path.abspath("//"), filepath))
+        if export_blb.export(context, props, logger, filepath):
+            logger.log("{}{}{}".format("Output file: ", bpy.path.abspath("//"), filepath))
 
         logger.write_log()
 

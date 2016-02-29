@@ -748,16 +748,15 @@ class BLBProcessor(object):
 
             if object_count == 0:
                 self.__logger.log("No objects selected.")
-                self.__properties.use_selection = False
             else:
                 if object_count == 1:
                     self.__logger.log("Found {} object.".format(len(objects)))
                 else:
                     self.__logger.log("Found {} objects.".format(len(objects)))
-                return objects
+
 
         # Get all scene objects.
-        if not self.__properties.use_selection:
+        if not self.__properties.use_selection or (self.__properties.use_selection and object_count == 0):
             self.__logger.log("Exporting scene to BLB.")
             objects = self.__context.scene.objects
 
@@ -770,7 +769,8 @@ class BLBProcessor(object):
                     self.__logger.log("Found {} object.".format(len(objects)))
                 else:
                     self.__logger.log("Found {} objects.".format(len(objects)))
-                return objects
+
+        return objects
 
     def __process_bounds_object(self, obj):
         """Processes a manually defined bounds object and saves the data to the bounds data and definition data sequences."""
@@ -1256,20 +1256,24 @@ class BLBProcessor(object):
         # Determine which objects to export.
         object_sequence = self.__get_object_sequence()
 
-        # FIXME: Crash when there are no objects in the scene.
+        if len(object_sequence) > 0:
+            # Process the definition objects first.
+            meshes = self.__process_definition_objects(object_sequence)
 
-        # Process the definition objects first.
-        meshes = self.__process_definition_objects(object_sequence)
+            # Calculate the coverage data.
+            self.__calculate_coverage()
 
-        # Calculate the coverage data.
-        self.__calculate_coverage()
-
-        return (self.__process_mesh_data(meshes), self.__definition_data)
+            return (self.__process_mesh_data(meshes), self.__definition_data)
+        else:
+            self.__logger.error("Error: Nothing to export.")
 
 ### EXPORT FUNCTION ###
 
 def export(context, properties, logger, filepath=""):
-    """Processes the data from the scene and writes it to a BLB file."""
+    """
+    Processes the data from the scene and writes it to a BLB file.
+    Returns True if the BLB file was written.
+    """
 
     # TODO: Layer support.
     # TODO: Exporting multiple bricks from a single file.
@@ -1278,6 +1282,10 @@ def export(context, properties, logger, filepath=""):
     processor = BLBProcessor(context, properties, logger, filepath)
     blb_data = processor.process()
 
-    # Write the data to a file.
-    writer = BLBWriter(filepath, properties.axis_blb_forward, blb_data[0], blb_data[1])
-    writer.write_file()
+    if blb_data is not None:
+        # Write the data to a file.
+        writer = BLBWriter(filepath, properties.axis_blb_forward, blb_data[0], blb_data[1])
+        writer.write_file()
+        return True
+
+    return False
