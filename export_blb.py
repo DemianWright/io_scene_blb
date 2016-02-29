@@ -53,51 +53,31 @@ def swizzle(sequence, order):
     # And add it to the new list.
     return [sequence[letters.index(letter)] for letter in order]
 
-def rotate(xyz, forward_axis, do_swizzle=False):
-    """
-    Either rotates or swizzles the given XYZ coordinate sequence.
-    Swizzling is used to "rotate" values that must always be positive (like dimensions), while rotation is perfomed with actual vertex coordinates.
-    If do_swizzle is true: Returns a new list of values copied from the given XYZ sequence where given coordinates are reordered according to the selected forward axis.
-    If do_swizzle is false: Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated according to the selected forward axis.
-    """
+def rotate(xyz, forward_axis):
+    """Returns a new list of XYZ values copied from the given XYZ sequence where given coordinates are rotated according to the selected forward axis."""
 
     rotated = []
 
     if forward_axis == "POSITIVE_X":
-        # Rotate: 0 deg clockwise
-        # Swizzle: XYZ = XYZ
+        # Rotate: 0 degrees clockwise
         return xyz
 
     elif forward_axis == "POSITIVE_Y":
-        # Rotate: 90 deg clockwise = X Y Z -> Y -X Z
-        # Swizzle: XYZ = YXZ
+        # Rotate: 90 degrees clockwise = X Y Z -> Y -X Z
 
         rotated.append(xyz[INDEX_Y])
-
-        if not do_swizzle:
-            rotated.append(-xyz[INDEX_X])
-        else:
-            rotated.append(xyz[INDEX_X])
+        rotated.append(-xyz[INDEX_X])
 
     elif forward_axis == "NEGATIVE_X":
-        # Rotate: 180 deg clockwise = X Y Z -> -X -Y Z
-        # Swizzle: XYZ = XYZ
+        # Rotate: 180 degrees clockwise = X Y Z -> -X -Y Z
 
-        if not do_swizzle:
-            rotated.append(-xyz[INDEX_X])
-            rotated.append(-xyz[INDEX_Y])
-        else:
-            return xyz
+        rotated.append(-xyz[INDEX_X])
+        rotated.append(-xyz[INDEX_Y])
 
     elif forward_axis == "NEGATIVE_Y":
-        # Rotate: 270 deg clockwise = X Y Z -> -Y X Z
-        # Swizzle: XYZ = YXZ
+        # Rotate: 270 degrees clockwise = X Y Z -> -Y X Z
 
-        if not do_swizzle:
-            rotated.append(-xyz[INDEX_Y])
-        else:
-            rotated.append(xyz[INDEX_Y])
-
+        rotated.append(-xyz[INDEX_Y])
         rotated.append(xyz[INDEX_X])
 
     # The Z axis is not yet taken into account.
@@ -164,7 +144,10 @@ class BLBWriter(object):
         with open(self.__filepath, "w") as file:
             # Write brick size.
             # Swizzle the values according to the forward axis.
-            self.__write_sequence(file, rotate(self.__definitions[BOUNDS_NAME_PREFIX], self.__forward_axis, True))
+            if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
+                self.__write_sequence(file, swizzle(self.__definitions[BOUNDS_NAME_PREFIX], "bac"))
+            else:
+                self.__write_sequence(file, self.__definitions[BOUNDS_NAME_PREFIX])
 
             # Write brick type.
             file.write("SPECIAL\n\n")
@@ -190,7 +173,10 @@ class BLBWriter(object):
 
                 # The size of the cuboid is the size of the bounds.
                 # Swizzle the values according to the forward axis.
-                self.__write_sequence(file, rotate(self.__definitions[BOUNDS_NAME_PREFIX], self.__forward_axis, True))
+                if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
+                    self.__write_sequence(file, swizzle(self.__definitions[BOUNDS_NAME_PREFIX], "bac"))
+                else:
+                    self.__write_sequence(file, self.__definitions[BOUNDS_NAME_PREFIX])
             else:
                 # Write defined collisions.
 
@@ -202,8 +188,12 @@ class BLBWriter(object):
                     file.write("\n")
                     # Mirror center according to the forward axis. No idea why but it works.
                     # Swizzle the values according to the forward axis.
-                    self.__write_sequence(file, rotate(self.__mirror(center), self.__forward_axis, True))
-                    self.__write_sequence(file, rotate(dimensions, self.__forward_axis, True))
+                    if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
+                        self.__write_sequence(file, swizzle(self.__mirror(center), "bac"))
+                        self.__write_sequence(file, swizzle(dimensions, "bac"))
+                    else:
+                        self.__write_sequence(file, self.__mirror(center))
+                        self.__write_sequence(file, dimensions)
 
             # Write coverage.
             file.write("COVERAGE:\n")
@@ -698,16 +688,16 @@ class BLBProcessor(object):
                 grid_min[INDEX_Y] = abs(grid_max[INDEX_Y])
                 grid_max[INDEX_Y] = abs(temp)
 
-                grid_min = swizzle(grid_min, "yxz")
-                grid_max = swizzle(grid_max, "yxz")
+                grid_min = swizzle(grid_min, "bac")
+                grid_max = swizzle(grid_max, "bac")
             elif self.__properties.axis_blb_forward == "NEGATIVE_X":
                 # Swap min/max width and make it positive.
                 temp = grid_min[INDEX_X]
                 grid_min[INDEX_X] = abs(grid_max[INDEX_X])
                 grid_max[INDEX_X] = abs(temp)
 
-                grid_min = swizzle(grid_min, "yxz")
-                grid_max = swizzle(grid_max, "yxz")
+                grid_min = swizzle(grid_min, "bac")
+                grid_max = swizzle(grid_max, "bac")
             elif self.__properties.axis_blb_forward == "NEGATIVE_Y":
                 # Swap min/max depth and make it positive.
                 temp = grid_min[INDEX_Y]
