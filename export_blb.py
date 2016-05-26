@@ -722,7 +722,7 @@ class BLBProcessor(object):
                     break
 
             if zero_size:
-                self.__logger.error("Error: Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
+                self.__logger.error("Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
                 raise self.ZeroSizeException()
             else:
                 # Return the index ranges as a tuple: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
@@ -731,9 +731,9 @@ class BLBProcessor(object):
                         (grid_min[INDEX_Z], grid_max[INDEX_Z]))
         else:
             if self.__bounds_data["name"] is None:
-                self.__logger.error("Error: Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
+                self.__logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
             else:
-                self.__logger.error("Error: Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
+                self.__logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
             raise self.OutOfBoundsException()
 
     def __get_object_sequence(self):
@@ -791,10 +791,10 @@ class BLBProcessor(object):
 
         # Are the dimensions of the bounds object not integers?
         if self.__are_not_ints(bounds_size):
-            self.__logger.warning("Warning: Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[INDEX_X],
-                                                                                                                                   bounds_size[INDEX_Y],
-                                                                                                                                   bounds_size[INDEX_Z],
-                                                                                                                                   self.__HUMAN_ERROR))
+            self.__logger.warning("Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[INDEX_X],
+                                                                                                                          bounds_size[INDEX_Y],
+                                                                                                                          bounds_size[INDEX_Z],
+                                                                                                                          self.__HUMAN_ERROR))
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount and force to int.
                 bounds_size[index] = round(self.__HUMAN_ERROR * round(value / self.__HUMAN_ERROR))
@@ -806,7 +806,7 @@ class BLBProcessor(object):
     def __calculate_bounds(self):
         """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
 
-        self.__logger.warning("Warning: No 'bounds' object found. Automatically calculated brick size may be undesirable.")
+        self.__logger.warning("No 'bounds' object found. Automatically calculated brick size may be undesirable.")
 
         # Get the dimensions defined by the vectors.
         bounds_size = self.__round_values((self.__vec_bounding_box_max[INDEX_X] - self.__vec_bounding_box_min[INDEX_X],
@@ -825,9 +825,9 @@ class BLBProcessor(object):
 
         # Are the dimensions of the bounds object not integers?
         if self.__are_not_ints(bounds_size):
-            self.__logger.warning("Warning: Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[INDEX_X],
-                                                                                                                    bounds_size[INDEX_Y],
-                                                                                                                    bounds_size[INDEX_Z]))
+            self.__logger.warning("Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[INDEX_X],
+                                                                                                           bounds_size[INDEX_Y],
+                                                                                                           bounds_size[INDEX_Z]))
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
             for index, value in enumerate(bounds_size):
@@ -864,16 +864,16 @@ class BLBProcessor(object):
 
         # Log messages for brick grid definitions.
         if len(definition_objects) == 0:
-            self.__logger.warning("Warning: No brick grid definitions found. Automatically generated brick grid may be undesirable.")
+            self.__logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.")
         elif len(definition_objects) == 1:
             if processed == 0:
-                self.__logger.warning("Warning: {} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
+                self.__logger.warning("{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} brick grid definition.".format(processed, len(definition_objects)))
         else:
             # Found more than one.
             if processed == 0:
-                self.__logger.warning("Warning: {} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
+                self.__logger.warning("{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
 
@@ -929,7 +929,7 @@ class BLBProcessor(object):
         processed = 0
 
         if len(definition_objects) > 10:
-            self.__logger.error("Error: {} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)))
+            self.__logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)))
 
         for obj in definition_objects:
             # Break the loop as soon as 10 definitions have been processed.
@@ -940,11 +940,11 @@ class BLBProcessor(object):
 
             # At least two vertices are required for a valid bounding box.
             if vert_count < 2:
-                self.__logger.error("Error: Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name))
+                self.__logger.error("Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name))
                 # Skip the rest of the loop and return to the beginning.
                 continue
             elif vert_count > 8:
-                self.__logger.warning("Warning: Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. Bounding box of this mesh will be used.".format(obj.name))
+                self.__logger.warning("Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. Bounding box of this mesh will be used.".format(obj.name))
                 # The mesh is still valid.
 
             # Find the minimum and maximum coordinates for the collision object.
@@ -966,7 +966,7 @@ class BLBProcessor(object):
                         break
 
                 if zero_size:
-                    self.__logger.error("Error: Collision definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
+                    self.__logger.error("Collision definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
                     # Skip the rest of the loop.
                     continue
 
@@ -985,22 +985,22 @@ class BLBProcessor(object):
                 self.__definition_data[COLLISION_PREFIX].append((self.__sequence_z_to_plates(center), self.__sequence_z_to_plates(dimensions)))
             else:
                 if self.__bounds_data["name"] is None:
-                    self.__logger.error("Error: Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
+                    self.__logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
                 else:
-                    self.__logger.error("Error: Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
+                    self.__logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
 
         # Log messages for collision definitions.
         if len(definition_objects) == 0:
-            self.__logger.warning("Warning: No collision definitions found. Default generated collision may be undesirable.")
+            self.__logger.warning("No collision definitions found. Default generated collision may be undesirable.")
         elif len(definition_objects) == 1:
             if processed == 0:
-                self.__logger.warning("Warning: {} collision definition found but was not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
+                self.__logger.warning("{} collision definition found but was not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} collision definition.".format(processed, len(definition_objects)))
         else:
             # Found more than one.
             if processed == 0:
-                self.__logger.warning("Warning: {} collision definitions found but were not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
+                self.__logger.warning("{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
             else:
                 self.__logger.log("Processed {} of {} collision definitions.".format(processed, len(definition_objects)))
 
@@ -1021,7 +1021,7 @@ class BLBProcessor(object):
             # Ignore non-mesh objects
             if obj.type != "MESH":
                 if obj.name.lower().startswith(BOUNDS_NAME_PREFIX):
-                    self.__logger.warning("Warning: Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
+                    self.__logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
                 continue
 
             # Is the current object the bounds definition object?
@@ -1032,7 +1032,7 @@ class BLBProcessor(object):
                                                                                                      self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Y],
                                                                                                      self.__definition_data[BOUNDS_NAME_PREFIX][INDEX_Z]))
                 else:
-                    self.__logger.warning("Warning: Multiple bounds definitions found. {} definition ignored.".format(obj.name))
+                    self.__logger.warning("Multiple bounds definitions found. {} definition ignored.".format(obj.name))
 
             # Is the current object a brick grid definition object?
             elif obj.name.lower().startswith(self.__grid_def_obj_prefix_priority):
@@ -1082,7 +1082,7 @@ class BLBProcessor(object):
             # UV layers exist?
             if current_data.uv_layers:
                 if len(current_data.uv_layers) > 1:
-                    self.__logger.warning("Warning: Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
+                    self.__logger.warning("Mesh '{}' has {} UV layers, using the 1st.".format(obj.name, len(current_data.uv_layers)))
 
                 uv_data = current_data.uv_layers[0].data
             else:
@@ -1144,10 +1144,10 @@ class BLBProcessor(object):
                 quads.append((positions, normals, uvs, colors, texture))
 
         if count_tris > 0:
-            self.__logger.warning("Warning: {} triangles degenerated to quads.".format(count_tris))
+            self.__logger.warning("{} triangles degenerated to quads.".format(count_tris))
 
         if count_ngon > 0:
-            self.__logger.warning("Warning: {} n-gons skipped.".format(count_ngon))
+            self.__logger.warning("{} n-gons skipped.".format(count_ngon))
 
         # Create an empty list for each quad section.
         # This is my workaround to making a sort of dictionary where the keys are in insertion order.
@@ -1265,7 +1265,7 @@ class BLBProcessor(object):
 
             return (self.__process_mesh_data(meshes), self.__definition_data)
         else:
-            self.__logger.error("Error: Nothing to export.")
+            self.__logger.error("Nothing to export.")
 
 ### EXPORT FUNCTION ###
 

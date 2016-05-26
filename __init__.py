@@ -52,12 +52,12 @@ class Logger(object):
                 self.__log_lines.append(message)
 
     def warning(self, message):
-        """Shorthand for log(message, True) to improve clarity."""
-        self.log(message, True)
+        """Automatically prefixes the message with 'Warning: ' and logs the message as a warning."""
+        self.log("Warning: " + message, True)
 
     def error(self, message):
-        """Shorthand for log(message, True) to improve clarity."""
-        self.log(message, True)
+        """Automatically prefixes the message with 'Error: ' and logs the message as a warning."""
+        self.log("Error: " + message, True)
 
     def write_log(self):
         """Writes a log file only if so specified at object creation."""
