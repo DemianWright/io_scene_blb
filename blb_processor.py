@@ -18,6 +18,7 @@ FLOATING_POINT_PRECISION = Decimal("0.000001")
 # Set the Decimal number context: 6 decimal points and 0.5 is rounded up.
 setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
 
+
 class BLBProcessor(object):
     """A class that handles processing Blender data and preparing it for writing to a BLB file."""
 
@@ -42,11 +43,11 @@ class BLBProcessor(object):
 
         # TODO: Get rid of as many attributes below as possible.
 
-        self.__grid_inside = "x" # Disallow building inside brick.
+        self.__grid_inside = "x"  # Disallow building inside brick.
         self.__grid_outside = "-"  # Allow building in empty space.
-        self.__grid_up = "u" # Allow placing bricks above this plate.
-        self.__grid_down = "d" # Allow placing bricks below this plate.
-        self.__grid_both = "b" # Allow placing bricks above and below this plate.
+        self.__grid_up = "u"  # Allow placing bricks above this plate.
+        self.__grid_down = "d"  # Allow placing bricks below this plate.
+        self.__grid_both = "b"  # Allow placing bricks above and below this plate.
 
         # Brick grid definition object name prefixes in reverse priority order.
         self.__grid_def_obj_prefix_priority = ("gridx",
@@ -62,7 +63,9 @@ class BLBProcessor(object):
                                             self.__grid_down,
                                             self.__grid_both)
 
-        # TODO: Combine these two into a single object to make everything make more sense. Now it's difficult trying to remember when what data has changed and why.
+        # TODO: Combine these two into a single object to make everything make
+        # more sense. Now it's difficult trying to remember when what data has
+        # changed and why.
         self.__bounds_data = {"name": None,
                               "brick_size": [],
                               "dimensions": [],
@@ -110,7 +113,7 @@ class BLBProcessor(object):
         """
 
         for val in values:
-            if val != int(val): # TODO: Fix OverflowError & crash where nothing is selected and exporting only selection.
+            if val != int(val):  # TODO: Fix OverflowError & crash where nothing is selected and exporting only selection.
                 return True
 
     @classmethod
@@ -144,7 +147,7 @@ class BLBProcessor(object):
         for vert in obj.data.vertices:
             coordinates = obj.matrix_world * vert.co
 
-            for i in range(0,3):
+            for i in range(0, 3):
                 sequence_min[i] = min(sequence_min[i], coordinates[i])
                 sequence_max[i] = max(sequence_max[i], coordinates[i])
 
@@ -447,7 +450,8 @@ class BLBProcessor(object):
                 # NEGATIVE_X: Index 0 = left of the brick.
                 grid_min[constants.INDEX_Y] = grid_min[constants.INDEX_Y] + halved_dimensions[constants.INDEX_Y]
 
-            grid_min[constants.INDEX_Z] = (grid_min[constants.INDEX_Z] - halved_dimensions[constants.INDEX_Z]) / self.__PLATE_HEIGHT  # Translate coordinates to negative Z axis, height to plates.
+            # Translate coordinates to negative Z axis, height to plates.
+            grid_min[constants.INDEX_Z] = (grid_min[constants.INDEX_Z] - halved_dimensions[constants.INDEX_Z]) / self.__PLATE_HEIGHT
 
             # Maximum indices.
             if self.__properties.axis_blb_forward == "NEGATIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
@@ -518,7 +522,8 @@ class BLBProcessor(object):
             if self.__bounds_data["name"] is None:
                 logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
             else:
-                logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
+                logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
+                    obj.name, self.__bounds_data["name"]))
             raise self.OutOfBoundsException()
 
     def __get_object_sequence(self):
@@ -637,13 +642,15 @@ class BLBProcessor(object):
             logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.")
         elif len(definition_objects) == 1:
             if processed == 0:
-                logger.warning("{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
+                logger.warning(
+                    "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
             else:
                 logger.info("Processed {} of {} brick grid definition.".format(processed, len(definition_objects)))
         else:
             # Found more than one.
             if processed == 0:
-                logger.warning("{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
+                logger.warning(
+                    "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
             else:
                 logger.info("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
 
@@ -664,8 +671,8 @@ class BLBProcessor(object):
             # Write the default brick grid.
             for d in range(grid_depth):
                 for h in range(grid_height):
-                    is_top = (h == 0) # Current height is the top of the brick?
-                    is_bottom = (h == grid_height - 1) # Current height is the bottom of the brick?
+                    is_top = (h == 0)  # Current height is the top of the brick?
+                    is_bottom = (h == grid_height - 1)  # Current height is the bottom of the brick?
 
                     if is_bottom and is_top:
                         symbol = self.__grid_both
@@ -714,7 +721,8 @@ class BLBProcessor(object):
                 # Skip the rest of the loop and return to the beginning.
                 continue
             elif vert_count > 8:
-                logger.warning("Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. Bounding box of this mesh will be used.".format(obj.name))
+                logger.warning(
+                    "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. Bounding box of this mesh will be used.".format(obj.name))
                 # The mesh is still valid.
 
             # Find the minimum and maximum coordinates for the collision object.
@@ -757,20 +765,23 @@ class BLBProcessor(object):
                 if self.__bounds_data["name"] is None:
                     logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
                 else:
-                    logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(obj.name, self.__bounds_data["name"]))
+                    logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
+                        obj.name, self.__bounds_data["name"]))
 
         # Log messages for collision definitions.
         if len(definition_objects) == 0:
             logger.warning("No collision definitions found. Default generated collision may be undesirable.")
         elif len(definition_objects) == 1:
             if processed == 0:
-                logger.warning("{} collision definition found but was not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
+                logger.warning(
+                    "{} collision definition found but was not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
             else:
                 logger.info("Processed {} of {} collision definition.".format(processed, len(definition_objects)))
         else:
             # Found more than one.
             if processed == 0:
-                logger.warning("{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
+                logger.warning(
+                    "{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
             else:
                 logger.info("Processed {} of {} collision definitions.".format(processed, len(definition_objects)))
 
@@ -815,7 +826,8 @@ class BLBProcessor(object):
                 if self.__bounds_data["name"] is None:
                     self.__process_bounds_object(obj)
                     logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X],
-                                                                                               self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
+                                                                                               self.__definition_data[
+                                                                                                   constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
                                                                                                self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]))
                 else:
                     logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj.name))
@@ -841,7 +853,8 @@ class BLBProcessor(object):
         if len(self.__definition_data[constants.BOUNDS_NAME_PREFIX]) == 0:
             self.__calculate_bounds()
             logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X],
-                                                                                          self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
+                                                                                          self.__definition_data[
+                                                                                              constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
                                                                                           self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]))
 
         # Process brick grid and collision definitions now that a bounds definition exists.

@@ -7,6 +7,7 @@ A module for writing data into a BLB file.
 # Blender requires imports from ".".
 from . import common, constants
 
+
 class BLBWriter(object):
     """Handles writing sorted quads and definitions to a BLB file."""
 

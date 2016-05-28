@@ -12,6 +12,7 @@ __WRITE_FILE = False
 __WARNINGS_ONLY = True
 __LOGPATH = ""
 
+
 def configure(write_file, write_only_on_warnings, logpath):
     """Configures the logger with the specified options and a log path."""
     global __WRITE_FILE, __WARNINGS_ONLY, __LOGPATH
@@ -19,6 +20,7 @@ def configure(write_file, write_only_on_warnings, logpath):
     __WRITE_FILE = write_file
     __WARNINGS_ONLY = write_only_on_warnings
     __LOGPATH = logpath
+
 
 def info(message, is_warning=False):
     """Prints the given message to the console and additionally to a log file if so specified at logger creation."""
@@ -36,13 +38,16 @@ def info(message, is_warning=False):
             # Else if all messages are written to a log file, append the message to the sequence.
             __LOG_LINES.append(message)
 
+
 def warning(message):
     """Prefixes the message with '[WARNING] ' and logs the message as a warning."""
     info("[WARNING] " + message, True)
 
+
 def error(message):
     """Prefixes the message with '[ERROR] ' and logs the message as a warning."""
     info("[ERROR] " + message, True)
+
 
 def build_countable_message(message_start, count, alternatives, message_end="", message_zero=None):
     """Builds a sentence with the correct message ending (i.e. singular or plural) based on the countable element.
@@ -77,6 +82,7 @@ def build_countable_message(message_start, count, alternatives, message_end="", 
         message_index = 1
 
     return "{}{}{}{}".format(message_start, count, alternatives[message_index], message_end)
+
 
 def write_log():
     """Writes a log file (if so configured) to the path specified at logger creation."""

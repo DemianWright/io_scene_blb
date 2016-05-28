@@ -9,6 +9,7 @@ from string import ascii_lowercase
 # Blender requires imports from ".".
 from . import constants
 
+
 def swizzle(sequence, order):
     """
     Changes the order of the elements in the specified sequence. (Max 26 elements.)
@@ -25,6 +26,7 @@ def swizzle(sequence, order):
     # Add it to a new list.
     # Return the new list.
     return [sequence[ascii_lowercase.index(letter)] for letter in order]
+
 
 def rotate(xyz, forward_axis):
     """
