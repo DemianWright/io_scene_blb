@@ -10,6 +10,8 @@ from . import common, constants
 class BLBWriter(object):
     """Handles writing sorted quads and definitions to a BLB file."""
 
+    # TODO: Remove all data manipulation logic from this class. This class should only write the given data in the correct order.
+
     def __init__(self, filepath, forward_axis, sorted_quads, definition_data):
         """Initializes the private class variables."""
         self.__filepath = filepath

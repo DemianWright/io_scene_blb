@@ -31,7 +31,8 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 from bpy_extras.io_utils import ExportHelper
 
-### EXPORT ###
+# TODO: Fix all docstring to follow the Google style guide or something.
+
 class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
 

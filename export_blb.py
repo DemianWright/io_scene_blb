@@ -33,6 +33,8 @@ def export(context, properties, filepath=""):
     # TODO: Exporting multiple bricks from a single file.
 
     # Process the data.
+    # The context variable contains all the Blender data.
+    # The properties variable contains all user-defined settings to take into account when processing the data.
     processor = blb_processor.BLBProcessor(context, properties)
     blb_data = processor.process()
 

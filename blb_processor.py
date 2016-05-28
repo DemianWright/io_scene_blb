@@ -29,6 +29,7 @@ class BLBProcessor(object):
         """An exception thrown when a definition object has zero brick size on at least one axis."""
         pass
 
+    # TODO: Make into a property.
     # Error allowed for manually created definition objects. Used for rounding vertex positions to the brick grid.
     __HUMAN_ERROR = Decimal("0.1")
 
@@ -38,6 +39,8 @@ class BLBProcessor(object):
         """Initializes the BLBProcessor with the specified properties."""
         self.__context = context
         self.__properties = properties
+
+        # TODO: Get rid of as many attributes below as possible.
 
         self.__grid_inside = "x" # Disallow building inside brick.
         self.__grid_outside = "-"  # Allow building in empty space.
@@ -514,38 +517,23 @@ class BLBProcessor(object):
             raise self.OutOfBoundsException()
 
     def __get_object_sequence(self):
-        """Returns the sequence of objects to use when exporting."""
+        """Returns the sequence of objects to be exported."""
+
+        objects = []
 
         # Use selected objects?
         if self.__properties.use_selection:
             logger.info("Exporting selection to BLB.")
             objects = self.__context.selected_objects
+            logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "No objects selected."))
 
-            object_count = len(objects)
-
-            if object_count == 0:
-                logger.info("No objects selected.")
-            else:
-                if object_count == 1:
-                    logger.info("Found {} object.".format(len(objects)))
-                else:
-                    logger.info("Found {} objects.".format(len(objects)))
-
-
+        # If user wants to export the whole scene.
+        # Or if user wanted to export only the selected objects but nothing was selected.
         # Get all scene objects.
-        if not self.__properties.use_selection or (self.__properties.use_selection and object_count == 0):
+        if len(objects) == 0:
             logger.info("Exporting scene to BLB.")
             objects = self.__context.scene.objects
-
-            object_count = len(objects)
-
-            if object_count == 0:
-                logger.info("No objects in the scene.")
-            else:
-                if object_count == 1:
-                    logger.info("Found {} object.".format(len(objects)))
-                else:
-                    logger.info("Found {} objects.".format(len(objects)))
+            logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "Scene has no objects."))
 
         return objects
 
@@ -1030,7 +1018,7 @@ class BLBProcessor(object):
         Returns a tuple where the first element is the sorted quad data and the second is the BLB definitions.
         """
 
-        # Determine which objects to export.
+        # Determine which objects to process.
         object_sequence = self.__get_object_sequence()
 
         if len(object_sequence) > 0:
