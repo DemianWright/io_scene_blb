@@ -771,9 +771,20 @@ class BLBProcessor(object):
                 logger.info("Processed {} of {} collision definitions.".format(processed, len(definition_objects)))
 
     def __process_definition_objects(self, objects):
-        """"
-        Processes all non-visible definition objects.
-        Returns a sequence of meshes (non-definition objects) that will be exported as visible 3D models.
+        """"Processes all definition objects that are not exported as a 3D model but will affect the brick properties.
+
+        Processed definition objects:
+            - bounds
+            - brick grid
+            - collision
+
+        If no bounds object is found, the brick bounds will be automatically calculated using the minimum and maximum coordinates of the found mesh objects.
+
+        Args:
+            objects (sequence of Blender objects): The sequence of objects to be processed.
+
+        Returns:
+            A sequence of mesh objects that will be exported as visible 3D models.
         """
 
         brick_grid_objects = []
@@ -788,9 +799,14 @@ class BLBProcessor(object):
             if obj.type != "MESH":
                 if obj.name.lower().startswith(constants.BOUNDS_NAME_PREFIX):
                     logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
+                elif obj.name.lower().startswith(self.__grid_def_obj_prefix_priority):
+                    logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj.name))
+                elif obj.name.lower().startswith(constants.COLLISION_PREFIX):
+                    logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj.name))
+
                 continue
 
-            # Is the current object the bounds definition object?
+            # Is the current object a bounds definition object?
             elif obj.name.lower().startswith(constants.BOUNDS_NAME_PREFIX):
                 if self.__bounds_data["name"] is None:
                     self.__process_bounds_object(obj)
@@ -798,39 +814,37 @@ class BLBProcessor(object):
                                                                                                self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
                                                                                                self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]))
                 else:
-                    logger.warning("Multiple bounds definitions found. {} definition ignored.".format(obj.name))
+                    logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj.name))
+                    continue
 
             # Is the current object a brick grid definition object?
             elif obj.name.lower().startswith(self.__grid_def_obj_prefix_priority):
                 # Brick grid definition objects cannot be processed until after the bounds have been defined.
-                # Store for later use.
                 brick_grid_objects.append(obj)
 
             # Is the current object a collision definition object?
             elif obj.name.lower().startswith(constants.COLLISION_PREFIX):
                 # Collision definition objects cannot be processed until after the bounds have been defined.
-                # Store for later use.
                 collision_objects.append(obj)
 
-            # Thus the object must be a regular mesh that is exported as a 3D model.
+            # Else the object must be a regular mesh that is exported as a 3D model.
             else:
-                # Record bounds.
+                # Record bounds for checking against the defined brick bounds or if none was specified, for calculating the bounds.
                 self.__set_world_min_max(self.__vec_bounding_box_min, self.__vec_bounding_box_max, obj)
-
-                # And store for later use.
                 mesh_objects.append(obj)
 
-        # No manually created bounds object was found, calculate brick size according to the combined minimum and maximum vertex positions of all processed meshes.
+        # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex position.
         if len(self.__definition_data[constants.BOUNDS_NAME_PREFIX]) == 0:
             self.__calculate_bounds()
             logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X],
                                                                                           self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
                                                                                           self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]))
+
         # Process brick grid and collision definitions now that a bounds definition exists.
         self.__process_grid_definitions(brick_grid_objects)
         self.__process_collision_definitions(collision_objects)
 
-        # Return the meshes to be exported to be processed elsewhere.
+        # Return the meshes to be exported.
         return mesh_objects
 
     def __process_mesh_data(self, meshes):

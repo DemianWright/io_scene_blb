@@ -10,6 +10,7 @@ INDEX_Y = 1
 INDEX_Z = 2
 
 # Definition object name constants.
+# TODO: Make these properties.
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"
 
