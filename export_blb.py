@@ -53,9 +53,8 @@ class BLBProcessor(object):
 
     __PLATE_HEIGHT = Decimal("0.4")  # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
 
-    def __init__(self, context, properties, filepath):
-        """Initializes the logger with the specified options and an appropriate log path."""
-        self.__filepath = filepath
+    def __init__(self, context, properties):
+        """Initializes the BLBProcessor with the specified properties."""
         self.__context = context
         self.__properties = properties
 
@@ -1078,7 +1077,7 @@ def export(context, properties, filepath=""):
     # TODO: Exporting multiple bricks from a single file.
 
     # Process the data.
-    processor = BLBProcessor(context, properties, filepath)
+    processor = BLBProcessor(context, properties)
     blb_data = processor.process()
 
     if blb_data is not None:
