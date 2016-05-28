@@ -62,6 +62,7 @@ class BLBProcessor(object):
                                             self.__grid_down,
                                             self.__grid_both)
 
+        # TODO: Combine these two into a single object to make everything make more sense. Now it's difficult trying to remember when what data has changed and why.
         self.__bounds_data = {"name": None,
                               "brick_size": [],
                               "dimensions": [],
@@ -1013,21 +1014,32 @@ class BLBProcessor(object):
         self.__definition_data["coverage"] = coverage
 
     def process(self):
-        """
-        Processes Blender data.
-        Returns a tuple where the first element is the sorted quad data and the second is the BLB definitions.
+        """Processes the Blender data specified when this processor was created.
+
+        Performs the following actions:
+            1. Determines which Blender objects will be processed.
+            2. Processes the definition objects (collision, brick grid, and bounds) that will affect how the brick works but will not be visible.
+            3. Calculates the coverage data based on the brick bounds.
+            4. Processes the visible mesh data into the correct format for writing into a BLB file.
+
+        Returns:
+            - A tuple where the first element is the sorted quad data and the second is the BLB definitions.
+            - None if there is no Blender data to export.
         """
 
         # Determine which objects to process.
         object_sequence = self.__get_object_sequence()
 
         if len(object_sequence) > 0:
-            # Process the definition objects first.
+            # Process the definition objects first and separate the visible meshes from the object sequence.
+            # This is done in a single function because it is faster, no need to iterate over the same sequence twice.
             meshes = self.__process_definition_objects(object_sequence)
 
+            # TODO: Pass in the bounds.
             # Calculate the coverage data.
             self.__calculate_coverage()
 
             return (self.__process_mesh_data(meshes), self.__definition_data)
         else:
             logger.error("Nothing to export.")
+            return None
