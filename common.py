@@ -4,26 +4,27 @@ Various functions used in multiple classes.
 @author: Demian Wright
 '''
 
+from string import ascii_lowercase
+
 # Blender requires imports from ".".
 from . import constants
 
 def swizzle(sequence, order):
     """
-    Changes the order of the elements in the specified sequence of up to 26 elements.
-    The new order of the sequence must be specified as string or a sequence of lower case letters.
+    Changes the order of the elements in the specified sequence. (Max 26 elements.)
+    The new order of the sequence must be specified as string or a sequence of lower case Latin letters.
     Sequence indices are represented using lower case letters a-z of the Latin alphabet.
     I.e. "a" signifies the index 0 and "z" stands for index 25.
     Duplicating elements is possible by specifying the the same letter multiple times.
-    Returns a copy of the specified sequence in the specified order.
+    Returns a new sequence of values shallowly copied from the specified sequence in the specified order.
+    The new sequence will only contain the elements specified in the order.
     """
-    letters = ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
-
-    # For every letter in the given order.
-    # Get the index of the letter in the letters tuple.
-    # Get the value of that index in the given sequence.
-    # And add it to the new list.
+    # For every letter in the specified order.
+    # Get the index of the letter in the ascii_lowercase string.
+    # Get the value of that index in the specified sequence.
+    # Add it to a new list.
     # Return the new list.
-    return [sequence[letters.index(letter)] for letter in order]
+    return [sequence[ascii_lowercase.index(letter)] for letter in order]
 
 def rotate(xyz, forward_axis):
     """
@@ -31,7 +32,6 @@ def rotate(xyz, forward_axis):
     By default Blockland assumes that coordinates are relative to +X axis being the brick forward axis pointing away from the player.
     Returns a new list of XYZ coordinates.
     """
-
     rotated = []
 
     if forward_axis == "POSITIVE_X":
