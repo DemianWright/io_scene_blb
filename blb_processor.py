@@ -36,8 +36,110 @@ FLOATING_POINT_PRECISION = Decimal("0.000001")
 setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
 
 
+def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None, forward_axis=None):
+    """Calculates the BLB coverage data for a brick.
+
+    Args:
+        brick_size (sequence of integers): An optional sequence of the sizes of the brick on each of the XYZ axes.
+                                           If not defined, default coverage will be used.
+        calculate_side (namedtuple): An optional named tuple of boolean values where the keys are the names of the brick sides.
+                                     A value of true means that coverage will be calculated for that side of the brick according the specified size of the brick.
+                                     A value of false means that the default coverage value will be used for that side.
+                                     Must be defined if brick_size is defined.
+        hide_adjacent (namedtuple): An optional named tuple of boolean values where the keys are the names of the brick sides.
+                                    A value of true means that faces of adjacent bricks covering this side of this brick will be hidden.
+                                    A value of false means that adjacent brick faces will not be hidden.
+                                    Must be defined if brick_size is defined.
+        forward_axis (string): The optional name of the user-defined BLB forward axis.
+                               Must be defined if brick_size is defined.
+
+    Returns:
+        A sequence of BLB coverage data.
+    """
+
+    coverage = []
+
+    # TODO: Loop?
+
+    # Does the user want to calculate coverage in the first place?
+    if calculate_side is not None:
+        # Initially assume that forward axis is +X, data will be swizzled later.
+
+        # Top: +Z
+        if calculate_side.top:
+            # Calculate the area of the top face.
+            area = brick_size[constants.INDEX_X] * brick_size[constants.INDEX_Y]
+        else:
+            area = constants.DEFAULT_COVERAGE
+
+        # Hide adjacent face: True/False
+        coverage.append((hide_adjacent.top, area))
+
+        # Bottom: -Z
+        if calculate_side.bottom:
+            area = brick_size[constants.INDEX_X] * brick_size[constants.INDEX_Y]
+        else:
+            area = constants.DEFAULT_COVERAGE
+        coverage.append((hide_adjacent.bottom, area))
+
+        # North: +X
+        if calculate_side.north:
+            area = brick_size[constants.INDEX_X] * brick_size[constants.INDEX_Z]
+        else:
+            area = constants.DEFAULT_COVERAGE
+        coverage.append((hide_adjacent.north, area))
+
+        # East: -Y
+        if calculate_side.east:
+            area = brick_size[constants.INDEX_Y] * brick_size[constants.INDEX_Z]
+        else:
+            area = constants.DEFAULT_COVERAGE
+        coverage.append((hide_adjacent.east, area))
+
+        # South: -X
+        if calculate_side.south:
+            area = brick_size[constants.INDEX_X] * brick_size[constants.INDEX_Z]
+        else:
+            area = constants.DEFAULT_COVERAGE
+        coverage.append((hide_adjacent.south, area))
+
+        # West: +Y
+        if calculate_side.west:
+            area = brick_size[constants.INDEX_Y] * brick_size[constants.INDEX_Z]
+        else:
+            area = constants.DEFAULT_COVERAGE
+        coverage.append((hide_adjacent.west, area))
+
+        # Swizzle the coverage values around according to the defined forward axis.
+        # Coverage was calculated with forward axis at +X.
+        # The order of the values in the coverage is:
+        # 0 = a = +Z: Top
+        # 1 = b = -Z: Bottom
+        # 2 = c = +X: North
+        # 3 = d = -Y: East
+        # 4 = e = -X: South
+        # 5 = f = +Y: West
+
+        # Technically this is wrong as the order would be different for -Y forward, but since the bricks must be cuboid in shape, they are symmetrical.
+        if forward_axis.lower().endswith("y"):
+            # New North will be +Y.
+            # Old North (+X) will be the new East
+            coverage = common.swizzle(coverage, "abfcde")
+
+        # Else forward_axis is +X or -X: no need to do anything, the calculation was done with +X.
+
+        # No support for Z axis remapping yet.
+    else:
+        # Use the default coverage.
+        # Do not hide adjacent face.
+        # Hide this face if it is covered by constants.DEFAULT_COVERAGE plates.
+        coverage = [(0, constants.DEFAULT_COVERAGE)] * 6
+
+    return coverage
+
+
 class BrickBounds(object):
-    """A class for storing the following brick bounds data.
+    """A class for storing brick bounds Blender data.
 
     Stores the following data:
         - Blender object name,
@@ -58,7 +160,15 @@ class BrickBounds(object):
 
 
 class BLBData(object):
-    """A class for storing the data to be written to a BLB file."""
+    """A class for storing the brick data to be written to a BLB file.
+
+    Stores the following data:
+        - size (dimensions) in plates,
+        - grid data,
+        - collision data,
+        - coverage data,
+        - and sorted quad data.
+    """
 
     def __init__(self):
         # Brick XYZ integer size in plates.
@@ -73,7 +183,8 @@ class BLBData(object):
         # Brick coverage data sequences.
         self.coverage = []
 
-        # Sorted vertex data sequences.
+        # TODO: Full breakdown of the quad data.
+        # Sorted quad data sequences.
         self.quads = []
 
 
@@ -905,6 +1016,34 @@ class BLBProcessor(object):
         # Return the meshes to be exported.
         return mesh_objects
 
+    def __process_coverage(self):
+        """Calculates the coverage data if the user has defined so in the properties.
+
+        Returns:
+            A sequence of BLB coverage data.
+        """
+        if self.__properties.calculate_coverage:
+            calculate_side = common.BrickSides(self.__properties.coverage_top_calculate,
+                                               self.__properties.coverage_bottom_calculate,
+                                               self.__properties.coverage_north_calculate,
+                                               self.__properties.coverage_east_calculate,
+                                               self.__properties.coverage_south_calculate,
+                                               self.__properties.coverage_west_calculate)
+
+            hide_adjacent = common.BrickSides(self.__properties.coverage_top_hide,
+                                              self.__properties.coverage_bottom_hide,
+                                              self.__properties.coverage_north_hide,
+                                              self.__properties.coverage_east_hide,
+                                              self.__properties.coverage_south_hide,
+                                              self.__properties.coverage_west_hide)
+
+            return calculate_coverage(self.__blb_data.brick_size,
+                                      calculate_side,
+                                      hide_adjacent,
+                                      self.__properties.axis_blb_forward)
+        else:
+            return calculate_coverage()
+
     def __process_mesh_data(self, meshes):
         """Returns a tuple of mesh data sorted into sections."""
 
@@ -1001,90 +1140,6 @@ class BLBProcessor(object):
 
         return sorted_quads
 
-    def __calculate_coverage(self):
-        """Calculates the coverage based on the properties and the brick bounds and saves the data to the definition data."""
-
-        coverage = []
-
-        # Calculate coverage?
-        if self.__properties.calculate_coverage:
-            # Get the brick size in plates.
-            dimensions = self.__blb_data.brick_size
-
-            # TODO: Why am I assuming that forward axis is +X?
-
-            # Top: +Z
-            if self.__properties.coverage_top_calculate:
-                # Calculate the area of the top face.
-                area = dimensions[constants.INDEX_X] * dimensions[constants.INDEX_Y]
-            else:
-                area = 9999
-
-            # Hide adjacent face: True/False
-            coverage.append((self.__properties.coverage_top_hide, area))
-
-            # Bottom: -Z
-            if self.__properties.coverage_bottom_calculate:
-                area = dimensions[constants.INDEX_X] * dimensions[constants.INDEX_Y]
-            else:
-                area = 9999
-            coverage.append((self.__properties.coverage_bottom_hide, area))
-
-            # North: +X
-            if self.__properties.coverage_north_calculate:
-                area = dimensions[constants.INDEX_X] * dimensions[constants.INDEX_Z]
-            else:
-                area = 9999
-            coverage.append((self.__properties.coverage_north_hide, area))
-
-            # East: -Y
-            if self.__properties.coverage_east_calculate:
-                area = dimensions[constants.INDEX_Y] * dimensions[constants.INDEX_Z]
-            else:
-                area = 9999
-            coverage.append((self.__properties.coverage_east_hide, area))
-
-            # South: -X
-            if self.__properties.coverage_south_calculate:
-                area = dimensions[constants.INDEX_X] * dimensions[constants.INDEX_Z]
-            else:
-                area = 9999
-            coverage.append((self.__properties.coverage_south_hide, area))
-
-            # West: +Y
-            if self.__properties.coverage_west_calculate:
-                area = dimensions[constants.INDEX_Y] * dimensions[constants.INDEX_Z]
-            else:
-                area = 9999
-            coverage.append((self.__properties.coverage_west_hide, area))
-
-            # Swizzle the coverage values around according to the defined forward axis.
-            # Coverage was calculated with forward axis at +X.
-            # The order of the values in the coverage is:
-            # 0 = a = +Z: Top
-            # 1 = b = -Z: Bottom
-            # 2 = c = +X: North
-            # 3 = d = -Y: East
-            # 4 = e = -X: South
-            # 5 = f = +Y: West
-
-            # Technically this is wrong as the order would be different for -Y forward, but since the bricks must be cuboidal in shape, they are symmetrical.
-            if self.__properties.axis_blb_forward == "POSITIVE_Y" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
-                # New North: +Y
-                # +X: New East
-                coverage = common.swizzle(coverage, "abfcde")
-
-            # Else self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "POSITIVE_X":
-            # No support for Z axis remapping yet.
-        else:
-            # Use the default coverage.
-            # Do not hide adjacent face.
-            # Hide this face if it is covered by 9999 plates.
-            coverage = [(0, 9999)] * 6
-
-        # Save the coverage data to the definitions.
-        self.__blb_data.coverage = coverage
-
     def process(self):
         """Processes the Blender data specified when this processor was created.
 
@@ -1099,6 +1154,8 @@ class BLBProcessor(object):
             - None if there is no Blender data to export.
         """
 
+        # TODO: I bet I could refactor all of these methods into regular functions and just pass the data between them here.
+
         # Determine which objects to process.
         object_sequence = self.__get_object_sequence()
 
@@ -1107,10 +1164,7 @@ class BLBProcessor(object):
             # This is done in a single function because it is faster, no need to iterate over the same sequence twice.
             meshes = self.__process_definition_objects(object_sequence)
 
-            # TODO: Pass in the bounds.
-            # Calculate the coverage data.
-            self.__calculate_coverage()
-
+            self.__blb_data.coverage = self.__process_coverage()
             self.__blb_data.quads = self.__process_mesh_data(meshes)
 
             return self.__blb_data

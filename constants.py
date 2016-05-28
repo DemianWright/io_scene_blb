@@ -40,3 +40,5 @@ GRID_DEF_OBJ_PREFIX_PRIORITY = ("gridx",
                                 "gridb")
 
 QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
+
+DEFAULT_COVERAGE = 9999
