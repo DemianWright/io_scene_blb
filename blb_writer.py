@@ -4,8 +4,8 @@ A module for writing data into a BLB file.
 @author: Demian Wright
 '''
 
-from common_functions import swizzle, rotate
-from constants import INDEX_X, INDEX_Y, INDEX_Z, BOUNDS_NAME_PREFIX, COLLISION_PREFIX, QUAD_SECTION_ORDER
+# Blender requires imports from ".".
+from . import common, constants
 
 class BLBWriter(object):
     """Handles writing sorted quads and definitions to a BLB file."""
@@ -18,9 +18,9 @@ class BLBWriter(object):
         self.__forward_axis = forward_axis
 
         # For clarity.
-        self.__size_x = self.__definitions[BOUNDS_NAME_PREFIX][INDEX_X]
-        self.__size_y = self.__definitions[BOUNDS_NAME_PREFIX][INDEX_Y]
-        self.__size_z = self.__definitions[BOUNDS_NAME_PREFIX][INDEX_Z]
+        self.__size_x = self.__definitions[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X]
+        self.__size_y = self.__definitions[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y]
+        self.__size_z = self.__definitions[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]
 
     @classmethod
     def __write_sequence(cls, file, sequence, new_line=True):
@@ -52,9 +52,9 @@ class BLBWriter(object):
         mirrored = xyz
 
         if self.__forward_axis == "POSITIVE_X" or self.__forward_axis == "NEGATIVE_X":
-            mirrored[INDEX_Y] = -mirrored[INDEX_Y]
+            mirrored[constants.INDEX_Y] = -mirrored[constants.INDEX_Y]
         else:
-            mirrored[INDEX_X] = -mirrored[INDEX_X]
+            mirrored[constants.INDEX_X] = -mirrored[constants.INDEX_X]
 
         return mirrored
 
@@ -65,9 +65,9 @@ class BLBWriter(object):
             # Write brick size.
             # Swizzle the values according to the forward axis.
             if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                self.__write_sequence(file, swizzle(self.__definitions[BOUNDS_NAME_PREFIX], "bac"))
+                self.__write_sequence(file, common.swizzle(self.__definitions[constants.BOUNDS_NAME_PREFIX], "bac"))
             else:
-                self.__write_sequence(file, self.__definitions[BOUNDS_NAME_PREFIX])
+                self.__write_sequence(file, self.__definitions[constants.BOUNDS_NAME_PREFIX])
 
             # Write brick type.
             file.write("SPECIAL\n\n")
@@ -82,7 +82,7 @@ class BLBWriter(object):
                 file.write("\n")
 
             # Write collisions.
-            if len(self.__definitions[COLLISION_PREFIX]) == 0:
+            if len(self.__definitions[constants.COLLISION_PREFIX]) == 0:
                 # Write default collision.
 
                 file.write("1\n")
@@ -94,23 +94,23 @@ class BLBWriter(object):
                 # The size of the cuboid is the size of the bounds.
                 # Swizzle the values according to the forward axis.
                 if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                    self.__write_sequence(file, swizzle(self.__definitions[BOUNDS_NAME_PREFIX], "bac"))
+                    self.__write_sequence(file, common.swizzle(self.__definitions[constants.BOUNDS_NAME_PREFIX], "bac"))
                 else:
-                    self.__write_sequence(file, self.__definitions[BOUNDS_NAME_PREFIX])
+                    self.__write_sequence(file, self.__definitions[constants.BOUNDS_NAME_PREFIX])
             else:
                 # Write defined collisions.
 
                 # Write the number of collision cuboids.
-                file.write(str(len(self.__definitions[COLLISION_PREFIX])))
+                file.write(str(len(self.__definitions[constants.COLLISION_PREFIX])))
                 file.write("\n")
 
-                for (center, dimensions) in self.__definitions[COLLISION_PREFIX]:
+                for (center, dimensions) in self.__definitions[constants.COLLISION_PREFIX]:
                     file.write("\n")
                     # Mirror center according to the forward axis. No idea why but it works.
                     # Swizzle the values according to the forward axis.
                     if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                        self.__write_sequence(file, swizzle(self.__mirror(center), "bac"))
-                        self.__write_sequence(file, swizzle(dimensions, "bac"))
+                        self.__write_sequence(file, common.swizzle(self.__mirror(center), "bac"))
+                        self.__write_sequence(file, common.swizzle(dimensions, "bac"))
                     else:
                         self.__write_sequence(file, self.__mirror(center))
                         self.__write_sequence(file, dimensions)
@@ -121,7 +121,7 @@ class BLBWriter(object):
                 file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
 
             # Write quad data.
-            for index, section_name in enumerate(QUAD_SECTION_ORDER):
+            for index, section_name in enumerate(constants.QUAD_SECTION_ORDER):
                 # TODO: Terse mode where optional stuff is excluded.
 
                 # Write section name.
@@ -138,7 +138,7 @@ class BLBWriter(object):
                     # Write vertex positions.
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
-                        self.__write_sequence(file, rotate(position, self.__forward_axis))
+                        self.__write_sequence(file, common.rotate(position, self.__forward_axis))
 
                     # Write face UV coordinates.
                     file.write("UV COORDS:\n")  # Optional.
@@ -149,7 +149,7 @@ class BLBWriter(object):
                     file.write("NORMALS:\n")  # Optional.
                     for normal in normals:
                         # Normals also need to rotated.
-                        self.__write_sequence(file, rotate(normal, self.__forward_axis))
+                        self.__write_sequence(file, common.rotate(normal, self.__forward_axis))
 
                     # Write vertex colors if any.
                     if colors is not None:
