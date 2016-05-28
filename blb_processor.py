@@ -50,8 +50,8 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
                                     A value of true means that faces of adjacent bricks covering this side of this brick will be hidden.
                                     A value of false means that adjacent brick faces will not be hidden.
                                     Must be defined if brick_size is defined.
-        forward_axis (string): The optional name of the user-defined BLB forward axis.
-                               Must be defined if brick_size is defined.
+        forward_axis (Axis): The optional user-defined BLB forward axis.
+                             Must be defined if brick_size is defined.
 
     Returns:
         A sequence of BLB coverage data.
@@ -121,7 +121,7 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
         # 5 = f = +Y: West
 
         # Technically this is wrong as the order would be different for -Y forward, but since the bricks must be cuboid in shape, they are symmetrical.
-        if forward_axis.lower().endswith("y"):
+        if forward_axis == constants.Axis.positive_y or forward_axis == constants.Axis.negative_y:
             # New North will be +Y.
             # Old North (+X) will be the new East
             coverage = common.swizzle(coverage, "abfcde")
@@ -214,6 +214,9 @@ class BLBProcessor(object):
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
+
+        # Change the forward axis property to enum for easier handling.
+        self.__properties.axis_blb_forward = constants.AXIS_STRING_ENUM_DICT[self.__properties.axis_blb_forward]
 
     @classmethod
     def __is_even(cls, value):
@@ -479,7 +482,7 @@ class BLBProcessor(object):
                 # Stop searching as soon as the first plane is found.
                 # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
 
-                # Assuming that forward axis is Blender +X ("POSITIVE_X").
+                # Assuming that forward axis is Blender +X (constants.Axis.positive_x).
                 # Then in-game the brick north is to the left of the player, which is +Y in Blender.
                 # I know it makes no sense.
 
@@ -516,20 +519,20 @@ class BLBProcessor(object):
             # Else the quad is not planar = Omni
 
         # Top, bottom, and omni are always the same.
-        # The initial values are according to POSITIVE_X forward axis.
-        if direction <= 1 or direction == 6 or self.__properties.axis_blb_forward == "POSITIVE_X":
+        # The initial values are according to +X forward axis.
+        if direction <= 1 or direction == 6 or self.__properties.axis_blb_forward == constants.Axis.positive_x:
             return direction
 
         # Rotate the direction according the defined forward axis.
-        elif self.__properties.axis_blb_forward == "POSITIVE_Y":
+        elif self.__properties.axis_blb_forward == constants.Axis.positive_y:
             # [2] North -> [3] East: (2 - 2 + 1) % 4 + 2 = 3
             # [5] West -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
             return (direction - 1) % 4 + 2
-        elif self.__properties.axis_blb_forward == "NEGATIVE_X":
+        elif self.__properties.axis_blb_forward == constants.Axis.negative_x:
             # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
             # [4] South -> [2] North
             return direction % 4 + 2
-        elif self.__properties.axis_blb_forward == "NEGATIVE_Y":
+        elif self.__properties.axis_blb_forward == constants.Axis.negative_y:
             # [2] North -> [5] West: (2 - 2 + 3) % 4 + 2 = 5
             # [5] West -> [4] South
             return (direction + 1) % 4 + 2
@@ -563,38 +566,38 @@ class BLBProcessor(object):
             # Convert the coordinates into brick grid sequence indices.
 
             # Minimum indices.
-            if self.__properties.axis_blb_forward == "NEGATIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
+            if self.__properties.axis_blb_forward == constants.Axis.negative_x or self.__properties.axis_blb_forward == constants.Axis.negative_y:
                 # Translate coordinates to negative X axis.
-                # NEGATIVE_X: Index 0 = front of the brick.
-                # NEGATIVE_Y: Index 0 = left of the brick.
+                # -X: Index 0 = front of the brick.
+                # -Y: Index 0 = left of the brick.
                 grid_min[constants.INDEX_X] = grid_min[constants.INDEX_X] - halved_dimensions[constants.INDEX_X]
             else:
                 # Translate coordinates to positive X axis.
-                # POSITIVE_X: Index 0 = front of the brick.
-                # POSITIVE_Y: Index 0 = left of the brick.
+                # +X: Index 0 = front of the brick.
+                # +Y: Index 0 = left of the brick.
                 grid_min[constants.INDEX_X] = grid_min[constants.INDEX_X] + halved_dimensions[constants.INDEX_X]
 
-            if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
+            if self.__properties.axis_blb_forward == constants.Axis.positive_x or self.__properties.axis_blb_forward == constants.Axis.negative_y:
                 # Translate coordinates to negative Y axis.
-                # POSITIVE_X: Index 0 = left of the brick.
-                # NEGATIVE_Y: Index 0 = front of the brick.
+                # +X: Index 0 = left of the brick.
+                # -Y: Index 0 = front of the brick.
                 grid_min[constants.INDEX_Y] = grid_min[constants.INDEX_Y] - halved_dimensions[constants.INDEX_Y]
             else:
                 # Translate coordinates to positive Y axis.
-                # POSITIVE_Y: Index 0 = front of the brick.
-                # NEGATIVE_X: Index 0 = left of the brick.
+                # +Y: Index 0 = front of the brick.
+                # -X: Index 0 = left of the brick.
                 grid_min[constants.INDEX_Y] = grid_min[constants.INDEX_Y] + halved_dimensions[constants.INDEX_Y]
 
             # Translate coordinates to negative Z axis, height to plates.
             grid_min[constants.INDEX_Z] = (grid_min[constants.INDEX_Z] - halved_dimensions[constants.INDEX_Z]) / self.__PLATE_HEIGHT
 
             # Maximum indices.
-            if self.__properties.axis_blb_forward == "NEGATIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
+            if self.__properties.axis_blb_forward == constants.Axis.negative_x or self.__properties.axis_blb_forward == constants.Axis.negative_y:
                 grid_max[constants.INDEX_X] = grid_max[constants.INDEX_X] - halved_dimensions[constants.INDEX_X]
             else:
                 grid_max[constants.INDEX_X] = grid_max[constants.INDEX_X] + halved_dimensions[constants.INDEX_X]
 
-            if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
+            if self.__properties.axis_blb_forward == constants.Axis.positive_x or self.__properties.axis_blb_forward == constants.Axis.negative_y:
                 grid_max[constants.INDEX_Y] = grid_max[constants.INDEX_Y] - halved_dimensions[constants.INDEX_Y]
             else:
                 grid_max[constants.INDEX_Y] = grid_max[constants.INDEX_Y] + halved_dimensions[constants.INDEX_Y]
@@ -606,7 +609,7 @@ class BLBProcessor(object):
             grid_min[constants.INDEX_Z] = abs(grid_max[constants.INDEX_Z])
             grid_max[constants.INDEX_Z] = abs(temp)
 
-            if self.__properties.axis_blb_forward == "POSITIVE_X":
+            if self.__properties.axis_blb_forward == constants.Axis.positive_x:
                 # Swap min/max depth and make it positive.
                 temp = grid_min[constants.INDEX_Y]
                 grid_min[constants.INDEX_Y] = abs(grid_max[constants.INDEX_Y])
@@ -614,7 +617,7 @@ class BLBProcessor(object):
 
                 grid_min = common.swizzle(grid_min, "bac")
                 grid_max = common.swizzle(grid_max, "bac")
-            elif self.__properties.axis_blb_forward == "NEGATIVE_X":
+            elif self.__properties.axis_blb_forward == constants.Axis.negative_x:
                 # Swap min/max width and make it positive.
                 temp = grid_min[constants.INDEX_X]
                 grid_min[constants.INDEX_X] = abs(grid_max[constants.INDEX_X])
@@ -622,7 +625,7 @@ class BLBProcessor(object):
 
                 grid_min = common.swizzle(grid_min, "bac")
                 grid_max = common.swizzle(grid_max, "bac")
-            elif self.__properties.axis_blb_forward == "NEGATIVE_Y":
+            elif self.__properties.axis_blb_forward == constants.Axis.negative_y:
                 # Swap min/max depth and make it positive.
                 temp = grid_min[constants.INDEX_Y]
                 grid_min[constants.INDEX_Y] = abs(grid_max[constants.INDEX_Y])
@@ -632,7 +635,7 @@ class BLBProcessor(object):
                 temp = grid_min[constants.INDEX_X]
                 grid_min[constants.INDEX_X] = abs(grid_max[constants.INDEX_X])
                 grid_max[constants.INDEX_X] = abs(temp)
-            # Else self.__properties.axis_blb_forward == "POSITIVE_Y": do nothing
+            # Else self.__properties.axis_blb_forward == constants.Axis.positive_y: do nothing
 
             grid_min = self.__force_to_int(grid_min)
             grid_max = self.__force_to_int(grid_max)
@@ -809,7 +812,7 @@ class BLBProcessor(object):
                 logger.info("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
 
         # The brick grid is a special case where I do need to take the custom forward axis already into account when processing the data.
-        if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_X":
+        if self.__properties.axis_blb_forward == constants.Axis.positive_x or self.__properties.axis_blb_forward == constants.Axis.negative_x:
             grid_width = self.__blb_data.brick_size[constants.INDEX_X]
             grid_depth = self.__blb_data.brick_size[constants.INDEX_Y]
         else:
