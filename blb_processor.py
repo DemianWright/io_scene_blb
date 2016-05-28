@@ -130,19 +130,24 @@ class BLBProcessor(object):
         return vec_min
 
     @classmethod
-    def __set_world_min_max(cls, sequence_min, sequence_max, obj):
-        """Updates the given sequences by assigning the minimum and maximum world space coordinates of the given object to the minimum and maximum sequences respectively."""
+    def __record_world_min_max(cls, sequence_min, sequence_max, obj):
+        """Updates the minimum and maximum found vertex coordinate.
+
+        Checks if the specified Blender object's vertices' world space coordinates are smaller or greater than the coordinates stored in their respective
+        minimum and maximum sequences and updates the values in those sequences with the object's coordinates if they are smaller or greater.
+
+        Args:
+            sequence_min (sequence of numbers): The sequence of smallest XYZ world space coordinates found so far.
+            sequence_max (sequence of numbers): The sequence of largest XYZ world space coordinates found so far.
+            obj (Blender object): The Blender object whose vertex coordinates to check against the current minimum and maximum coordinates.
+        """
 
         for vert in obj.data.vertices:
-            coord = obj.matrix_world * vert.co
+            coordinates = obj.matrix_world * vert.co
 
-            sequence_min[constants.INDEX_X] = min(sequence_min[constants.INDEX_X], coord[constants.INDEX_X])
-            sequence_min[constants.INDEX_Y] = min(sequence_min[constants.INDEX_Y], coord[constants.INDEX_Y])
-            sequence_min[constants.INDEX_Z] = min(sequence_min[constants.INDEX_Z], coord[constants.INDEX_Z])
-
-            sequence_max[constants.INDEX_X] = max(sequence_max[constants.INDEX_X], coord[constants.INDEX_X])
-            sequence_max[constants.INDEX_Y] = max(sequence_max[constants.INDEX_Y], coord[constants.INDEX_Y])
-            sequence_max[constants.INDEX_Z] = max(sequence_max[constants.INDEX_Z], coord[constants.INDEX_Z])
+            for i in range(0,2):
+                sequence_min[i] = min(sequence_min[i], coordinates[i])
+                sequence_max[i] = max(sequence_max[i], coordinates[i])
 
     @classmethod
     def __index_to_position(cls, obj, index):
@@ -407,7 +412,7 @@ class BLBProcessor(object):
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-        self.__set_world_min_max(grid_min, grid_max, obj)
+        self.__record_world_min_max(grid_min, grid_max, obj)
 
         # Recenter the coordinates to the bounds. (Also rounds the values.)
         grid_min = self.__world_to_local(grid_min)
@@ -547,7 +552,7 @@ class BLBProcessor(object):
         # Find the minimum and maximum world coordinates for the bounds object.
         bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-        self.__set_world_min_max(bounds_min, bounds_max, obj)
+        self.__record_world_min_max(bounds_min, bounds_max, obj)
 
         self.__bounds_data["world_coords_min"] = self.__round_values(bounds_min)
         self.__bounds_data["world_coords_max"] = self.__round_values(bounds_max)
@@ -716,7 +721,7 @@ class BLBProcessor(object):
             # Find the minimum and maximum coordinates for the collision object.
             col_min = Vector((float("+inf"), float("+inf"), float("+inf")))
             col_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-            self.__set_world_min_max(col_min, col_max, obj)
+            self.__record_world_min_max(col_min, col_max, obj)
 
             # Recenter the coordinates to the bounds. (Also rounds the values.)
             col_min = self.__world_to_local(col_min)
@@ -830,7 +835,7 @@ class BLBProcessor(object):
             # Else the object must be a regular mesh that is exported as a 3D model.
             else:
                 # Record bounds for checking against the defined brick bounds or if none was specified, for calculating the bounds.
-                self.__set_world_min_max(self.__vec_bounding_box_min, self.__vec_bounding_box_max, obj)
+                self.__record_world_min_max(self.__vec_bounding_box_min, self.__vec_bounding_box_max, obj)
                 mesh_objects.append(obj)
 
         # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex position.
