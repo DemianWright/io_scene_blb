@@ -141,11 +141,10 @@ class BLBProcessor(object):
             sequence_max (sequence of numbers): The sequence of largest XYZ world space coordinates found so far.
             obj (Blender object): The Blender object whose vertex coordinates to check against the current minimum and maximum coordinates.
         """
-
         for vert in obj.data.vertices:
             coordinates = obj.matrix_world * vert.co
 
-            for i in range(0,2):
+            for i in range(0,3):
                 sequence_min[i] = min(sequence_min[i], coordinates[i])
                 sequence_max[i] = max(sequence_max[i], coordinates[i])
 
