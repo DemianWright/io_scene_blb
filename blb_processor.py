@@ -531,7 +531,7 @@ class BLBProcessor(object):
         if self.__properties.use_selection:
             logger.info("Exporting selection to BLB.")
             objects = self.__context.selected_objects
-            logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "No objects selected."))
+            logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "", "No objects selected."))
 
         # If user wants to export the whole scene.
         # Or if user wanted to export only the selected objects but nothing was selected.
@@ -539,7 +539,7 @@ class BLBProcessor(object):
         if len(objects) == 0:
             logger.info("Exporting scene to BLB.")
             objects = self.__context.scene.objects
-            logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "Scene has no objects."))
+            logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "", "Scene has no objects."))
 
         return objects
 
