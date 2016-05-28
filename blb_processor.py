@@ -4,9 +4,9 @@ A module for processing Blender data into the BLB file format for writing.
 @author: Demian Wright
 '''
 
-from mathutils import Vector
-from math import ceil
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
+from math import ceil
+from mathutils import Vector
 
 # Blender requires imports from ".".
 from . import logger, common, constants
@@ -17,6 +17,47 @@ FLOATING_POINT_PRECISION = Decimal("0.000001")
 
 # Set the Decimal number context: 6 decimal points and 0.5 is rounded up.
 setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
+
+
+class BrickBounds(object):
+    """A class for storing the following brick bounds data.
+
+    Stores the following data:
+        - Blender object name,
+        - object dimensions,
+        - minimum world coordinate,
+        - and maximum world coordinate.
+    """
+
+    def __init__(self):
+        # The name of the Blender object.
+        self.name = None
+
+        # The dimensions are stored separately even though it is trivial to calculate them from the coordinates because they are used often.
+        self.dimensions = []
+
+        self.world_coords_min = []
+        self.world_coords_max = []
+
+
+class BLBData(object):
+    """A class for storing the data to be written to a BLB file."""
+
+    def __init__(self):
+        # Brick XYZ integer size in plates.
+        self.brick_size = []
+
+        # Brick grid data sequences.
+        self.brick_grid = []
+
+        # Brick collision box coordinates.
+        self.collision = []
+
+        # Brick coverage data sequences.
+        self.coverage = []
+
+        # Sorted vertex data sequences.
+        self.quads = []
 
 
 class BLBProcessor(object):
@@ -40,6 +81,8 @@ class BLBProcessor(object):
         """Initializes the BLBProcessor with the specified properties."""
         self.__context = context
         self.__properties = properties
+        self.__bounds_data = BrickBounds()
+        self.__blb_data = BLBData()
 
         # TODO: Get rid of as many attributes below as possible.
 
@@ -62,20 +105,6 @@ class BLBProcessor(object):
                                             self.__grid_up,
                                             self.__grid_down,
                                             self.__grid_both)
-
-        # TODO: Combine these two into a single object to make everything make
-        # more sense. Now it's difficult trying to remember when what data has
-        # changed and why.
-        self.__bounds_data = {"name": None,
-                              "brick_size": [],
-                              "dimensions": [],
-                              "world_coords_min": [],
-                              "world_coords_max": []}
-
-        self.__definition_data = {constants.BOUNDS_NAME_PREFIX: [],
-                                  constants.COLLISION_PREFIX: [],
-                                  "brickgrid": [],
-                                  "coverage": []}
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
@@ -253,8 +282,8 @@ class BLBProcessor(object):
             dimensions = local_bounds_object.dimensions
         else:
             # Use the bounds object data.
-            bounds_min = self.__bounds_data["world_coords_min"]
-            dimensions = self.__bounds_data["dimensions"]
+            bounds_min = self.__bounds_data.world_coords_min
+            dimensions = self.__bounds_data.dimensions
 
         local_center = self.__round_values((bounds_min[constants.INDEX_X] + (dimensions[constants.INDEX_X] / Decimal("2.0")),
                                             bounds_min[constants.INDEX_Y] + (dimensions[constants.INDEX_Y] / Decimal("2.0")),
@@ -315,7 +344,7 @@ class BLBProcessor(object):
 
         return result
 
-    def __sort_quad(self, quad, bounds_data):
+    def __sort_quad(self, quad):
         """
         Calculates the section for the given quad within the given bounds.
         The quad section is determined by whether the quad is in the same plane as one the planes defined by the bounds.
@@ -327,7 +356,7 @@ class BLBProcessor(object):
 
         # Divide all dimension values by 2 to get the local bounding values.
         # The dimensions are in Blender units so Z height needs to be converted to plates.
-        local_bounds = self.__sequence_z_to_plates([value / Decimal("2.0") for value in bounds_data["dimensions"]])
+        local_bounds = self.__sequence_z_to_plates([value / Decimal("2.0") for value in self.__bounds_data.dimensions])
 
         # Assume omni direction until otherwise proven.
         direction = 6
@@ -409,7 +438,7 @@ class BLBProcessor(object):
         Can raise OutOfBoundsException and ZeroSizeException.
         """
 
-        halved_dimensions = [value / Decimal("2.0") for value in self.__bounds_data["dimensions"]]
+        halved_dimensions = [value / Decimal("2.0") for value in self.__bounds_data.dimensions]
 
         # Find the minimum and maximum coordinates for the brick grid object.
         grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
@@ -421,10 +450,10 @@ class BLBProcessor(object):
         grid_max = self.__world_to_local(grid_max)
 
         # Round coordinates to the nearest plate.
-        grid_min = self.__round_to_plate_coordinates(grid_min, self.__bounds_data["dimensions"])
-        grid_max = self.__round_to_plate_coordinates(grid_max, self.__bounds_data["dimensions"])
+        grid_min = self.__round_to_plate_coordinates(grid_min, self.__bounds_data.dimensions)
+        grid_max = self.__round_to_plate_coordinates(grid_max, self.__bounds_data.dimensions)
 
-        if self.__all_within_bounds(grid_min, self.__bounds_data["dimensions"]) and self.__all_within_bounds(grid_max, self.__bounds_data["dimensions"]):
+        if self.__all_within_bounds(grid_min, self.__bounds_data.dimensions) and self.__all_within_bounds(grid_max, self.__bounds_data.dimensions):
             # Convert the coordinates into brick grid sequence indices.
 
             # Minimum indices.
@@ -519,11 +548,11 @@ class BLBProcessor(object):
                         (grid_min[constants.INDEX_Y], grid_max[constants.INDEX_Y]),
                         (grid_min[constants.INDEX_Z], grid_max[constants.INDEX_Z]))
         else:
-            if self.__bounds_data["name"] is None:
+            if self.__bounds_data.name is None:
                 logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
             else:
                 logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                    obj.name, self.__bounds_data["name"]))
+                    obj.name, self.__bounds_data.name))
             raise self.OutOfBoundsException()
 
     def __get_object_sequence(self):
@@ -550,33 +579,39 @@ class BLBProcessor(object):
     def __process_bounds_object(self, obj):
         """Processes a manually defined bounds object and saves the data to the bounds data and definition data sequences."""
 
-        self.__bounds_data["name"] = obj.name
-        self.__bounds_data["dimensions"] = self.__round_values(obj.dimensions)
+        # Store Blender object and vertex data for processing other definition objects, like collision.
+
+        self.__bounds_data.name = obj.name
+        # TODO: Figure out why I'm rounding the dimensions here but not below.
+        self.__bounds_data.dimensions = self.__round_values(obj.dimensions)
 
         # Find the minimum and maximum world coordinates for the bounds object.
         bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         self.__record_world_min_max(bounds_min, bounds_max, obj)
 
-        self.__bounds_data["world_coords_min"] = self.__round_values(bounds_min)
-        self.__bounds_data["world_coords_max"] = self.__round_values(bounds_max)
+        self.__bounds_data.world_coords_min = self.__round_values(bounds_min)
+        self.__bounds_data.world_coords_max = self.__round_values(bounds_max)
+
+        # Store BLB data.
 
         # Get the dimensions of the Blender object and convert the height to plates.
         bounds_size = self.__sequence_z_to_plates(obj.dimensions)
 
         # Are the dimensions of the bounds object not integers?
+        # TODO: Flip the boolean logic.
         if self.__are_not_ints(bounds_size):
-            logger.warning("Defined bounds has a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[constants.INDEX_X],
-                                                                                                                   bounds_size[constants.INDEX_Y],
-                                                                                                                   bounds_size[constants.INDEX_Z],
-                                                                                                                   self.__HUMAN_ERROR))
+            logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[constants.INDEX_X],
+                                                                                                                    bounds_size[constants.INDEX_Y],
+                                                                                                                    bounds_size[constants.INDEX_Z],
+                                                                                                                    self.__HUMAN_ERROR))
             for index, value in enumerate(bounds_size):
-                # Round to the specified error amount and force to int.
+                # Round to the specified error amount.
                 bounds_size[index] = round(self.__HUMAN_ERROR * round(value / self.__HUMAN_ERROR))
 
         # The value type must be int because you can't have partial plates. Returns a list.
-        self.__definition_data[constants.BOUNDS_NAME_PREFIX] = self.__force_to_int(bounds_size)
-        self.__bounds_data["brick_size"] = self.__definition_data[constants.BOUNDS_NAME_PREFIX]
+        self.__blb_data.brick_size = self.__force_to_int(bounds_size)
+        #self.__bounds_data["brick_size"] = self.__definition_data[constants.BOUNDS_NAME_PREFIX]
 
     def __calculate_bounds(self):
         """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
@@ -588,12 +623,12 @@ class BLBProcessor(object):
                                            self.__vec_bounding_box_max[constants.INDEX_Y] - self.__vec_bounding_box_min[constants.INDEX_Y],
                                            (self.__vec_bounding_box_max[constants.INDEX_Z] - self.__vec_bounding_box_min[constants.INDEX_Z])))
 
-        self.__bounds_data["name"] = None
-        self.__bounds_data["dimensions"] = bounds_size
+        self.__bounds_data.name = None
+        self.__bounds_data.dimensions = bounds_size
 
         # The minimum and maximum calculated world coordinates.
-        self.__bounds_data["world_coords_min"] = self.__round_values(self.__vec_bounding_box_min)
-        self.__bounds_data["world_coords_max"] = self.__round_values(self.__vec_bounding_box_max)
+        self.__bounds_data.world_coords_min = self.__round_values(self.__vec_bounding_box_min)
+        self.__bounds_data.world_coords_max = self.__round_values(self.__vec_bounding_box_max)
 
         # Convert height to plates.
         bounds_size = self.__sequence_z_to_plates(bounds_size)
@@ -609,8 +644,8 @@ class BLBProcessor(object):
                 bounds_size[index] = ceil(value)
 
         # The value type must be int because you can't have partial plates. Returns a list.
-        self.__definition_data[constants.BOUNDS_NAME_PREFIX] = self.__force_to_int(bounds_size)
-        self.__bounds_data["brick_size"] = self.__definition_data[constants.BOUNDS_NAME_PREFIX]
+        self.__blb_data.brick_size = self.__force_to_int(bounds_size)
+        #self.__bounds_data["brick_size"] = self.__definition_data[constants.BOUNDS_NAME_PREFIX]
 
     def __process_grid_definitions(self, definition_objects):
         """
@@ -656,13 +691,13 @@ class BLBProcessor(object):
 
         # The brick grid is a special case where I do need to take the custom forward axis already into account when processing the data.
         if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_X":
-            grid_width = self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X]
-            grid_depth = self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y]
+            grid_width = self.__blb_data.brick_size[constants.INDEX_X]
+            grid_depth = self.__blb_data.brick_size[constants.INDEX_Y]
         else:
-            grid_width = self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y]
-            grid_depth = self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X]
+            grid_width = self.__blb_data.brick_size[constants.INDEX_Y]
+            grid_depth = self.__blb_data.brick_size[constants.INDEX_X]
 
-        grid_height = self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]
+        grid_height = self.__blb_data.brick_size[constants.INDEX_Z]
 
         # Initialize the brick grid with the empty symbol with the dimensions of the brick.
         brick_grid = [[[self.__grid_outside for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
@@ -695,7 +730,7 @@ class BLBProcessor(object):
                     # Modify the grid by adding the symbol to the correct locations.
                     self.__modify_brick_grid(brick_grid, volume, symbol)
 
-        self.__definition_data["brickgrid"] = brick_grid
+        self.__blb_data.brick_grid = brick_grid
 
     def __process_collision_definitions(self, definition_objects):
         """
@@ -734,7 +769,7 @@ class BLBProcessor(object):
             col_min = self.__world_to_local(col_min)
             col_max = self.__world_to_local(col_max)
 
-            if self.__all_within_bounds(col_min, self.__bounds_data["dimensions"]) and self.__all_within_bounds(col_max, self.__bounds_data["dimensions"]):
+            if self.__all_within_bounds(col_min, self.__bounds_data.dimensions) and self.__all_within_bounds(col_max, self.__bounds_data.dimensions):
                 zero_size = False
 
                 # Check for zero size.
@@ -760,13 +795,13 @@ class BLBProcessor(object):
 
                 # Add the center and dimensions to the definition data as a tuple.
                 # The coordinates and dimensions are in plates.
-                self.__definition_data[constants.COLLISION_PREFIX].append((self.__sequence_z_to_plates(center), self.__sequence_z_to_plates(dimensions)))
+                self.__blb_data.collision.append((self.__sequence_z_to_plates(center), self.__sequence_z_to_plates(dimensions)))
             else:
-                if self.__bounds_data["name"] is None:
+                if self.__bounds_data.name is None:
                     logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
                 else:
                     logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                        obj.name, self.__bounds_data["name"]))
+                        obj.name, self.__bounds_data.name))
 
         # Log messages for collision definitions.
         if len(definition_objects) == 0:
@@ -823,12 +858,11 @@ class BLBProcessor(object):
 
             # Is the current object a bounds definition object?
             elif obj.name.lower().startswith(constants.BOUNDS_NAME_PREFIX):
-                if self.__bounds_data["name"] is None:
+                if self.__bounds_data.name is None:
                     self.__process_bounds_object(obj)
-                    logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X],
-                                                                                               self.__definition_data[
-                                                                                                   constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
-                                                                                               self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]))
+                    logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(self.__blb_data.brick_size[constants.INDEX_X],
+                                                                                               self.__blb_data.brick_size[constants.INDEX_Y],
+                                                                                               self.__blb_data.brick_size[constants.INDEX_Z]))
                 else:
                     logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj.name))
                     continue
@@ -850,12 +884,11 @@ class BLBProcessor(object):
                 mesh_objects.append(obj)
 
         # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex position.
-        if len(self.__definition_data[constants.BOUNDS_NAME_PREFIX]) == 0:
+        if self.__bounds_data.name is None:
             self.__calculate_bounds()
-            logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X],
-                                                                                          self.__definition_data[
-                                                                                              constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y],
-                                                                                          self.__definition_data[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]))
+            logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__blb_data.brick_size[constants.INDEX_X],
+                                                                                          self.__blb_data.brick_size[constants.INDEX_Y],
+                                                                                          self.__blb_data.brick_size[constants.INDEX_Z]))
 
         # Process brick grid and collision definitions now that a bounds definition exists.
         self.__process_grid_definitions(brick_grid_objects)
@@ -956,7 +989,7 @@ class BLBProcessor(object):
             # Calculate the section name the quad belongs to.
             # Get the index of that section name in the QUAD_SECTION_ORDER list.
             # Append the quad data to the list in the tuple at that index.
-            sorted_quads[self.__sort_quad(quad, self.__bounds_data)].append(quad)
+            sorted_quads[self.__sort_quad(quad)].append(quad)
 
         return sorted_quads
 
@@ -967,10 +1000,10 @@ class BLBProcessor(object):
 
         # Calculate coverage?
         if self.__properties.calculate_coverage:
-            # Get the brick bounds in plates.
-            dimensions = self.__definition_data[constants.BOUNDS_NAME_PREFIX]
+            # Get the brick size in plates.
+            dimensions = self.__blb_data.brick_size
 
-            # Assuming forward axis is +X.
+            # TODO: Why am I assuming that forward axis is +X?
 
             # Top: +Z
             if self.__properties.coverage_top_calculate:
@@ -1042,7 +1075,7 @@ class BLBProcessor(object):
             coverage = [(0, 9999)] * 6
 
         # Save the coverage data to the definitions.
-        self.__definition_data["coverage"] = coverage
+        self.__blb_data.coverage = coverage
 
     def process(self):
         """Processes the Blender data specified when this processor was created.
@@ -1070,7 +1103,9 @@ class BLBProcessor(object):
             # Calculate the coverage data.
             self.__calculate_coverage()
 
-            return (self.__process_mesh_data(meshes), self.__definition_data)
+            self.__blb_data.quads = self.__process_mesh_data(meshes)
+
+            return self.__blb_data
         else:
             logger.error("Nothing to export.")
             return None

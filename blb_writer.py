@@ -13,17 +13,16 @@ class BLBWriter(object):
 
     # TODO: Remove all data manipulation logic from this class. This class should only write the given data in the correct order.
 
-    def __init__(self, filepath, forward_axis, sorted_quads, definition_data):
+    def __init__(self, filepath, forward_axis, blb_data):
         """Initializes the private class variables."""
         self.__filepath = filepath
-        self.__quads = sorted_quads
-        self.__definitions = definition_data
+        self.__data = blb_data
         self.__forward_axis = forward_axis
 
         # For clarity.
-        self.__size_x = self.__definitions[constants.BOUNDS_NAME_PREFIX][constants.INDEX_X]
-        self.__size_y = self.__definitions[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Y]
-        self.__size_z = self.__definitions[constants.BOUNDS_NAME_PREFIX][constants.INDEX_Z]
+        self.__size_x = self.__data.brick_size[constants.INDEX_X]
+        self.__size_y = self.__data.brick_size[constants.INDEX_Y]
+        self.__size_z = self.__data.brick_size[constants.INDEX_Z]
 
     @classmethod
     def __write_sequence(cls, file, sequence, new_line=True):
@@ -68,15 +67,15 @@ class BLBWriter(object):
             # Write brick size.
             # Swizzle the values according to the forward axis.
             if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                self.__write_sequence(file, common.swizzle(self.__definitions[constants.BOUNDS_NAME_PREFIX], "bac"))
+                self.__write_sequence(file, common.swizzle(self.__data.brick_size, "bac"))
             else:
-                self.__write_sequence(file, self.__definitions[constants.BOUNDS_NAME_PREFIX])
+                self.__write_sequence(file, self.__data.brick_size)
 
             # Write brick type.
             file.write("SPECIAL\n\n")
 
             # Write brick grid.
-            for axis_slice in self.__definitions["brickgrid"]:
+            for axis_slice in self.__data.brick_grid:
                 for row in axis_slice:
                     # Join each Y-axis of data without a separator.
                     file.write("".join(row) + "\n")
@@ -85,7 +84,7 @@ class BLBWriter(object):
                 file.write("\n")
 
             # Write collisions.
-            if len(self.__definitions[constants.COLLISION_PREFIX]) == 0:
+            if len(self.__data.collision) == 0:
                 # Write default collision.
 
                 file.write("1\n")
@@ -97,17 +96,17 @@ class BLBWriter(object):
                 # The size of the cuboid is the size of the bounds.
                 # Swizzle the values according to the forward axis.
                 if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                    self.__write_sequence(file, common.swizzle(self.__definitions[constants.BOUNDS_NAME_PREFIX], "bac"))
+                    self.__write_sequence(file, common.swizzle(self.__data.brick_size, "bac"))
                 else:
-                    self.__write_sequence(file, self.__definitions[constants.BOUNDS_NAME_PREFIX])
+                    self.__write_sequence(file, self.__data.brick_size)
             else:
                 # Write defined collisions.
 
                 # Write the number of collision cuboids.
-                file.write(str(len(self.__definitions[constants.COLLISION_PREFIX])))
+                file.write(str(len(self.__data.collision)))
                 file.write("\n")
 
-                for (center, dimensions) in self.__definitions[constants.COLLISION_PREFIX]:
+                for (center, dimensions) in self.__data.collision:
                     file.write("\n")
                     # Mirror center according to the forward axis. No idea why but it works.
                     # Swizzle the values according to the forward axis.
@@ -120,7 +119,7 @@ class BLBWriter(object):
 
             # Write coverage.
             file.write("COVERAGE:\n")
-            for (hide_adjacent, plate_count) in self.__definitions["coverage"]:
+            for (hide_adjacent, plate_count) in self.__data.coverage:
                 file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
 
             # Write quad data.
@@ -131,9 +130,9 @@ class BLBWriter(object):
                 file.write("--{} QUADS--\n".format(section_name))  # Optional.
 
                 # Write section length.
-                file.write("{}\n".format(str(len(self.__quads[index]))))
+                file.write("{}\n".format(str(len(self.__data.quads[index]))))
 
-                for (positions, normals, uvs, colors, texture) in self.__quads[index]:
+                for (positions, normals, uvs, colors, texture) in self.__data.quads[index]:
                     # Write face texture name.
                     file.write("\nTEX:")  # Optional.
                     file.write(texture)

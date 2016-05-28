@@ -32,6 +32,7 @@ def export(context, properties, filepath=""):
 
     # TODO: Layer support.
     # TODO: Exporting multiple bricks from a single file.
+    # TODO: Move this function into init?
 
     # Process the data.
     # The context variable contains all the Blender data.
@@ -41,7 +42,9 @@ def export(context, properties, filepath=""):
 
     if blb_data is not None:
         # Write the data to a file.
-        writer = blb_writer.BLBWriter(filepath, properties.axis_blb_forward, blb_data[0], blb_data[1])
+        writer = blb_writer.BLBWriter(filepath, properties.axis_blb_forward, blb_data)
+
+        # TODO: Actually return true only if the file was written.
         writer.write_file()
         return True
 
