@@ -84,28 +84,6 @@ class BLBProcessor(object):
         self.__bounds_data = BrickBounds()
         self.__blb_data = BLBData()
 
-        # TODO: Get rid of as many attributes below as possible.
-
-        self.__grid_inside = "x"  # Disallow building inside brick.
-        self.__grid_outside = "-"  # Allow building in empty space.
-        self.__grid_up = "u"  # Allow placing bricks above this plate.
-        self.__grid_down = "d"  # Allow placing bricks below this plate.
-        self.__grid_both = "b"  # Allow placing bricks above and below this plate.
-
-        # Brick grid definition object name prefixes in reverse priority order.
-        self.__grid_def_obj_prefix_priority = ("gridx",
-                                               "grid-",
-                                               "gridu",
-                                               "gridd",
-                                               "gridb")
-
-        # Brick grid definitions in reverse priority order.
-        self.__grid_definitions_priority = (self.__grid_inside,
-                                            self.__grid_outside,
-                                            self.__grid_up,
-                                            self.__grid_down,
-                                            self.__grid_both)
-
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
 
@@ -653,8 +631,21 @@ class BLBProcessor(object):
         Processes the given brick grid definitions and saves the results to the definition data sequence.
         """
 
+        grid_inside = "x"  # Disallow building inside brick.
+        grid_outside = "-"  # Allow building in empty space.
+        grid_up = "u"  # Allow placing bricks above this plate.
+        grid_down = "d"  # Allow placing bricks below this plate.
+        grid_both = "b"  # Allow placing bricks above and below this plate.
+
+        # Brick grid definitions in reverse priority order.
+        grid_definitions_priority = (grid_inside,
+                                     grid_outside,
+                                     grid_up,
+                                     grid_down,
+                                     grid_both)
+
         # Make one empty list for each brick grid definition.
-        definition_volumes = [[] for i in range(len(self.__grid_def_obj_prefix_priority))]
+        definition_volumes = [[] for i in range(len(constants.GRID_DEF_OBJ_PREFIX_PRIORITY))]
         processed = 0
 
         for grid_obj in definition_objects:
@@ -662,7 +653,7 @@ class BLBProcessor(object):
                 # The first 5 characters of the Blender object name must be the grid definition prefix.
                 # Get the index of the definition list.
                 # And append the definition data to the list.
-                index = self.__grid_def_obj_prefix_priority.index(grid_obj.name.lower()[:5])
+                index = constants.GRID_DEF_OBJ_PREFIX_PRIORITY.index(grid_obj.name.lower()[:5])
                 definition_volumes[index].append(self.__grid_object_to_volume(grid_obj))
                 processed += 1
             except self.OutOfBoundsException:
@@ -700,7 +691,7 @@ class BLBProcessor(object):
         grid_height = self.__blb_data.brick_size[constants.INDEX_Z]
 
         # Initialize the brick grid with the empty symbol with the dimensions of the brick.
-        brick_grid = [[[self.__grid_outside for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
+        brick_grid = [[[grid_outside for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
 
         if len(definition_objects) == 0:
             # Write the default brick grid.
@@ -710,13 +701,13 @@ class BLBProcessor(object):
                     is_bottom = (h == grid_height - 1)  # Current height is the bottom of the brick?
 
                     if is_bottom and is_top:
-                        symbol = self.__grid_both
+                        symbol = grid_both
                     elif is_bottom:
-                        symbol = self.__grid_down
+                        symbol = grid_down
                     elif is_top:
-                        symbol = self.__grid_up
+                        symbol = grid_up
                     else:
-                        symbol = self.__grid_inside
+                        symbol = grid_inside
 
                     # Create a new list of the width of the grid filled with the selected symbol.
                     # Assign it to the current height.
@@ -725,7 +716,7 @@ class BLBProcessor(object):
             # Write the calculated definition_volumes into the brick grid.
             for index, volumes in enumerate(definition_volumes):
                 # Get the symbol for these volumes.
-                symbol = self.__grid_definitions_priority[index]
+                symbol = grid_definitions_priority[index]
                 for volume in volumes:
                     # Modify the grid by adding the symbol to the correct locations.
                     self.__modify_brick_grid(brick_grid, volume, symbol)
@@ -849,7 +840,7 @@ class BLBProcessor(object):
             if obj.type != "MESH":
                 if obj.name.lower().startswith(constants.BOUNDS_NAME_PREFIX):
                     logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
-                elif obj.name.lower().startswith(self.__grid_def_obj_prefix_priority):
+                elif obj.name.lower().startswith(constants.GRID_DEF_OBJ_PREFIX_PRIORITY):
                     logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj.name))
                 elif obj.name.lower().startswith(constants.COLLISION_PREFIX):
                     logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj.name))
@@ -868,7 +859,7 @@ class BLBProcessor(object):
                     continue
 
             # Is the current object a brick grid definition object?
-            elif obj.name.lower().startswith(self.__grid_def_obj_prefix_priority):
+            elif obj.name.lower().startswith(constants.GRID_DEF_OBJ_PREFIX_PRIORITY):
                 # Brick grid definition objects cannot be processed until after the bounds have been defined.
                 brick_grid_objects.append(obj)
 

@@ -14,4 +14,12 @@ INDEX_Z = 2
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"
 
+
+# Brick grid definition object name prefixes in reverse priority order.
+GRID_DEF_OBJ_PREFIX_PRIORITY = ("gridx",
+                                "grid-",
+                                "gridu",
+                                "gridd",
+                                "gridb")
+
 QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
