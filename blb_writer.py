@@ -37,9 +37,9 @@ class BLBWriter(object):
         self.__forward_axis = forward_axis
 
         # For clarity.
-        self.__size_x = self.__data.brick_size[constants.INDEX_X]
-        self.__size_y = self.__data.brick_size[constants.INDEX_Y]
-        self.__size_z = self.__data.brick_size[constants.INDEX_Z]
+        self.__size_x = self.__data.brick_size[constants.X]
+        self.__size_y = self.__data.brick_size[constants.Y]
+        self.__size_z = self.__data.brick_size[constants.Z]
 
     @classmethod
     def __write_sequence(cls, file, sequence, new_line=True):
@@ -71,9 +71,9 @@ class BLBWriter(object):
         mirrored = xyz
 
         if self.__forward_axis == "POSITIVE_X" or self.__forward_axis == "NEGATIVE_X":
-            mirrored[constants.INDEX_Y] = -mirrored[constants.INDEX_Y]
+            mirrored[constants.Y] = -mirrored[constants.Y]
         else:
-            mirrored[constants.INDEX_X] = -mirrored[constants.INDEX_X]
+            mirrored[constants.X] = -mirrored[constants.X]
 
         return mirrored
 

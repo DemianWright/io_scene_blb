@@ -23,9 +23,9 @@ Various constants used in multiple classes.
 from decimal import Decimal
 
 # Generic.
-INDEX_X = 0
-INDEX_Y = 1
-INDEX_Z = 2
+X = 0
+Y = 1
+Z = 2
 
 # Definition object name constants.
 # TODO: Make these into properties.
@@ -45,3 +45,18 @@ DEFAULT_COVERAGE = 9999
 
 # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
 PLATE_HEIGHT = Decimal("0.4")
+
+# Brick grid symbols.
+GRID_INSIDE = "x"  # Disallow building inside brick.
+GRID_OUTSIDE = "-"  # Allow building in empty space.
+GRID_UP = "u"  # Allow placing bricks above this plate.
+GRID_DOWN = "d"  # Allow placing bricks below this plate.
+GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
+
+# Brick grid definitions in reverse priority order.
+# I.e. GRID_DOWN will overwrite GRID_OUTSIDE.
+GRID_DEFINITIONS_PRIORITY = (GRID_INSIDE,
+                             GRID_OUTSIDE,
+                             GRID_UP,
+                             GRID_DOWN,
+                             GRID_BOTH)

@@ -63,20 +63,20 @@ def rotate(xyz, forward_axis):
 
     elif forward_axis == "POSITIVE_Y":
         # Rotate: 90 degrees clockwise = X Y Z -> Y -X Z
-        rotated.append(xyz[constants.INDEX_Y])
-        rotated.append(-xyz[constants.INDEX_X])
+        rotated.append(xyz[constants.Y])
+        rotated.append(-xyz[constants.X])
 
     elif forward_axis == "NEGATIVE_X":
         # Rotate: 180 degrees clockwise = X Y Z -> -X -Y Z
-        rotated.append(-xyz[constants.INDEX_X])
-        rotated.append(-xyz[constants.INDEX_Y])
+        rotated.append(-xyz[constants.X])
+        rotated.append(-xyz[constants.Y])
 
     elif forward_axis == "NEGATIVE_Y":
         # Rotate: 270 degrees clockwise = X Y Z -> -Y X Z
-        rotated.append(-xyz[constants.INDEX_Y])
-        rotated.append(xyz[constants.INDEX_X])
+        rotated.append(-xyz[constants.Y])
+        rotated.append(xyz[constants.X])
 
     # The Z axis is not yet taken into account.
-    rotated.append(xyz[constants.INDEX_Z])
+    rotated.append(xyz[constants.Z])
 
     return rotated

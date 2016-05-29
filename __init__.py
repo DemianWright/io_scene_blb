@@ -49,7 +49,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     logfile_ext = ".log"
     filter_glob = StringProperty(default="*.blb", options={'HIDDEN'})
 
+    # ==========
+    # Properties
+    # ==========
+
     # TODO: Scale.
+    # TODO: Allow disabling warnings by category.
 
     # TODO: Change this to enum: Selection, Layer, Scene
     use_selection = BoolProperty(
@@ -160,10 +165,14 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    # ===============
+    # Export Function
+    # ===============
+
     def execute(self, context):
         """Export the scene."""
 
-        # Blender requires that I import from "." so ti can find the modules.
+        # Blender requires that I import from "." so it can find the modules.
         from . import export_blb, logger
 
         print("\n____STARTING BLB EXPORT____")
@@ -180,6 +189,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         logger.write_log()
 
         return {'FINISHED'}
+
+    # ==============
+    # User Interface
+    # ==============
 
     def draw(self, context):
         """Draws the UI in the export menu."""
@@ -261,6 +274,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         row = split.row()
         row.prop(self, "axis_blb_forward", expand=True)
 
+
+# =============
+# Blender Stuff
+# =============
 
 def menu_export(self, context):
     """Adds the export option into the export menu."""
