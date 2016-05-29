@@ -33,6 +33,10 @@ Z = 2
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"
 
+# Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
+# Used for rounding vertex positions to the brick grid.
+HUMAN_ERROR = Decimal("0.1")
+
 # Brick grid definition object name prefixes in reverse priority order.
 GRID_DEF_OBJ_PREFIX_PRIORITY = ("gridx",
                                 "grid-",

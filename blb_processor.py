@@ -499,6 +499,11 @@ def sort_quad(quad, bounds_dimensions, forward_axis):
         return (direction + 1) % 4 + 2
 
 
+# =================
+# BrickBounds Class
+# =================
+
+
 class BrickBounds(object):
     """A class for storing brick bounds Blender data.
 
@@ -521,6 +526,11 @@ class BrickBounds(object):
 
         self.world_coords_min = []
         self.world_coords_max = []
+
+
+# =============
+# BLBData Class
+# =============
 
 
 class BLBData(object):
@@ -552,6 +562,11 @@ class BLBData(object):
         self.quads = []
 
 
+# ==================
+# BLBProcessor Class
+# ==================
+
+
 class BLBProcessor(object):
     """A class that handles processing Blender data and preparing it for writing to a BLB file."""
 
@@ -562,10 +577,6 @@ class BLBProcessor(object):
     class ZeroSizeException(Exception):
         """An exception thrown when a definition object has zero brick size on at least one axis."""
         pass
-
-    # TODO: Make into a property.
-    # Error allowed for manually created definition objects. Used for rounding vertex positions to the brick grid.
-    __HUMAN_ERROR = Decimal("0.1")
 
     # TODO: I bet I could refactor all of these methods into regular functions and just pass the data between them.
 
@@ -759,10 +770,10 @@ class BLBProcessor(object):
             logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
                                                                                                                     bounds_size[const.Y],
                                                                                                                     bounds_size[const.Z],
-                                                                                                                    self.__HUMAN_ERROR))
+                                                                                                                    const.HUMAN_ERROR))
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
-                bounds_size[index] = round(self.__HUMAN_ERROR * round(value / self.__HUMAN_ERROR))
+                bounds_size[index] = round(const.HUMAN_ERROR * round(value / const.HUMAN_ERROR))
 
         # The value type must be int because you can't have partial plates. Returns a list.
         self.__blb_data.brick_size = force_to_int(bounds_size)
