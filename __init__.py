@@ -15,10 +15,15 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
+'''
+Handles registering the add-on into Blender and drawing properties to the UI.
+
+@author: Demian Wright
+'''
 
 bl_info = {
     "name": "Blockland Brick Format",
-    "author": "Nick Smith (Port) & Demian Wright",
+    "author": "Demian Wright & Nick Smith (Port)",
     "version": (0, 1),
     "blender": (2, 76, 0),
     "location": "File > Export > Blockland Brick (.blb)",
@@ -31,7 +36,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 from bpy_extras.io_utils import ExportHelper
 
-# TODO: Fix all docstring to follow the Google style guide or something.
+# TODO: Rewrite all docstrings to follow the Google style guide or something.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):

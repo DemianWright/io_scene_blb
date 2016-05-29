@@ -203,7 +203,7 @@ class BLBProcessor(object):
     # Error allowed for manually created definition objects. Used for rounding vertex positions to the brick grid.
     __HUMAN_ERROR = Decimal("0.1")
 
-    __PLATE_HEIGHT = Decimal("0.4")  # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
+    # TODO: I bet I could refactor all of these methods into regular functions and just pass the data between them here.
 
     def __init__(self, context, properties):
         """Initializes the BLBProcessor with the specified properties."""
@@ -420,7 +420,7 @@ class BLBProcessor(object):
 
         if len(xyz) == 3:
             sequence = self.__round_values(xyz)
-            sequence[constants.INDEX_Z] /= self.__PLATE_HEIGHT
+            sequence[constants.INDEX_Z] /= constants.PLATE_HEIGHT
             return sequence
         else:
             return xyz
@@ -446,10 +446,10 @@ class BLBProcessor(object):
             result.append(self.__round_value(coordinates[constants.INDEX_Y], 0.5))
 
         # Round to the nearest full plate height. (Half is rounded up)
-        if self.__is_even(brick_dimensions[constants.INDEX_Z] / self.__PLATE_HEIGHT):
-            result.append(self.__round_value(coordinates[constants.INDEX_Z], self.__PLATE_HEIGHT))
+        if self.__is_even(brick_dimensions[constants.INDEX_Z] / constants.PLATE_HEIGHT):
+            result.append(self.__round_value(coordinates[constants.INDEX_Z], constants.PLATE_HEIGHT))
         else:
-            result.append(self.__round_value(coordinates[constants.INDEX_Z], (self.__PLATE_HEIGHT / Decimal("2.0"))))
+            result.append(self.__round_value(coordinates[constants.INDEX_Z], (constants.PLATE_HEIGHT / Decimal("2.0"))))
 
         return result
 
@@ -589,7 +589,7 @@ class BLBProcessor(object):
                 grid_min[constants.INDEX_Y] = grid_min[constants.INDEX_Y] + halved_dimensions[constants.INDEX_Y]
 
             # Translate coordinates to negative Z axis, height to plates.
-            grid_min[constants.INDEX_Z] = (grid_min[constants.INDEX_Z] - halved_dimensions[constants.INDEX_Z]) / self.__PLATE_HEIGHT
+            grid_min[constants.INDEX_Z] = (grid_min[constants.INDEX_Z] - halved_dimensions[constants.INDEX_Z]) / constants.PLATE_HEIGHT
 
             # Maximum indices.
             if self.__properties.axis_blb_forward == constants.Axis.negative_x or self.__properties.axis_blb_forward == constants.Axis.negative_y:
@@ -602,7 +602,7 @@ class BLBProcessor(object):
             else:
                 grid_max[constants.INDEX_Y] = grid_max[constants.INDEX_Y] + halved_dimensions[constants.INDEX_Y]
 
-            grid_max[constants.INDEX_Z] = (grid_max[constants.INDEX_Z] - halved_dimensions[constants.INDEX_Z]) / self.__PLATE_HEIGHT
+            grid_max[constants.INDEX_Z] = (grid_max[constants.INDEX_Z] - halved_dimensions[constants.INDEX_Z]) / constants.PLATE_HEIGHT
 
             # Swap min/max Z index and make it positive. Index 0 = top of the brick.
             temp = grid_min[constants.INDEX_Z]
@@ -1156,8 +1156,6 @@ class BLBProcessor(object):
             - A tuple where the first element is the sorted quad data and the second is the BLB definitions.
             - None if there is no Blender data to export.
         """
-
-        # TODO: I bet I could refactor all of these methods into regular functions and just pass the data between them here.
 
         # Determine which objects to process.
         object_sequence = self.__get_object_sequence()

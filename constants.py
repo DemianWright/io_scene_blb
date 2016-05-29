@@ -20,6 +20,7 @@ Various constants used in multiple classes.
 
 @author: Demian Wright
 '''
+from decimal import Decimal
 from enum import Enum
 
 
@@ -37,10 +38,9 @@ INDEX_Y = 1
 INDEX_Z = 2
 
 # Definition object name constants.
-# TODO: Make these properties.
+# TODO: Make these into properties.
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"
-
 
 # Brick grid definition object name prefixes in reverse priority order.
 GRID_DEF_OBJ_PREFIX_PRIORITY = ("gridx",
@@ -57,3 +57,6 @@ AXIS_STRING_ENUM_DICT = {"POSITIVE_X": Axis.positive_x,
                          "POSITIVE_Y": Axis.positive_y,
                          "NEGATIVE_X": Axis.negative_x,
                          "NEGATIVE_Y": Axis.negative_y}
+
+# A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
+PLATE_HEIGHT = Decimal("0.4")
