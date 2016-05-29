@@ -70,7 +70,7 @@ class BLBWriter(object):
 
         mirrored = xyz
 
-        if self.__forward_axis == constants.Axis.positive_x or self.__forward_axis == constants.Axis.negative_x:
+        if self.__forward_axis == "POSITIVE_X" or self.__forward_axis == "NEGATIVE_X":
             mirrored[constants.INDEX_Y] = -mirrored[constants.INDEX_Y]
         else:
             mirrored[constants.INDEX_X] = -mirrored[constants.INDEX_X]
@@ -83,7 +83,7 @@ class BLBWriter(object):
         with open(self.__filepath, "w") as file:
             # Write brick size.
             # Swizzle the values according to the forward axis.
-            if self.__forward_axis == constants.Axis.positive_y or self.__forward_axis == constants.Axis.negative_y:
+            if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
                 self.__write_sequence(file, common.swizzle(self.__data.brick_size, "bac"))
             else:
                 self.__write_sequence(file, self.__data.brick_size)
@@ -112,7 +112,7 @@ class BLBWriter(object):
 
                 # The size of the cuboid is the size of the bounds.
                 # Swizzle the values according to the forward axis.
-                if self.__forward_axis == constants.Axis.positive_y or self.__forward_axis == constants.Axis.negative_y:
+                if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
                     self.__write_sequence(file, common.swizzle(self.__data.brick_size, "bac"))
                 else:
                     self.__write_sequence(file, self.__data.brick_size)
@@ -127,7 +127,7 @@ class BLBWriter(object):
                     file.write("\n")
                     # Mirror center according to the forward axis. No idea why but it works.
                     # Swizzle the values according to the forward axis.
-                    if self.__forward_axis == constants.Axis.positive_y or self.__forward_axis == constants.Axis.negative_y:
+                    if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
                         self.__write_sequence(file, common.swizzle(self.__mirror(center), "bac"))
                         self.__write_sequence(file, common.swizzle(dimensions, "bac"))
                     else:

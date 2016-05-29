@@ -57,21 +57,21 @@ def rotate(xyz, forward_axis):
     """
     rotated = []
 
-    if forward_axis == constants.Axis.positive_x:
+    if forward_axis == "POSITIVE_X":
         # Rotate: 0 degrees clockwise
         return xyz
 
-    elif forward_axis == constants.Axis.positive_y:
+    elif forward_axis == "POSITIVE_Y":
         # Rotate: 90 degrees clockwise = X Y Z -> Y -X Z
         rotated.append(xyz[constants.INDEX_Y])
         rotated.append(-xyz[constants.INDEX_X])
 
-    elif forward_axis == constants.Axis.negative_x:
+    elif forward_axis == "NEGATIVE_X":
         # Rotate: 180 degrees clockwise = X Y Z -> -X -Y Z
         rotated.append(-xyz[constants.INDEX_X])
         rotated.append(-xyz[constants.INDEX_Y])
 
-    elif forward_axis == constants.Axis.negative_y:
+    elif forward_axis == "NEGATIVE_Y":
         # Rotate: 270 degrees clockwise = X Y Z -> -Y X Z
         rotated.append(-xyz[constants.INDEX_Y])
         rotated.append(xyz[constants.INDEX_X])
