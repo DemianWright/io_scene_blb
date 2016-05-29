@@ -79,10 +79,8 @@ def get_world_min(obj):
         # Local coordinates to world space.
         coord = obj.matrix_world * vert.co
 
-        # TODO: Loop.
-        vec_min[const.X] = min(vec_min[const.X], coord[const.X])
-        vec_min[const.Y] = min(vec_min[const.Y], coord[const.Y])
-        vec_min[const.Z] = min(vec_min[const.Z], coord[const.Z])
+        for i in range(3):
+            vec_min[i] = min(vec_min[i], coord[i])
 
     return vec_min
 
@@ -101,7 +99,7 @@ def record_world_min_max(sequence_min, sequence_max, obj):
     for vert in obj.data.vertices:
         coordinates = obj.matrix_world * vert.co
 
-        for i in range(0, 3):
+        for i in range(3):
             sequence_min[i] = min(sequence_min[i], coordinates[i])
             sequence_max[i] = max(sequence_max[i], coordinates[i])
 
@@ -289,14 +287,14 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
     Args:
         brick_size (sequence of integers): An optional sequence of the sizes of the brick on each of the XYZ axes.
                                            If not defined, default coverage will be used.
-        calculate_side (namedtuple): An optional named tuple of boolean values where the keys are the names of the brick sides.
-                                     A value of true means that coverage will be calculated for that side of the brick according the specified size of the brick.
-                                     A value of false means that the default coverage value will be used for that side.
-                                     Must be defined if brick_size is defined.
-        hide_adjacent (namedtuple): An optional named tuple of boolean values where the keys are the names of the brick sides.
-                                    A value of true means that faces of adjacent bricks covering this side of this brick will be hidden.
-                                    A value of false means that adjacent brick faces will not be hidden.
-                                    Must be defined if brick_size is defined.
+        calculate_side (sequence of booleans): An optional sequence of boolean values where the values must in the same order as const.QUAD_SECTION_ORDER.
+                                               A value of true means that coverage will be calculated for that side of the brick according the specified size of the brick.
+                                               A value of false means that the default coverage value will be used for that side.
+                                               Must be defined if brick_size is defined.
+        hide_adjacent (sequence of booleans): An optional sequence of boolean values where the values must in the same order as const.QUAD_SECTION_ORDER.
+                                              A value of true means that faces of adjacent bricks covering this side of this brick will be hidden.
+                                              A value of false means that adjacent brick faces will not be hidden.
+                                              Must be defined if brick_size is defined.
         forward_axis (Axis): The optional user-defined BLB forward axis.
                              Must be defined if brick_size is defined.
 
@@ -305,59 +303,28 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
     """
     coverage = []
 
-    # TODO: Loop?
-
     # Does the user want to calculate coverage in the first place?
     if calculate_side is not None:
         # Initially assume that forward axis is +X, data will be swizzled later.
+        for index, side in enumerate(calculate_side):
+            if side:
+                # Calculate the area of side.
+                if index == const.QUAD_SECTION_IDX_TOP or index == const.QUAD_SECTION_IDX_BOTTOM:
+                    area = brick_size[const.X] * brick_size[const.Y]
+                if index == const.QUAD_SECTION_IDX_NORTH or index == const.QUAD_SECTION_IDX_SOUTH:
+                    area = brick_size[const.X] * brick_size[const.Z]
+                if index == const.QUAD_SECTION_IDX_EAST or index == const.QUAD_SECTION_IDX_WEST:
+                    area = brick_size[const.Y] * brick_size[const.Z]
+            else:
+                area = const.DEFAULT_COVERAGE
 
-        # Top: +Z
-        if calculate_side.top:
-            # Calculate the area of the top face.
-            area = brick_size[const.X] * brick_size[const.Y]
-        else:
-            area = const.DEFAULT_COVERAGE
-
-        # Hide adjacent face: True/False
-        coverage.append((hide_adjacent.top, area))
-
-        # Bottom: -Z
-        if calculate_side.bottom:
-            area = brick_size[const.X] * brick_size[const.Y]
-        else:
-            area = const.DEFAULT_COVERAGE
-        coverage.append((hide_adjacent.bottom, area))
-
-        # North: +X
-        if calculate_side.north:
-            area = brick_size[const.X] * brick_size[const.Z]
-        else:
-            area = const.DEFAULT_COVERAGE
-        coverage.append((hide_adjacent.north, area))
-
-        # East: -Y
-        if calculate_side.east:
-            area = brick_size[const.Y] * brick_size[const.Z]
-        else:
-            area = const.DEFAULT_COVERAGE
-        coverage.append((hide_adjacent.east, area))
-
-        # South: -X
-        if calculate_side.south:
-            area = brick_size[const.X] * brick_size[const.Z]
-        else:
-            area = const.DEFAULT_COVERAGE
-        coverage.append((hide_adjacent.south, area))
-
-        # West: +Y
-        if calculate_side.west:
-            area = brick_size[const.Y] * brick_size[const.Z]
-        else:
-            area = const.DEFAULT_COVERAGE
-        coverage.append((hide_adjacent.west, area))
+            # Hide adjacent face?
+            coverage.append((hide_adjacent[index], area))
 
         # Swizzle the coverage values around according to the defined forward axis.
         # Coverage was calculated with forward axis at +X.
+
+        # ===========================================
         # The order of the values in the coverage is:
         # 0 = a = +Z: Top
         # 1 = b = -Z: Bottom
@@ -365,6 +332,7 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
         # 3 = d = -Y: East
         # 4 = e = -X: South
         # 5 = f = +Y: West
+        # ===========================================
 
         # Technically this is wrong as the order would be different for -Y forward, but since the bricks must be cuboid in shape, they are symmetrical.
         if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
@@ -1074,19 +1042,19 @@ class BLBProcessor(object):
             A sequence of BLB coverage data.
         """
         if self.__properties.calculate_coverage:
-            calculate_side = common.BrickSides(self.__properties.coverage_top_calculate,
-                                               self.__properties.coverage_bottom_calculate,
-                                               self.__properties.coverage_north_calculate,
-                                               self.__properties.coverage_east_calculate,
-                                               self.__properties.coverage_south_calculate,
-                                               self.__properties.coverage_west_calculate)
+            calculate_side = ((self.__properties.coverage_top_calculate,
+                               self.__properties.coverage_bottom_calculate,
+                               self.__properties.coverage_north_calculate,
+                               self.__properties.coverage_east_calculate,
+                               self.__properties.coverage_south_calculate,
+                               self.__properties.coverage_west_calculate))
 
-            hide_adjacent = common.BrickSides(self.__properties.coverage_top_hide,
-                                              self.__properties.coverage_bottom_hide,
-                                              self.__properties.coverage_north_hide,
-                                              self.__properties.coverage_east_hide,
-                                              self.__properties.coverage_south_hide,
-                                              self.__properties.coverage_west_hide)
+            hide_adjacent = ((self.__properties.coverage_top_hide,
+                              self.__properties.coverage_bottom_hide,
+                              self.__properties.coverage_north_hide,
+                              self.__properties.coverage_east_hide,
+                              self.__properties.coverage_south_hide,
+                              self.__properties.coverage_west_hide))
 
             return calculate_coverage(self.__blb_data.brick_size,
                                       calculate_side,
