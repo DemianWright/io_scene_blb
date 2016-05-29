@@ -143,6 +143,8 @@ def round_value(value, precision=1.0, decimals=FLOATING_POINT_DECIMALS):
     # Creating decimals through strings is more accurate than floating point numbers.
     fraction = Decimal("1.0") / to_decimal(precision, decimals)
 
+    # TODO: Remove double casting decimals.
+
     # I'm not entirely sure what the Decimal("1") bit does but it works.
     return to_decimal((value * fraction).quantize(Decimal("1")) / fraction)
 
@@ -554,9 +556,6 @@ class BLBProcessor(object):
         self.__bounds_data = BrickBounds()
         self.__blb_data = BLBData()
 
-        self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-        self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-
     def __grid_object_to_volume(self, obj):
         """
         Note: This function requires that it is called after the bounds object has been defined.
@@ -703,15 +702,17 @@ class BLBProcessor(object):
         return objects
 
     def __process_bounds_object(self, obj):
-        """Processes a manually defined bounds object and saves the data to the bounds data and definition data sequences."""
+        """Processes a manually defined bounds Blender object and saves the data to the bounds and BLB data objects."""
         # =============================================================================================
         # Store Blender object and vertex data for processing other definition objects, like collision.
         # =============================================================================================
 
         # TODO: Make use of __calculate_bounds to reduce duplicate code.
 
+        # Store the name for logging.
         self.__bounds_data.name = obj.name
-        # TODO: Figure out why I'm rounding the dimensions here but not below.
+
+        # ROUND & CAST: defined bounds object dimensions into Decimals for accuracy.
         self.__bounds_data.dimensions = round_values(obj.dimensions)
 
         # Find the minimum and maximum world coordinates for the bounds object.
@@ -719,6 +720,7 @@ class BLBProcessor(object):
         bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         record_world_min_max(bounds_min, bounds_max, obj)
 
+        # ROUND & CAST: defined bounds object min/max world coordinates into Decimals for accuracy.
         self.__bounds_data.world_coords_min = round_values(bounds_min)
         self.__bounds_data.world_coords_max = round_values(bounds_max)
 
@@ -743,27 +745,26 @@ class BLBProcessor(object):
 
         # The value type must be int because you can't have partial plates. Returns a list.
         self.__blb_data.brick_size = force_to_int(bounds_size)
-        #self.__bounds_data["brick_size"] = self.__definition_data[const.BOUNDS_NAME_PREFIX]
 
-    def __calculate_bounds(self):
-        """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
-        logger.warning("No 'bounds' object found. Automatically calculated brick size may be undesirable.")
-
+    def __calculate_bounds(self, min_world_coordinates, max_world_coordinates):
+        """Calculates the brick bounds data from the recorded minimum and maximum vertex world coordinates and saves the data to the bounds and BLB data objects."""
         # =============================================================================================
         # Store Blender object and vertex data for processing other definition objects, like collision.
         # =============================================================================================
+        logger.warning("No '" + const.BOUNDS_NAME_PREFIX + "' definition found. Automatically calculated brick size may be undesirable.")
 
         # Get the dimensions defined by the vectors.
-        bounds_size = round_values((self.__vec_bounding_box_max[const.X] - self.__vec_bounding_box_min[const.X],
-                                    self.__vec_bounding_box_max[const.Y] - self.__vec_bounding_box_min[const.Y],
-                                    (self.__vec_bounding_box_max[const.Z] - self.__vec_bounding_box_min[const.Z])))
+        # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
+        bounds_size = round_values((max_world_coordinates[const.X] - min_world_coordinates[const.X],
+                                    max_world_coordinates[const.Y] - min_world_coordinates[const.Y],
+                                    (max_world_coordinates[const.Z] - min_world_coordinates[const.Z])))
 
         self.__bounds_data.name = None
         self.__bounds_data.dimensions = bounds_size
 
         # The minimum and maximum calculated world coordinates.
-        self.__bounds_data.world_coords_min = round_values(self.__vec_bounding_box_min)
-        self.__bounds_data.world_coords_max = round_values(self.__vec_bounding_box_max)
+        self.__bounds_data.world_coords_min = round_values(min_world_coordinates)
+        self.__bounds_data.world_coords_max = round_values(max_world_coordinates)
 
         self.__bounds_data.world_center = calculate_center(self.__bounds_data.world_coords_min, self.__bounds_data.dimensions)
 
@@ -786,7 +787,6 @@ class BLBProcessor(object):
 
         # The value type must be int because you can't have partial plates. Returns a list.
         self.__blb_data.brick_size = force_to_int(bounds_size)
-        #self.__bounds_data["brick_size"] = self.__definition_data[const.BOUNDS_NAME_PREFIX]
 
     def __process_grid_definitions(self, definition_objects):
         """
@@ -979,6 +979,13 @@ class BLBProcessor(object):
         collision_objects = []
         mesh_objects = []
 
+        # These are vectors because Blender vertex coordinates are stored as vectors.
+        # They are used for recording the minimum and maximum vertex world
+        # coordinates of all visible meshes so that the brick bounds can be
+        # calculated, if they are not defined manually.
+        min_world_coordinates = Vector((float("+inf"), float("+inf"), float("+inf")))
+        max_world_coordinates = Vector((float("-inf"), float("-inf"), float("-inf")))
+
         # Loop through all objects in the sequence.
         # The objects in the sequence are sorted so that the oldest created object is last.
         # Process the objects from oldest to newest.
@@ -1017,13 +1024,17 @@ class BLBProcessor(object):
 
             # Else the object must be a regular mesh that is exported as a 3D model.
             else:
-                # Record bounds for checking against the defined brick bounds or if none was specified, for calculating the bounds.
-                record_world_min_max(self.__vec_bounding_box_min, self.__vec_bounding_box_max, obj)
                 mesh_objects.append(obj)
 
-        # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex position.
+                # If no bounds object has been defined.
+                if self.__bounds_data.name is None:
+                    # Record min/max world coordinates for calculating the bounds.
+                    record_world_min_max(min_world_coordinates, max_world_coordinates, obj)
+                # Else a bounds object has been defined, recording the min/max coordinates is pointless.
+
+        # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
         if self.__bounds_data.name is None:
-            self.__calculate_bounds()
+            self.__calculate_bounds(min_world_coordinates, max_world_coordinates)
             logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__blb_data.brick_size[const.X],
                                                                                           self.__blb_data.brick_size[const.Y],
                                                                                           self.__blb_data.brick_size[const.Z]))
