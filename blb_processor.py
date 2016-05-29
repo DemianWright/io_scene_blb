@@ -21,6 +21,8 @@ A module for processing Blender data into the BLB file format for writing.
 @author: Demian Wright
 '''
 
+# TODO: Remove all implicit rounding.
+
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
 from math import ceil
 from mathutils import Vector
@@ -203,6 +205,52 @@ def round_to_plate_coordinates(coordinates, brick_dimensions):
     return result
 
 
+def calculate_center(object_minimum_coordinates, object_dimensions):
+    """Calculates the coordinates of the center of a 3D object.
+
+    Args:
+        object_minimum_coordinates (sequence of numbers): A sequence of minimum XYZ coordinates of the object.
+                                                          This function is only useful is these are world space coordinates.
+                                                          If local space coordinates are given, (0, 0, 0) will always be returned as the center regardless of the specified dimensions.
+        object_dimensions (sequence of numbers): The dimensions of the object.
+
+    Returns:
+        A tuple of Decimal type XYZ coordinates.
+    """
+    return (object_minimum_coordinates[const.X] + (object_dimensions[const.X] / Decimal("2.0")),
+            object_minimum_coordinates[const.Y] + (object_dimensions[const.Y] / Decimal("2.0")),
+            object_minimum_coordinates[const.Z] + (object_dimensions[const.Z] / Decimal("2.0")))
+
+
+def world_to_local(coordinates, new_origin):
+    """Translates the specified coordinates to be relative to the specified new origin coordinates.
+
+    Commonly used to translate coordinates from world space (centered on (0, 0, 0)) to local space (arbitrary center).
+
+    Args:
+        coordinates (sequence of numbers): The sequence of XYZ coordinates to be translated.
+        new_origin (sequence of numbers): The new origin point as a sequence of XYZ coordinates.
+
+    Returns:
+        A list of Decimal type coordinates rounded to eliminate floating point errors.
+    """
+    # If the specified position is a Decimal do nothing.
+    if isinstance(coordinates[0], Decimal):
+        pos = coordinates
+    else:
+        # Otherwise convert to Decimal.
+        # FIXME: Implicit rounding.
+        pos = round_values(coordinates)
+
+    new_pos = []
+
+    for index, old_coord in enumerate(pos):
+        new_pos.append(old_coord - new_origin[index])
+
+    # FIXME: Implicit rounding.
+    return round_values(new_pos)
+
+
 def modify_brick_grid(brick_grid, volume, symbol):
     """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
     # Ranges are exclusive [min, max[ index ranges.
@@ -354,6 +402,9 @@ class BrickBounds(object):
         # The dimensions are stored separately even though it is trivial to calculate them from the coordinates because they are used often.
         self.dimensions = []
 
+        # The object center coordinates are stored separately for convenience.
+        self.world_center = []
+
         self.world_coords_min = []
         self.world_coords_max = []
 
@@ -413,38 +464,6 @@ class BLBProcessor(object):
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-
-    def __world_to_local(self, world_position, local_bounds_object=None):
-        """
-        Translates the given world space position so it is relative to the geometric center of the given local space bounds.
-        If no local_bounds_object is defined, data from bounds_data is used.
-        Returns a list of Decimal type local coordinates rounded to eliminate floating point errors.
-        """
-        if local_bounds_object is not None:
-            bounds_min = get_world_min(local_bounds_object)
-            dimensions = local_bounds_object.dimensions
-        else:
-            # Use the bounds object data.
-            bounds_min = self.__bounds_data.world_coords_min
-            dimensions = self.__bounds_data.dimensions
-
-        local_center = round_values((bounds_min[const.X] + (dimensions[const.X] / Decimal("2.0")),
-                                     bounds_min[const.Y] + (dimensions[const.Y] / Decimal("2.0")),
-                                     bounds_min[const.Z] + (dimensions[const.Z] / Decimal("2.0"))))
-
-        # If given position is in Decimals do nothing.
-        if isinstance(world_position[0], Decimal):
-            world = world_position
-        else:
-            # Otherwise convert to Decimal.
-            world = round_values(world_position)
-
-        local = []
-
-        for index, value in enumerate(world):
-            local.append(value - local_center[index])
-
-        return round_values(local)
 
     def __sort_quad(self, quad):
         """
@@ -546,8 +565,8 @@ class BLBProcessor(object):
         record_world_min_max(grid_min, grid_max, obj)
 
         # Recenter the coordinates to the bounds. (Also rounds the values.)
-        grid_min = self.__world_to_local(grid_min)
-        grid_max = self.__world_to_local(grid_max)
+        grid_min = world_to_local(grid_min, self.__bounds_data.world_center)
+        grid_max = world_to_local(grid_max, self.__bounds_data.world_center)
 
         # Round coordinates to the nearest plate.
         grid_min = round_to_plate_coordinates(grid_min, self.__bounds_data.dimensions)
@@ -677,7 +696,11 @@ class BLBProcessor(object):
 
     def __process_bounds_object(self, obj):
         """Processes a manually defined bounds object and saves the data to the bounds data and definition data sequences."""
+        # =============================================================================================
         # Store Blender object and vertex data for processing other definition objects, like collision.
+        # =============================================================================================
+
+        # TODO: Make use of __calculate_bounds to reduce duplicate code.
 
         self.__bounds_data.name = obj.name
         # TODO: Figure out why I'm rounding the dimensions here but not below.
@@ -691,7 +714,11 @@ class BLBProcessor(object):
         self.__bounds_data.world_coords_min = round_values(bounds_min)
         self.__bounds_data.world_coords_max = round_values(bounds_max)
 
-        # Store BLB data.
+        self.__bounds_data.world_center = calculate_center(self.__bounds_data.world_coords_min, self.__bounds_data.dimensions)
+
+        # ==============
+        # Store BLB data
+        # ==============
 
         # Get the dimensions of the Blender object and convert the height to plates.
         bounds_size = sequence_z_to_plates(obj.dimensions)
@@ -715,6 +742,10 @@ class BLBProcessor(object):
         """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
         logger.warning("No 'bounds' object found. Automatically calculated brick size may be undesirable.")
 
+        # =============================================================================================
+        # Store Blender object and vertex data for processing other definition objects, like collision.
+        # =============================================================================================
+
         # Get the dimensions defined by the vectors.
         bounds_size = round_values((self.__vec_bounding_box_max[const.X] - self.__vec_bounding_box_min[const.X],
                                     self.__vec_bounding_box_max[const.Y] - self.__vec_bounding_box_min[const.Y],
@@ -726,6 +757,12 @@ class BLBProcessor(object):
         # The minimum and maximum calculated world coordinates.
         self.__bounds_data.world_coords_min = round_values(self.__vec_bounding_box_min)
         self.__bounds_data.world_coords_max = round_values(self.__vec_bounding_box_max)
+
+        self.__bounds_data.world_center = calculate_center(self.__bounds_data.world_coords_min, self.__bounds_data.dimensions)
+
+        # ==============
+        # Store BLB data
+        # ==============
 
         # Convert height to plates.
         bounds_size = sequence_z_to_plates(bounds_size)
@@ -861,8 +898,8 @@ class BLBProcessor(object):
             record_world_min_max(col_min, col_max, obj)
 
             # Recenter the coordinates to the bounds. (Also rounds the values.)
-            col_min = self.__world_to_local(col_min)
-            col_max = self.__world_to_local(col_max)
+            col_min = world_to_local(col_min, self.__bounds_data.world_center)
+            col_max = world_to_local(col_max, self.__bounds_data.world_center)
 
             if all_within_bounds(col_min, self.__bounds_data.dimensions) and all_within_bounds(col_max, self.__bounds_data.dimensions):
                 zero_size = False
@@ -1069,7 +1106,7 @@ class BLBProcessor(object):
                     # Center the position to the current bounds object: coordinates are now in local object space.
                     # TODO: Why on earth am I rounding the vertex coordinates to the closest
                     # plate height? This needs to be a property, not something done automatically!
-                    positions.append(sequence_z_to_plates(self.__world_to_local(index_to_position(obj, index))))
+                    positions.append(sequence_z_to_plates(world_to_local(index_to_position(obj, index), self.__bounds_data.world_center)))
 
                 # =======
                 # Normals
