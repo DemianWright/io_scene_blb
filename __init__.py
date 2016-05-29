@@ -65,6 +65,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
     # I.e. -X is facing you when the brick is planted and +X is the brick north instead of +Y which makes more sense to me.
+    # TODO: Support Z axis remapping.
     axis_blb_forward = EnumProperty(
         items=[("POSITIVE_X", "+X", "The positive X axis"),
                ("POSITIVE_Y", "+Y", "The positive Y axis"),

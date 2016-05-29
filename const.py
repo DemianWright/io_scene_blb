@@ -27,8 +27,9 @@ X = 0
 Y = 1
 Z = 2
 
+# TODO: Make most of these into properties.
+
 # Definition object name const.
-# TODO: Make these into properties.
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"
 
@@ -39,8 +40,19 @@ GRID_DEF_OBJ_PREFIX_PRIORITY = ("gridx",
                                 "gridd",
                                 "gridb")
 
+# Quad and coverage section IDs and directions for sorting.
+QUAD_SECTION_IDX_TOP = 0
+QUAD_SECTION_IDX_BOTTOM = 1
+QUAD_SECTION_IDX_NORTH = 2
+QUAD_SECTION_IDX_EAST = 3
+QUAD_SECTION_IDX_SOUTH = 4
+QUAD_SECTION_IDX_WEST = 5
+QUAD_SECTION_IDX_OMNI = 6
+
+# The quad sections in the correct order for writing to a BLB file.
 QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
 
+# The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 DEFAULT_COVERAGE = 9999
 
 # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)

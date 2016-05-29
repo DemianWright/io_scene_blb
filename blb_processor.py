@@ -385,6 +385,120 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
     return coverage
 
 
+def sort_quad(quad, bounds_dimensions, forward_axis):
+    """Calculates the section (brick side) for the specified quad within the specified bounds dimensions.
+
+    The section is determined by whether all vertices of the quad are in the same plane as one of the planes (brick sides) defined by the (cuboid) brick bounds.
+    The quad's section is needed for brick coverage.
+
+    Args:
+        quad (sequence): A sequence of various data that defines the quad.
+        bounds_dimensions (sequence of Decimals): The dimensions of the brick bounds.
+        forward_axis (string): The name of the user-defined BLB forward axis.
+
+    Returns:
+        The index of the section name in const.QUAD_SECTION_ORDER sequence.
+    """
+    # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
+    positions = quad[0]
+
+    # Divide all dimension values by 2 to get the local bounding plane values.
+    # The dimensions are in Blender units so Z height needs to be converted to plates.
+    local_bounds = sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions])
+
+    # Assume omni direction until otherwise proven.
+    direction = 6
+
+    # Each position list has exactly 3 values.
+    # 0 = X
+    # 1 = Y
+    # 2 = Z
+    for axis in range(3):
+        # If the vertex coordinate is the same on an axis for all 4 vertices, this face is parallel to the plane perpendicular to that axis.
+        if positions[0][axis] == positions[1][axis] == positions[2][axis] == positions[3][axis]:
+            # If the common value is equal to one of the bounding values the quad is on the same plane as one of the edges of the brick.
+            # Stop searching as soon as the first plane is found because it is impossible for the quad to be on multiple planes at the same time.
+            # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
+
+            # Assuming that forward axis is Blender +X ("POSITIVE_X").
+            # Then in-game the brick north is to the left of the player, which is +Y in Blender.
+            # I know it makes no sense.
+
+            # All vertex coordinates are the same on this axis, only the first one needs to be checked.
+
+            # Positive values.
+            if positions[0][axis] == local_bounds[axis]:
+                # +X = East
+                if axis == const.X:
+                    direction = const.QUAD_SECTION_IDX_EAST
+                    break
+                # +Y = North
+                elif axis == const.Y:
+                    direction = const.QUAD_SECTION_IDX_NORTH
+                    break
+                # +Z = Top
+                else:
+                    direction = const.QUAD_SECTION_IDX_TOP
+                    break
+
+            # Negative values.
+            elif positions[0][axis] == -local_bounds[axis]:
+                # -X = West
+                if axis == const.X:
+                    direction = const.QUAD_SECTION_IDX_WEST
+                    break
+                # -Y = South
+                elif axis == const.Y:
+                    direction = const.QUAD_SECTION_IDX_SOUTH
+                    break
+                # -Z = Bottom
+                else:
+                    direction = const.QUAD_SECTION_IDX_BOTTOM
+                    break
+            # Else the quad is not on the same plane with one of the bounding planes = Omni
+        # Else the quad is not planar = Omni
+
+    # ===========================
+    # QUAD_SECTION_IDX_TOP    = 0
+    # QUAD_SECTION_IDX_BOTTOM = 1
+    # QUAD_SECTION_IDX_NORTH  = 2
+    # QUAD_SECTION_IDX_EAST   = 3
+    # QUAD_SECTION_IDX_SOUTH  = 4
+    # QUAD_SECTION_IDX_WEST   = 5
+    # QUAD_SECTION_IDX_OMNI   = 6
+    # ===========================
+
+    # Top and bottom always the same and do not need to be rotated because Z axis remapping is not yet supported.
+    # Omni is not planar and does not need to be rotated.
+    # The initial values are calculated according to +X forward axis.
+    if direction <= const.QUAD_SECTION_IDX_BOTTOM or direction == const.QUAD_SECTION_IDX_OMNI or forward_axis == "POSITIVE_X":
+        return direction
+
+    # ========================================================================
+    # Rotate the direction according the defined forward axis.
+    # 0. direction is in the range [2, 5].
+    # 1. Subtract 2 to put direction in the range [0, 3]: dir - 2
+    # 2. Add the rotation constant:                       dir - 2 + R
+    # 3. Use modulo make direction wrap around 3 -> 0:    dir - 2 + R % 4
+    # 4. Add 2 to get back to the correct range [2, 5]:   dir - 2 + R % 4 + 2
+    # ========================================================================
+    elif forward_axis == "POSITIVE_Y":
+        # 90 degrees clockwise.
+        # [2] North -> [3] East:  (2 - 2 + 1) % 4 + 2 = 3
+        # [5] West  -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
+        return (direction - 1) % 4 + 2
+    elif forward_axis == "NEGATIVE_X":
+        # 180 degrees clockwise.
+        # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
+        # [4] South -> [2] North
+        return direction % 4 + 2
+    elif forward_axis == "NEGATIVE_Y":
+        # 270 degrees clockwise.
+        # [2] North -> [5] West:  (2 - 2 + 3) % 4 + 2 = 5
+        # [5] West  -> [4] South
+        return (direction + 1) % 4 + 2
+
+
 class BrickBounds(object):
     """A class for storing brick bounds Blender data.
 
@@ -464,90 +578,6 @@ class BLBProcessor(object):
 
         self.__vec_bounding_box_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         self.__vec_bounding_box_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-
-    def __sort_quad(self, quad):
-        """
-        Calculates the section for the given quad within the given bounds.
-        The quad section is determined by whether the quad is in the same plane as one the planes defined by the bounds.
-        Returns the index of the section name in QUAD_SECTION_ORDER sequence.
-        """
-        # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
-        positions = quad[0]
-
-        # Divide all dimension values by 2 to get the local bounding values.
-        # The dimensions are in Blender units so Z height needs to be converted to plates.
-        local_bounds = sequence_z_to_plates([value / Decimal("2.0") for value in self.__bounds_data.dimensions])
-
-        # Assume omni direction until otherwise proven.
-        direction = 6
-
-        # Each position list has exactly 3 values.
-        # 0 = X
-        # 1 = Y
-        # 2 = Z
-        for axis in range(3):
-            # If the vertex coordinate is the same on an axis for all 4 vertices, this face is parallel to the plane perpendicular to that axis.
-            if positions[0][axis] == positions[1][axis] == positions[2][axis] == positions[3][axis]:
-                # Is the common value equal to one of the bounding values?
-                # I.e. the quad is on the same plane as one of the edges of the brick.
-                # Stop searching as soon as the first plane is found.
-                # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
-
-                # Assuming that forward axis is Blender +X ("POSITIVE_X").
-                # Then in-game the brick north is to the left of the player, which is +Y in Blender.
-                # I know it makes no sense.
-
-                # Positive values.
-                if positions[0][axis] == local_bounds[axis]:
-                    # +X = East
-                    if axis == 0:
-                        direction = 3
-                        break
-                    # +Y = North
-                    elif axis == 1:
-                        direction = 2
-                        break
-                    # +Z = Top
-                    else:
-                        direction = 0
-                        break
-
-                # Negative values.
-                elif positions[0][axis] == -local_bounds[axis]:
-                    # -X = West
-                    if axis == 0:
-                        direction = 5
-                        break
-                    # -Y = South
-                    elif axis == 1:
-                        direction = 4
-                        break
-                    # -Z = Bottom
-                    else:
-                        direction = 1
-                        break
-                # Else the quad is not on the same plane with one of the bounding planes = Omni
-            # Else the quad is not planar = Omni
-
-        # Top, bottom, and omni are always the same.
-        # The initial values are according to +X forward axis.
-        if direction <= 1 or direction == 6 or self.__properties.axis_blb_forward == "POSITIVE_X":
-            return direction
-
-        # Rotate the direction according the defined forward axis.
-        elif self.__properties.axis_blb_forward == "POSITIVE_Y":
-            # [2] North -> [3] East: (2 - 2 + 1) % 4 + 2 = 3
-            # [5] West -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
-            return (direction - 1) % 4 + 2
-        elif self.__properties.axis_blb_forward == "NEGATIVE_X":
-            # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
-            # [4] South -> [2] North
-            return direction % 4 + 2
-        elif self.__properties.axis_blb_forward == "NEGATIVE_Y":
-            # [2] North -> [5] West: (2 - 2 + 3) % 4 + 2 = 5
-            # [5] West -> [4] South
-            return (direction + 1) % 4 + 2
-        # TODO: Does not support Z axis remapping yet.
 
     def __grid_object_to_volume(self, obj):
         """
@@ -1165,7 +1195,7 @@ class BLBProcessor(object):
             # Calculate the section name the quad belongs to.
             # Get the index of that section name in the QUAD_SECTION_ORDER list.
             # Append the quad data to the list in the tuple at that index.
-            sorted_quads[self.__sort_quad(quad)].append(quad)
+            sorted_quads[sort_quad(quad, self.__bounds_data.dimensions, self.__properties.axis_blb_forward)].append(quad)
 
         return sorted_quads
 
