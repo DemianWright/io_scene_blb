@@ -62,14 +62,13 @@ def force_to_int(values):
     return result
 
 
-def are_not_ints(values):
-    """
-    Returns True if at least one value in the given list is not numerically equal to its integer counterparts.
-    '1.000' is numerically equal to '1' while '1.001' is not.
-    """
-    for val in values:
-        if val != int(val):  # TODO: Fix OverflowError & crash where nothing is selected and exporting only selection.
-            return True
+def are_ints(sequence):
+    """Returns True if and only if all values in the specified sequence are numerically equal to their integer counterparts."""
+    for value in sequence:
+        if value != int(value):  # TODO: Fix OverflowError & crash when nothing is selected and exporting only selection.
+            return False
+
+    return True
 
 
 def get_world_min(obj):
@@ -765,8 +764,7 @@ class BLBProcessor(object):
         bounds_size = sequence_z_to_plates(obj.dimensions)
 
         # Are the dimensions of the bounds object not integers?
-        # TODO: Flip the boolean logic.
-        if are_not_ints(bounds_size):
+        if not are_ints(bounds_size):
             logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
                                                                                                                     bounds_size[const.Y],
                                                                                                                     bounds_size[const.Z],
@@ -809,7 +807,7 @@ class BLBProcessor(object):
         bounds_size = sequence_z_to_plates(bounds_size)
 
         # Are the dimensions of the bounds object not integers?
-        if are_not_ints(bounds_size):
+        if not are_ints(bounds_size):
             logger.warning("Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[const.X],
                                                                                                     bounds_size[const.Y],
                                                                                                     bounds_size[const.Z]))
