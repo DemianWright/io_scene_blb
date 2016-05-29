@@ -22,7 +22,7 @@ A module for writing data into a BLB file.
 '''
 
 # Blender requires imports from ".".
-from . import common, constants
+from . import common, const
 
 
 class BLBWriter(object):
@@ -37,9 +37,9 @@ class BLBWriter(object):
         self.__forward_axis = forward_axis
 
         # For clarity.
-        self.__size_x = self.__data.brick_size[constants.X]
-        self.__size_y = self.__data.brick_size[constants.Y]
-        self.__size_z = self.__data.brick_size[constants.Z]
+        self.__size_x = self.__data.brick_size[const.X]
+        self.__size_y = self.__data.brick_size[const.Y]
+        self.__size_z = self.__data.brick_size[const.Z]
 
     @classmethod
     def __write_sequence(cls, file, sequence, new_line=True):
@@ -71,9 +71,9 @@ class BLBWriter(object):
         mirrored = xyz
 
         if self.__forward_axis == "POSITIVE_X" or self.__forward_axis == "NEGATIVE_X":
-            mirrored[constants.Y] = -mirrored[constants.Y]
+            mirrored[const.Y] = -mirrored[const.Y]
         else:
-            mirrored[constants.X] = -mirrored[constants.X]
+            mirrored[const.X] = -mirrored[const.X]
 
         return mirrored
 
@@ -140,7 +140,7 @@ class BLBWriter(object):
                 file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
 
             # Write quad data.
-            for index, section_name in enumerate(constants.QUAD_SECTION_ORDER):
+            for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
                 # TODO: Terse mode where optional stuff is excluded.
 
                 # Write section name.

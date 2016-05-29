@@ -27,7 +27,7 @@ X = 0
 Y = 1
 Z = 2
 
-# Definition object name constants.
+# Definition object name const.
 # TODO: Make these into properties.
 BOUNDS_NAME_PREFIX = "bounds"
 COLLISION_PREFIX = "collision"

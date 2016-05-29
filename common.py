@@ -25,7 +25,7 @@ from collections import namedtuple
 from string import ascii_lowercase
 
 # Blender requires imports from ".".
-from . import constants
+from . import const
 
 # The order of the sides is the same as the one required by BLB coverage data and sorted quads.
 BrickSides = namedtuple('BrickSides', 'top bottom north east south west')
@@ -63,20 +63,20 @@ def rotate(xyz, forward_axis):
 
     elif forward_axis == "POSITIVE_Y":
         # Rotate: 90 degrees clockwise = X Y Z -> Y -X Z
-        rotated.append(xyz[constants.Y])
-        rotated.append(-xyz[constants.X])
+        rotated.append(xyz[const.Y])
+        rotated.append(-xyz[const.X])
 
     elif forward_axis == "NEGATIVE_X":
         # Rotate: 180 degrees clockwise = X Y Z -> -X -Y Z
-        rotated.append(-xyz[constants.X])
-        rotated.append(-xyz[constants.Y])
+        rotated.append(-xyz[const.X])
+        rotated.append(-xyz[const.Y])
 
     elif forward_axis == "NEGATIVE_Y":
         # Rotate: 270 degrees clockwise = X Y Z -> -Y X Z
-        rotated.append(-xyz[constants.Y])
-        rotated.append(xyz[constants.X])
+        rotated.append(-xyz[const.Y])
+        rotated.append(xyz[const.X])
 
     # The Z axis is not yet taken into account.
-    rotated.append(xyz[constants.Z])
+    rotated.append(xyz[const.Z])
 
     return rotated

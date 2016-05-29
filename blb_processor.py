@@ -26,7 +26,7 @@ from math import ceil
 from mathutils import Vector
 
 # Blender requires imports from ".".
-from . import logger, common, constants
+from . import logger, common, const
 
 # Number of decimal places to round floating point numbers.
 FLOATING_POINT_DECIMALS = 6
@@ -79,9 +79,9 @@ def get_world_min(obj):
         coord = obj.matrix_world * vert.co
 
         # TODO: Loop.
-        vec_min[constants.X] = min(vec_min[constants.X], coord[constants.X])
-        vec_min[constants.Y] = min(vec_min[constants.Y], coord[constants.Y])
-        vec_min[constants.Z] = min(vec_min[constants.Z], coord[constants.Z])
+        vec_min[const.X] = min(vec_min[const.X], coord[const.X])
+        vec_min[const.Y] = min(vec_min[const.Y], coord[const.Y])
+        vec_min[const.Z] = min(vec_min[const.Z], coord[const.Z])
 
     return vec_min
 
@@ -169,7 +169,7 @@ def sequence_z_to_plates(xyz):
     """
     if len(xyz) == 3:
         sequence = round_values(xyz)
-        sequence[constants.Z] /= constants.PLATE_HEIGHT
+        sequence[const.Z] /= const.PLATE_HEIGHT
         return sequence
     else:
         return xyz
@@ -184,21 +184,21 @@ def round_to_plate_coordinates(coordinates, brick_dimensions):
     # 1 plate is 1.0 Blender units wide and deep.
     # Plates can only be 1.0 units long on the X and Y axes.
     # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
-    if is_even(brick_dimensions[constants.X]):
-        result.append(round_value(coordinates[constants.X], 1.0))
+    if is_even(brick_dimensions[const.X]):
+        result.append(round_value(coordinates[const.X], 1.0))
     else:
-        result.append(round_value(coordinates[constants.X], 0.5))
+        result.append(round_value(coordinates[const.X], 0.5))
 
-    if is_even(brick_dimensions[constants.Y]):
-        result.append(round_value(coordinates[constants.Y], 1.0))
+    if is_even(brick_dimensions[const.Y]):
+        result.append(round_value(coordinates[const.Y], 1.0))
     else:
-        result.append(round_value(coordinates[constants.Y], 0.5))
+        result.append(round_value(coordinates[const.Y], 0.5))
 
     # Round to the nearest full plate height. (Half is rounded up)
-    if is_even(brick_dimensions[constants.Z] / constants.PLATE_HEIGHT):
-        result.append(round_value(coordinates[constants.Z], constants.PLATE_HEIGHT))
+    if is_even(brick_dimensions[const.Z] / const.PLATE_HEIGHT):
+        result.append(round_value(coordinates[const.Z], const.PLATE_HEIGHT))
     else:
-        result.append(round_value(coordinates[constants.Z], (constants.PLATE_HEIGHT / Decimal("2.0"))))
+        result.append(round_value(coordinates[const.Z], (const.PLATE_HEIGHT / Decimal("2.0"))))
 
     return result
 
@@ -206,9 +206,9 @@ def round_to_plate_coordinates(coordinates, brick_dimensions):
 def modify_brick_grid(brick_grid, volume, symbol):
     """Modifies the given brick grid by adding the given symbol to every grid slot specified by the volume."""
     # Ranges are exclusive [min, max[ index ranges.
-    width_range = volume[constants.X]
-    depth_range = volume[constants.Y]
-    height_range = volume[constants.Z]
+    width_range = volume[const.X]
+    depth_range = volume[const.Y]
+    height_range = volume[const.Z]
 
     # Example data for a cuboid brick that is:
     # - 2 plates wide
@@ -267,46 +267,46 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
         # Top: +Z
         if calculate_side.top:
             # Calculate the area of the top face.
-            area = brick_size[constants.X] * brick_size[constants.Y]
+            area = brick_size[const.X] * brick_size[const.Y]
         else:
-            area = constants.DEFAULT_COVERAGE
+            area = const.DEFAULT_COVERAGE
 
         # Hide adjacent face: True/False
         coverage.append((hide_adjacent.top, area))
 
         # Bottom: -Z
         if calculate_side.bottom:
-            area = brick_size[constants.X] * brick_size[constants.Y]
+            area = brick_size[const.X] * brick_size[const.Y]
         else:
-            area = constants.DEFAULT_COVERAGE
+            area = const.DEFAULT_COVERAGE
         coverage.append((hide_adjacent.bottom, area))
 
         # North: +X
         if calculate_side.north:
-            area = brick_size[constants.X] * brick_size[constants.Z]
+            area = brick_size[const.X] * brick_size[const.Z]
         else:
-            area = constants.DEFAULT_COVERAGE
+            area = const.DEFAULT_COVERAGE
         coverage.append((hide_adjacent.north, area))
 
         # East: -Y
         if calculate_side.east:
-            area = brick_size[constants.Y] * brick_size[constants.Z]
+            area = brick_size[const.Y] * brick_size[const.Z]
         else:
-            area = constants.DEFAULT_COVERAGE
+            area = const.DEFAULT_COVERAGE
         coverage.append((hide_adjacent.east, area))
 
         # South: -X
         if calculate_side.south:
-            area = brick_size[constants.X] * brick_size[constants.Z]
+            area = brick_size[const.X] * brick_size[const.Z]
         else:
-            area = constants.DEFAULT_COVERAGE
+            area = const.DEFAULT_COVERAGE
         coverage.append((hide_adjacent.south, area))
 
         # West: +Y
         if calculate_side.west:
-            area = brick_size[constants.Y] * brick_size[constants.Z]
+            area = brick_size[const.Y] * brick_size[const.Z]
         else:
-            area = constants.DEFAULT_COVERAGE
+            area = const.DEFAULT_COVERAGE
         coverage.append((hide_adjacent.west, area))
 
         # Swizzle the coverage values around according to the defined forward axis.
@@ -331,8 +331,8 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
     else:
         # Use the default coverage.
         # Do not hide adjacent face.
-        # Hide this face if it is covered by constants.DEFAULT_COVERAGE plates.
-        coverage = [(0, constants.DEFAULT_COVERAGE)] * 6
+        # Hide this face if it is covered by const.DEFAULT_COVERAGE plates.
+        coverage = [(0, const.DEFAULT_COVERAGE)] * 6
 
     return coverage
 
@@ -428,9 +428,9 @@ class BLBProcessor(object):
             bounds_min = self.__bounds_data.world_coords_min
             dimensions = self.__bounds_data.dimensions
 
-        local_center = round_values((bounds_min[constants.X] + (dimensions[constants.X] / Decimal("2.0")),
-                                     bounds_min[constants.Y] + (dimensions[constants.Y] / Decimal("2.0")),
-                                     bounds_min[constants.Z] + (dimensions[constants.Z] / Decimal("2.0"))))
+        local_center = round_values((bounds_min[const.X] + (dimensions[const.X] / Decimal("2.0")),
+                                     bounds_min[const.Y] + (dimensions[const.Y] / Decimal("2.0")),
+                                     bounds_min[const.Z] + (dimensions[const.Z] / Decimal("2.0"))))
 
         # If given position is in Decimals do nothing.
         if isinstance(world_position[0], Decimal):
@@ -561,71 +561,71 @@ class BLBProcessor(object):
                 # Translate coordinates to negative X axis.
                 # -X: Index 0 = front of the brick.
                 # -Y: Index 0 = left of the brick.
-                grid_min[constants.X] = grid_min[constants.X] - halved_dimensions[constants.X]
+                grid_min[const.X] = grid_min[const.X] - halved_dimensions[const.X]
             else:
                 # Translate coordinates to positive X axis.
                 # +X: Index 0 = front of the brick.
                 # +Y: Index 0 = left of the brick.
-                grid_min[constants.X] = grid_min[constants.X] + halved_dimensions[constants.X]
+                grid_min[const.X] = grid_min[const.X] + halved_dimensions[const.X]
 
             if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
                 # Translate coordinates to negative Y axis.
                 # +X: Index 0 = left of the brick.
                 # -Y: Index 0 = front of the brick.
-                grid_min[constants.Y] = grid_min[constants.Y] - halved_dimensions[constants.Y]
+                grid_min[const.Y] = grid_min[const.Y] - halved_dimensions[const.Y]
             else:
                 # Translate coordinates to positive Y axis.
                 # +Y: Index 0 = front of the brick.
                 # -X: Index 0 = left of the brick.
-                grid_min[constants.Y] = grid_min[constants.Y] + halved_dimensions[constants.Y]
+                grid_min[const.Y] = grid_min[const.Y] + halved_dimensions[const.Y]
 
             # Translate coordinates to negative Z axis, height to plates.
-            grid_min[constants.Z] = (grid_min[constants.Z] - halved_dimensions[constants.Z]) / constants.PLATE_HEIGHT
+            grid_min[const.Z] = (grid_min[const.Z] - halved_dimensions[const.Z]) / const.PLATE_HEIGHT
 
             # Maximum indices.
             if self.__properties.axis_blb_forward == "NEGATIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
-                grid_max[constants.X] = grid_max[constants.X] - halved_dimensions[constants.X]
+                grid_max[const.X] = grid_max[const.X] - halved_dimensions[const.X]
             else:
-                grid_max[constants.X] = grid_max[constants.X] + halved_dimensions[constants.X]
+                grid_max[const.X] = grid_max[const.X] + halved_dimensions[const.X]
 
             if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_Y":
-                grid_max[constants.Y] = grid_max[constants.Y] - halved_dimensions[constants.Y]
+                grid_max[const.Y] = grid_max[const.Y] - halved_dimensions[const.Y]
             else:
-                grid_max[constants.Y] = grid_max[constants.Y] + halved_dimensions[constants.Y]
+                grid_max[const.Y] = grid_max[const.Y] + halved_dimensions[const.Y]
 
-            grid_max[constants.Z] = (grid_max[constants.Z] - halved_dimensions[constants.Z]) / constants.PLATE_HEIGHT
+            grid_max[const.Z] = (grid_max[const.Z] - halved_dimensions[const.Z]) / const.PLATE_HEIGHT
 
             # Swap min/max Z index and make it positive. Index 0 = top of the brick.
-            temp = grid_min[constants.Z]
-            grid_min[constants.Z] = abs(grid_max[constants.Z])
-            grid_max[constants.Z] = abs(temp)
+            temp = grid_min[const.Z]
+            grid_min[const.Z] = abs(grid_max[const.Z])
+            grid_max[const.Z] = abs(temp)
 
             if self.__properties.axis_blb_forward == "POSITIVE_X":
                 # Swap min/max depth and make it positive.
-                temp = grid_min[constants.Y]
-                grid_min[constants.Y] = abs(grid_max[constants.Y])
-                grid_max[constants.Y] = abs(temp)
+                temp = grid_min[const.Y]
+                grid_min[const.Y] = abs(grid_max[const.Y])
+                grid_max[const.Y] = abs(temp)
 
                 grid_min = common.swizzle(grid_min, "bac")
                 grid_max = common.swizzle(grid_max, "bac")
             elif self.__properties.axis_blb_forward == "NEGATIVE_X":
                 # Swap min/max width and make it positive.
-                temp = grid_min[constants.X]
-                grid_min[constants.X] = abs(grid_max[constants.X])
-                grid_max[constants.X] = abs(temp)
+                temp = grid_min[const.X]
+                grid_min[const.X] = abs(grid_max[const.X])
+                grid_max[const.X] = abs(temp)
 
                 grid_min = common.swizzle(grid_min, "bac")
                 grid_max = common.swizzle(grid_max, "bac")
             elif self.__properties.axis_blb_forward == "NEGATIVE_Y":
                 # Swap min/max depth and make it positive.
-                temp = grid_min[constants.Y]
-                grid_min[constants.Y] = abs(grid_max[constants.Y])
-                grid_max[constants.Y] = abs(temp)
+                temp = grid_min[const.Y]
+                grid_min[const.Y] = abs(grid_max[const.Y])
+                grid_max[const.Y] = abs(temp)
 
                 # Swap min/max width and make it positive.
-                temp = grid_min[constants.X]
-                grid_min[constants.X] = abs(grid_max[constants.X])
-                grid_max[constants.X] = abs(temp)
+                temp = grid_min[const.X]
+                grid_min[const.X] = abs(grid_max[const.X])
+                grid_max[const.X] = abs(temp)
             # Else self.__properties.axis_blb_forward == "POSITIVE_Y": do nothing
 
             grid_min = force_to_int(grid_min)
@@ -644,9 +644,9 @@ class BLBProcessor(object):
                 raise self.ZeroSizeException()
             else:
                 # Return the index ranges as a tuple: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
-                return ((grid_min[constants.X], grid_max[constants.X]),
-                        (grid_min[constants.Y], grid_max[constants.Y]),
-                        (grid_min[constants.Z], grid_max[constants.Z]))
+                return ((grid_min[const.X], grid_max[const.X]),
+                        (grid_min[const.Y], grid_max[const.Y]),
+                        (grid_min[const.Z], grid_max[const.Z]))
         else:
             if self.__bounds_data.name is None:
                 logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
@@ -699,9 +699,9 @@ class BLBProcessor(object):
         # Are the dimensions of the bounds object not integers?
         # TODO: Flip the boolean logic.
         if are_not_ints(bounds_size):
-            logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[constants.X],
-                                                                                                                    bounds_size[constants.Y],
-                                                                                                                    bounds_size[constants.Z],
+            logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
+                                                                                                                    bounds_size[const.Y],
+                                                                                                                    bounds_size[const.Z],
                                                                                                                     self.__HUMAN_ERROR))
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
@@ -709,16 +709,16 @@ class BLBProcessor(object):
 
         # The value type must be int because you can't have partial plates. Returns a list.
         self.__blb_data.brick_size = force_to_int(bounds_size)
-        #self.__bounds_data["brick_size"] = self.__definition_data[constants.BOUNDS_NAME_PREFIX]
+        #self.__bounds_data["brick_size"] = self.__definition_data[const.BOUNDS_NAME_PREFIX]
 
     def __calculate_bounds(self):
         """Gets the bounds data from calculated minimum and maximum vertex coordinates and saves the data to the bounds data and definition data sequences."""
         logger.warning("No 'bounds' object found. Automatically calculated brick size may be undesirable.")
 
         # Get the dimensions defined by the vectors.
-        bounds_size = round_values((self.__vec_bounding_box_max[constants.X] - self.__vec_bounding_box_min[constants.X],
-                                    self.__vec_bounding_box_max[constants.Y] - self.__vec_bounding_box_min[constants.Y],
-                                    (self.__vec_bounding_box_max[constants.Z] - self.__vec_bounding_box_min[constants.Z])))
+        bounds_size = round_values((self.__vec_bounding_box_max[const.X] - self.__vec_bounding_box_min[const.X],
+                                    self.__vec_bounding_box_max[const.Y] - self.__vec_bounding_box_min[const.Y],
+                                    (self.__vec_bounding_box_max[const.Z] - self.__vec_bounding_box_min[const.Z])))
 
         self.__bounds_data.name = None
         self.__bounds_data.dimensions = bounds_size
@@ -732,9 +732,9 @@ class BLBProcessor(object):
 
         # Are the dimensions of the bounds object not integers?
         if are_not_ints(bounds_size):
-            logger.warning("Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[constants.X],
-                                                                                                    bounds_size[constants.Y],
-                                                                                                    bounds_size[constants.Z]))
+            logger.warning("Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[const.X],
+                                                                                                    bounds_size[const.Y],
+                                                                                                    bounds_size[const.Z]))
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
             for index, value in enumerate(bounds_size):
@@ -742,7 +742,7 @@ class BLBProcessor(object):
 
         # The value type must be int because you can't have partial plates. Returns a list.
         self.__blb_data.brick_size = force_to_int(bounds_size)
-        #self.__bounds_data["brick_size"] = self.__definition_data[constants.BOUNDS_NAME_PREFIX]
+        #self.__bounds_data["brick_size"] = self.__definition_data[const.BOUNDS_NAME_PREFIX]
 
     def __process_grid_definitions(self, definition_objects):
         """
@@ -750,7 +750,7 @@ class BLBProcessor(object):
         Processes the given brick grid definitions and saves the results to the definition data sequence.
         """
         # Make one empty list for each brick grid definition.
-        definition_volumes = [[] for i in range(len(constants.GRID_DEF_OBJ_PREFIX_PRIORITY))]
+        definition_volumes = [[] for i in range(len(const.GRID_DEF_OBJ_PREFIX_PRIORITY))]
         processed = 0
 
         for grid_obj in definition_objects:
@@ -758,7 +758,7 @@ class BLBProcessor(object):
                 # The first 5 characters of the Blender object name must be the grid definition prefix.
                 # Get the index of the definition list.
                 # And append the definition data to the list.
-                index = constants.GRID_DEF_OBJ_PREFIX_PRIORITY.index(grid_obj.name.lower()[:5])
+                index = const.GRID_DEF_OBJ_PREFIX_PRIORITY.index(grid_obj.name.lower()[:5])
                 definition_volumes[index].append(self.__grid_object_to_volume(grid_obj))
                 processed += 1
             except self.OutOfBoundsException:
@@ -787,16 +787,16 @@ class BLBProcessor(object):
 
         # The brick grid is a special case where I do need to take the custom forward axis already into account when processing the data.
         if self.__properties.axis_blb_forward == "POSITIVE_X" or self.__properties.axis_blb_forward == "NEGATIVE_X":
-            grid_width = self.__blb_data.brick_size[constants.X]
-            grid_depth = self.__blb_data.brick_size[constants.Y]
+            grid_width = self.__blb_data.brick_size[const.X]
+            grid_depth = self.__blb_data.brick_size[const.Y]
         else:
-            grid_width = self.__blb_data.brick_size[constants.Y]
-            grid_depth = self.__blb_data.brick_size[constants.X]
+            grid_width = self.__blb_data.brick_size[const.Y]
+            grid_depth = self.__blb_data.brick_size[const.X]
 
-        grid_height = self.__blb_data.brick_size[constants.Z]
+        grid_height = self.__blb_data.brick_size[const.Z]
 
         # Initialize the brick grid with the empty symbol with the dimensions of the brick.
-        brick_grid = [[[constants.GRID_OUTSIDE for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
+        brick_grid = [[[const.GRID_OUTSIDE for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
 
         if len(definition_objects) == 0:
             # Write the default brick grid.
@@ -806,13 +806,13 @@ class BLBProcessor(object):
                     is_bottom = (h == grid_height - 1)  # Current height is the bottom of the brick?
 
                     if is_bottom and is_top:
-                        symbol = constants.GRID_BOTH
+                        symbol = const.GRID_BOTH
                     elif is_bottom:
-                        symbol = constants.GRID_DOWN
+                        symbol = const.GRID_DOWN
                     elif is_top:
-                        symbol = constants.GRID_UP
+                        symbol = const.GRID_UP
                     else:
-                        symbol = constants.GRID_INSIDE
+                        symbol = const.GRID_INSIDE
 
                     # Create a new list of the width of the grid filled with the selected symbol.
                     # Assign it to the current height.
@@ -821,7 +821,7 @@ class BLBProcessor(object):
             # Write the calculated definition_volumes into the brick grid.
             for index, volumes in enumerate(definition_volumes):
                 # Get the symbol for these volumes.
-                symbol = constants.GRID_DEFINITIONS_PRIORITY[index]
+                symbol = const.GRID_DEFINITIONS_PRIORITY[index]
                 for volume in volumes:
                     # Modify the grid by adding the symbol to the correct locations.
                     modify_brick_grid(brick_grid, volume, symbol)
@@ -941,33 +941,33 @@ class BLBProcessor(object):
         for obj in reversed(objects):
             # Ignore non-mesh objects
             if obj.type != "MESH":
-                if obj.name.lower().startswith(constants.BOUNDS_NAME_PREFIX):
+                if obj.name.lower().startswith(const.BOUNDS_NAME_PREFIX):
                     logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
-                elif obj.name.lower().startswith(constants.GRID_DEF_OBJ_PREFIX_PRIORITY):
+                elif obj.name.lower().startswith(const.GRID_DEF_OBJ_PREFIX_PRIORITY):
                     logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj.name))
-                elif obj.name.lower().startswith(constants.COLLISION_PREFIX):
+                elif obj.name.lower().startswith(const.COLLISION_PREFIX):
                     logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj.name))
 
                 continue
 
             # Is the current object a bounds definition object?
-            elif obj.name.lower().startswith(constants.BOUNDS_NAME_PREFIX):
+            elif obj.name.lower().startswith(const.BOUNDS_NAME_PREFIX):
                 if self.__bounds_data.name is None:
                     self.__process_bounds_object(obj)
-                    logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(self.__blb_data.brick_size[constants.X],
-                                                                                               self.__blb_data.brick_size[constants.Y],
-                                                                                               self.__blb_data.brick_size[constants.Z]))
+                    logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(self.__blb_data.brick_size[const.X],
+                                                                                               self.__blb_data.brick_size[const.Y],
+                                                                                               self.__blb_data.brick_size[const.Z]))
                 else:
                     logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj.name))
                     continue
 
             # Is the current object a brick grid definition object?
-            elif obj.name.lower().startswith(constants.GRID_DEF_OBJ_PREFIX_PRIORITY):
+            elif obj.name.lower().startswith(const.GRID_DEF_OBJ_PREFIX_PRIORITY):
                 # Brick grid definition objects cannot be processed until after the bounds have been defined.
                 brick_grid_objects.append(obj)
 
             # Is the current object a collision definition object?
-            elif obj.name.lower().startswith(constants.COLLISION_PREFIX):
+            elif obj.name.lower().startswith(const.COLLISION_PREFIX):
                 # Collision definition objects cannot be processed until after the bounds have been defined.
                 collision_objects.append(obj)
 
@@ -980,9 +980,9 @@ class BLBProcessor(object):
         # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex position.
         if self.__bounds_data.name is None:
             self.__calculate_bounds()
-            logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__blb_data.brick_size[constants.X],
-                                                                                          self.__blb_data.brick_size[constants.Y],
-                                                                                          self.__blb_data.brick_size[constants.Z]))
+            logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(self.__blb_data.brick_size[const.X],
+                                                                                          self.__blb_data.brick_size[const.Y],
+                                                                                          self.__blb_data.brick_size[const.Z]))
 
         # Process brick grid and collision definitions now that a bounds definition exists.
         self.__process_grid_definitions(brick_grid_objects)
@@ -1121,7 +1121,7 @@ class BLBProcessor(object):
         # This is my workaround to making a sort of dictionary where the keys are in insertion order.
         # The quads must be written in a specific order.
         # TODO: Consider using a standard dictionary and worrying about the order when writing.
-        sorted_quads = tuple([[] for i in range(len(constants.QUAD_SECTION_ORDER))])
+        sorted_quads = tuple([[] for i in range(len(const.QUAD_SECTION_ORDER))])
 
         # Sort quads into sections.
         for quad in quads:
