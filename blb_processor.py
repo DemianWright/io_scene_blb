@@ -30,12 +30,10 @@ from mathutils import Vector
 # Blender requires imports from ".".
 from . import logger, common, const
 
-# Number of decimal places to round floating point numbers.
-FLOATING_POINT_DECIMALS = 6
-FLOATING_POINT_PRECISION = Decimal("0.000001")
-
-# Set the Decimal number context: 6 decimal points and 0.5 is rounded up.
-setcontext(Context(prec=FLOATING_POINT_DECIMALS, rounding=ROUND_HALF_UP))
+# Set the Decimal number context for operations: 0.5 is rounded up. (Precision can be whatever.)
+# NOTE: prec=n limits the number of digits for the whole number.
+# E.g. 1234.56 has a precision of 6, not 2.
+setcontext(Context(rounding=ROUND_HALF_UP))
 
 
 def is_even(value):
@@ -43,23 +41,69 @@ def is_even(value):
     return value % 2 == 0
 
 
-def to_decimal(value, decimals=FLOATING_POINT_DECIMALS):
-    """Converts the given value to a Decimal value with up to 6 decimal places of precision."""
-    if decimals > FLOATING_POINT_DECIMALS:
-        decimals = FLOATING_POINT_DECIMALS
+def to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
+    """Creates a Decimal number of the specified value and rounds it to the closest specified quantize value.
+    The number of decimal digits in the quantize value will determine the number of decimal digits in the returned value.
 
-    # First convert float to string with n decimal digits and then make a Decimal out of it.
-    return Decimal(("{0:." + str(decimals) + "f}").format(value))
+    Args:
+        value (number): A numerical value to create a Decimal out of.
+        quantize (string or Decimal): The optional value to round the specified number to.
+                                      The value may be given as a string or a Decimal number.
+                                      If no value is specified, the default floating point precision will be used.
+
+    Returns:
+        A Decimal representation of the specified value as the closest multiple of the quantize value, with half rounded up.
+    """
+    # Make a Decimal out of the quantize value if it already isn't.
+    if isinstance(quantize, str):
+        quantize = Decimal(quantize)
+    elif isinstance(quantize, Decimal):
+        pass
+    else:
+        raise ValueError("quantize must be a string or a Decimal, was {}".format(type(quantize)))
+
+    # Calculate the fraction that will be used to do the rounding to an arbitrary number.
+    fraction = Decimal("1.0") / quantize
+
+    # If the value is not a decimal, convert the value to string and create a Decimal out of the formatted string.
+    # Using strings is the only way to create Decimals accurately from numbers as the Decimal representation of
+    # the input will be identical to that of the string.
+    # I.e. I'm pushing the issue of accurate floating point representation to whatever is the default formatting.
+    if not isinstance(value, Decimal):
+        value = Decimal("{}".format(value))
+
+    # Multiply the Decimal value with the Decimal fraction.
+    # Round to the nearest integer with quantize.
+    # Divide with the Decimal fraction.
+    # Quantize the result to get the correct number of decimal digits.
+    # Result: value is rounded to the nearest value of quantize (half rounded up)
+    return ((value * fraction).quantize(Decimal("1")) / fraction).quantize(quantize)
+
+
+def to_decimals(values, quantize=const.FLOATING_POINT_PRECISION):
+    """Creates Decimal numbers out of the values in the specified sequence and rounds them to the specified round_to_value.
+    The number of decimal digits in the quantize value will determine the number of decimal digits in the returned values.
+
+    Args:
+        values (sequence of numbers): A sequence of numerical values to create Decimals out of.
+        quantize (string or Decimal): The optional value to round the specified numbers to.
+                                      The value may be given as a string or a Decimal number.
+                                      If no value is specified, the default floating point precision will be used.
+
+    Returns:
+        A list of Decimal representations of the specified values as the closest multiple of the quantize value, with half rounded up.
+    """
+    result = []
+
+    for val in values:
+        result.append(to_decimal(val, quantize))
+
+    return result
 
 
 def force_to_int(values):
     """Returns a new list of sequence values casted to integers."""
-    result = []
-
-    for val in values:
-        result.append(int(val))
-
-    return result
+    return [int(val) for val in values]
 
 
 def are_ints(sequence):
@@ -138,38 +182,13 @@ def all_within_bounds(sequence, bounding_dimensions):
     return True
 
 
-def round_value(value, precision=1.0, decimals=FLOATING_POINT_DECIMALS):
-    """Returns the given value as Decimal rounded to the given precision (default 1.0) and decimal places (default FLOATING_POINT_DECIMALS)."""
-    # Creating decimals through strings is more accurate than floating point numbers.
-    fraction = Decimal("1.0") / to_decimal(precision, decimals)
-
-    # TODO: Remove double casting decimals.
-
-    # I'm not entirely sure what the Decimal("1") bit does but it works.
-    return to_decimal((value * fraction).quantize(Decimal("1")) / fraction)
-
-
-def round_values(values, precision=None, decimals=FLOATING_POINT_DECIMALS):
-    """Returns a new list of Decimal values with the values of the given sequence rounded to the given precision (default no rounding) and decimal places (default FLOATING_POINT_DECIMALS)."""
-    result = []
-
-    if precision is None:
-        for val in values:
-            result.append(to_decimal(val, decimals))
-    else:
-        for val in values:
-            result.append(round_value(val, precision, decimals))
-
-    return result
-
-
 def sequence_z_to_plates(xyz):
     """
-    Performs round_values(sequence) on the given sequence and scales the Z component to match Blockland plates.
+    Performs to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
     If the given sequence does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
     """
     if len(xyz) == 3:
-        sequence = round_values(xyz)
+        sequence = to_decimals(xyz)
         sequence[const.Z] /= const.PLATE_HEIGHT
         return sequence
     else:
@@ -186,20 +205,20 @@ def round_to_plate_coordinates(coordinates, brick_dimensions):
     # Plates can only be 1.0 units long on the X and Y axes.
     # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
     if is_even(brick_dimensions[const.X]):
-        result.append(round_value(coordinates[const.X], 1.0))
+        result.append(to_decimal(coordinates[const.X], "1.0"))
     else:
-        result.append(round_value(coordinates[const.X], 0.5))
+        result.append(to_decimal(coordinates[const.X], "0.5"))
 
     if is_even(brick_dimensions[const.Y]):
-        result.append(round_value(coordinates[const.Y], 1.0))
+        result.append(to_decimal(coordinates[const.Y], "1.0"))
     else:
-        result.append(round_value(coordinates[const.Y], 0.5))
+        result.append(to_decimal(coordinates[const.Y], "0.5"))
 
     # Round to the nearest full plate height. (Half is rounded up)
     if is_even(brick_dimensions[const.Z] / const.PLATE_HEIGHT):
-        result.append(round_value(coordinates[const.Z], const.PLATE_HEIGHT))
+        result.append(to_decimal(coordinates[const.Z], const.PLATE_HEIGHT))
     else:
-        result.append(round_value(coordinates[const.Z], (const.PLATE_HEIGHT / Decimal("2.0"))))
+        result.append(to_decimal(coordinates[const.Z], (const.PLATE_HEIGHT / Decimal("2.0"))))
 
     return result
 
@@ -239,7 +258,7 @@ def world_to_local(coordinates, new_origin):
     else:
         # Otherwise convert to Decimal.
         # FIXME: Implicit rounding.
-        pos = round_values(coordinates)
+        pos = to_decimals(coordinates)
 
     new_pos = []
 
@@ -247,7 +266,7 @@ def world_to_local(coordinates, new_origin):
         new_pos.append(old_coord - new_origin[index])
 
     # FIXME: Implicit rounding.
-    return round_values(new_pos)
+    return to_decimals(new_pos)
 
 
 def modify_brick_grid(brick_grid, volume, symbol):
@@ -713,7 +732,7 @@ class BLBProcessor(object):
         self.__bounds_data.name = obj.name
 
         # ROUND & CAST: defined bounds object dimensions into Decimals for accuracy.
-        self.__bounds_data.dimensions = round_values(obj.dimensions)
+        self.__bounds_data.dimensions = to_decimals(obj.dimensions)
 
         # Find the minimum and maximum world coordinates for the bounds object.
         bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
@@ -721,8 +740,8 @@ class BLBProcessor(object):
         record_world_min_max(bounds_min, bounds_max, obj)
 
         # ROUND & CAST: defined bounds object min/max world coordinates into Decimals for accuracy.
-        self.__bounds_data.world_coords_min = round_values(bounds_min)
-        self.__bounds_data.world_coords_max = round_values(bounds_max)
+        self.__bounds_data.world_coords_min = to_decimals(bounds_min)
+        self.__bounds_data.world_coords_max = to_decimals(bounds_max)
 
         self.__bounds_data.world_center = calculate_center(self.__bounds_data.world_coords_min, self.__bounds_data.dimensions)
 
@@ -755,16 +774,16 @@ class BLBProcessor(object):
 
         # Get the dimensions defined by the vectors.
         # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
-        bounds_size = round_values((max_world_coordinates[const.X] - min_world_coordinates[const.X],
-                                    max_world_coordinates[const.Y] - min_world_coordinates[const.Y],
-                                    (max_world_coordinates[const.Z] - min_world_coordinates[const.Z])))
+        bounds_size = to_decimals((max_world_coordinates[const.X] - min_world_coordinates[const.X],
+                                   max_world_coordinates[const.Y] - min_world_coordinates[const.Y],
+                                   (max_world_coordinates[const.Z] - min_world_coordinates[const.Z])))
 
         self.__bounds_data.name = None
         self.__bounds_data.dimensions = bounds_size
 
         # The minimum and maximum calculated world coordinates.
-        self.__bounds_data.world_coords_min = round_values(min_world_coordinates)
-        self.__bounds_data.world_coords_max = round_values(max_world_coordinates)
+        self.__bounds_data.world_coords_min = to_decimals(min_world_coordinates)
+        self.__bounds_data.world_coords_max = to_decimals(max_world_coordinates)
 
         self.__bounds_data.world_center = calculate_center(self.__bounds_data.world_coords_min, self.__bounds_data.dimensions)
 

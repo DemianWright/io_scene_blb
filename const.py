@@ -76,3 +76,7 @@ GRID_DEFINITIONS_PRIORITY = (GRID_INSIDE,
                              GRID_UP,
                              GRID_DOWN,
                              GRID_BOTH)
+
+# Number of decimal places to round floating point numbers.
+FLOATING_POINT_DECIMALS = 6
+FLOATING_POINT_PRECISION = "0.000001"
