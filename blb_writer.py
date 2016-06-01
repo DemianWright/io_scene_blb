@@ -42,7 +42,7 @@ class BLBWriter(object):
         self.__size_z = self.__data.brick_size[const.Z]
 
     @classmethod
-    def __write_sequence(cls, file, sequence, new_line=True):
+    def __write_sequence(cls, file, sequence, new_line=True, decimal_digits=None):
         """
         Writes the values of the given sequence separated with spaces into the given file.
         An optional new line character is added at the end of the line by default.
@@ -56,8 +56,12 @@ class BLBWriter(object):
                 # Handle zeros.
                 file.write("0")
             else:
+                # TODO: The trimming should be a property.
                 # Format the value into string, remove all zeros from the end, then remove all periods.
-                file.write("{}".format(value).rstrip('0').rstrip('.'))
+                if decimal_digits is None:
+                    file.write("{}".format(value).rstrip('0').rstrip('.'))
+                else:
+                    file.write("{0:.{1}f}".format(value, decimal_digits).rstrip('0').rstrip('.'))
         if new_line:
             # Write a new line after all values.
             file.write("\n")
@@ -157,7 +161,7 @@ class BLBWriter(object):
                     # Write vertex positions.
                     file.write("\nPOSITION:\n")  # Optional.
                     for position in positions:
-                        self.__write_sequence(file, common.rotate(position, self.__forward_axis))
+                        self.__write_sequence(file, common.rotate(position, self.__forward_axis), True, const.FLOATING_POINT_DECIMALS)
 
                     # Write face UV coordinates.
                     file.write("UV COORDS:\n")  # Optional.
