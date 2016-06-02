@@ -258,23 +258,17 @@ def world_to_local(coordinates, new_origin):
         new_origin (sequence of numbers): The new origin point as a sequence of XYZ coordinates.
 
     Returns:
-        A list of Decimal type coordinates rounded to eliminate floating point errors.
+        A list of Decimal type coordinates relative to the specified new origin coordinates.
     """
-    # If the specified position is a Decimal do nothing.
-    if isinstance(coordinates[0], Decimal):
-        pos = coordinates
-    else:
-        # Otherwise convert to Decimal.
-        # FIXME: Implicit rounding.
-        pos = to_decimals(coordinates)
+    # Make the coordinates Decimals if all of them are not.
+    if not all(isinstance(coord, Decimal) for coord in coordinates):
+        coordinates = to_decimals(coordinates)
 
-    new_pos = []
+    # Make the new origin Decimals if all of them are not.
+    if not all(isinstance(coord, Decimal) for coord in new_origin):
+        new_origin = to_decimals(new_origin)
 
-    for index, old_coord in enumerate(pos):
-        new_pos.append(old_coord - new_origin[index])
-
-    # FIXME: Implicit rounding.
-    return to_decimals(new_pos)
+    return [old_coord - new_origin[index] for index, old_coord in enumerate(coordinates)]
 
 
 def modify_brick_grid(brick_grid, volume, symbol):
