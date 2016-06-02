@@ -37,7 +37,7 @@ setcontext(Context(rounding=ROUND_HALF_UP))
 
 
 def is_even(value):
-    """Returns True if given value is divisible by 2."""
+    """Returns True if the specified value is exactly divisible by 2."""
     return value % 2 == 0
 
 
@@ -65,7 +65,7 @@ def to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
     # Calculate the fraction that will be used to do the rounding to an arbitrary number.
     fraction = Decimal("1.0") / quantize
 
-    # If the value is not a decimal, convert the value to string and create a Decimal out of the formatted string.
+    # If the value is not a Decimal, convert the value to string and create a Decimal out of the formatted string.
     # Using strings is the only way to create Decimals accurately from numbers as the Decimal representation of
     # the input will be identical to that of the string.
     # I.e. I'm pushing the issue of accurate floating point representation to whatever is the default formatting.
@@ -83,7 +83,6 @@ def to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
 def to_decimals(values, quantize=const.FLOATING_POINT_PRECISION):
     """Creates Decimal numbers out of the values in the specified sequence and rounds them to the specified round_to_value.
     The number of decimal digits in the quantize value will determine the number of decimal digits in the returned values.
-
     Args:
         values (sequence of numbers): A sequence of numerical values to create Decimals out of.
         quantize (string or Decimal): The optional value to round the specified numbers to.
@@ -102,7 +101,7 @@ def to_decimals(values, quantize=const.FLOATING_POINT_PRECISION):
 
 
 def force_to_int(values):
-    """Returns a new list of sequence values casted to integers."""
+    """Returns a new list of the sequence values casted to integers."""
     return [int(val) for val in values]
 
 
@@ -117,6 +116,7 @@ def are_ints(sequence):
 
 def get_world_min(obj):
     """Returns a new Vector(X,Y,Z) of the minimum world space coordinates of the given object."""
+    # This function deals with Vectors instead of Decimals because it works with Blender object data, which uses Vectors.
     vec_min = Vector((float("+inf"), float("+inf"), float("+inf")))
 
     for vert in obj.data.vertices:
@@ -148,12 +148,20 @@ def record_world_min_max(sequence_min, sequence_max, obj):
             sequence_max[i] = max(sequence_max[i], coordinates[i])
 
 
-def index_to_position(obj, index):
-    """Returns the world coordinates for the vertex whose index was given in the current polygon loop."""
-    return obj.matrix_world * obj.data.vertices[obj.data.loops[index].vertex_index].co
+def vert_index_to_world_coordinate(obj, index):
+    """Gets the world coordinates for the vertex at the specified index in the specified Blender object.
+
+    Args:
+        obj (Blender object): The Blender object where the vertex is stored.
+        index (int): The index of the vertex in the specified object's vertex data sequence.
+
+    Returns:
+        The world coordinates of the vertex.
+    """
+    return obj.matrix_world * obj.data.vertices[index].co
 
 
-def vertex_index_to_normal(obj, index):
+def vert_index_to_normal_vector(obj, index):
     """Calculates the normalized vertex normal for the specified vertex in the given object."""
     return (obj.matrix_world.to_3x3() * obj.data.vertices[obj.data.loops[index].vertex_index].normal).normalized()
 
@@ -1138,12 +1146,15 @@ class BLBProcessor(object):
                 positions = []
 
                 # Reverse the loop_indices tuple. (Blender seems to keep opposite winding order.)
-                for index in reversed(loop_indices):
-                    # Get the vertex world position from the index.
+                for loop_index in reversed(loop_indices):
+                    # Get the vertex index in the object from the loop.
+                    vert_index = obj.data.loops[loop_index].vertex_index
+
+                    # Get the vertex world position from the vertex index.
                     # Center the position to the current bounds object: coordinates are now in local object space.
                     # TODO: Why on earth am I rounding the vertex coordinates to the closest
                     # plate height? This needs to be a property, not something done automatically!
-                    positions.append(sequence_z_to_plates(world_to_local(index_to_position(obj, index), self.__bounds_data.world_center)))
+                    positions.append(sequence_z_to_plates(world_to_local(vert_index_to_world_coordinate(obj, vert_index), self.__bounds_data.world_center)))
 
                 # =======
                 # Normals
@@ -1153,7 +1164,7 @@ class BLBProcessor(object):
                 if poly.use_smooth:
                     # Smooth shading.
                     # For every vertex index in the loop_indices, calculate the vertex normal and add it to the list.
-                    normals = [vertex_index_to_normal(obj, index) for index in reversed(loop_indices)]
+                    normals = [vert_index_to_normal_vector(obj, index) for index in reversed(loop_indices)]
                 else:
                     # Flat shading: every vertex in this loop has the same normal.
                     normals = (poly.normal,) * 4
