@@ -115,7 +115,7 @@ def are_ints(sequence):
 
 
 def get_world_min(obj):
-    """Returns a new Vector(X,Y,Z) of the minimum world space coordinates of the given object."""
+    """Returns a new Vector of the minimum world space coordinates of the specified object."""
     # This function deals with Vectors instead of Decimals because it works with Blender object data, which uses Vectors.
     vec_min = Vector((float("+inf"), float("+inf"), float("+inf")))
 
@@ -136,8 +136,8 @@ def record_world_min_max(sequence_min, sequence_max, obj):
     minimum and maximum sequences and updates the values in those sequences with the object's coordinates if they are smaller or greater.
 
     Args:
-        sequence_min (sequence of numbers): The sequence of smallest XYZ world space coordinates found so far.
-        sequence_max (sequence of numbers): The sequence of largest XYZ world space coordinates found so far.
+        sequence_min (Vector): The Vector of smallest XYZ world space coordinates found so far.
+        sequence_max (Vector): The Vector of largest XYZ world space coordinates found so far.
         obj (Blender object): The Blender object whose vertex coordinates to check against the current minimum and maximum coordinates.
     """
     for vert in obj.data.vertices:
@@ -156,7 +156,7 @@ def vert_index_to_world_coordinate(obj, index):
         index (int): The index of the vertex in the specified object's vertex data sequence.
 
     Returns:
-        The world coordinates of the vertex.
+        A Vector of the world coordinates of the vertex.
     """
     return obj.matrix_world * obj.data.vertices[index].co
 
