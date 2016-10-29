@@ -24,7 +24,7 @@ A module for processing Blender data into the BLB file format for writing.
 # TODO: Remove all implicit rounding.
 
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
-from math import ceil
+from math import ceil, isnan
 from mathutils import Vector
 
 # Blender requires imports from ".".
@@ -406,6 +406,25 @@ def __mirror(xyz, forward_axis):
         mirrored[const.X] = -mirrored[const.X]
 
     return mirrored
+
+
+def __to_float_or_none(value):
+    """Converts the specified value to a float if it is numerical, or None if it is not.
+
+    Args:
+        value (object): Object to be converted to a float.
+
+    Returns:
+        A float representing the object or None if the object was not numerical.
+    """
+    try:
+        num = float(value)
+
+        if isnan(num):
+            return None
+        return num
+    except ValueError:
+        return None
 
 # =================================
 # Blender Data Processing Functions
@@ -1299,6 +1318,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
             else:
                 # N-gon.
                 count_ngon += 1
+                # Cannot process n-gons, skip.
                 continue
 
             # ================
@@ -1342,10 +1362,32 @@ def __process_mesh_data(properties, bounds_data, meshes):
                 # These UV coordinates with the SIDE texture lead to a blank textureless face.
                 uvs = (Vector((0.5, 0.5)),) * 4
 
-            # ===================
-            # TODO: Vertex colors
-            # ===================
-            colors = None
+            # =============
+            # Vertex Colors
+            # =============
+            if len(current_data.vertex_colors) == 0:
+                colors = None
+            else:
+                colors = []
+                # Vertex winding order is reversed compared to Blockland.
+                for index in reversed(loop_indices):
+                    # Only use the first color layer.
+                    loop_color = current_data.vertex_colors[0].data[index]
+
+                    # TODO: Document this feature in UI.
+                    # Use the color layer name as the value for alpha, if it is numerical.
+                    # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
+                    # Well actually the game can render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
+                    name = __to_float_or_none(current_data.vertex_colors[0].name)
+
+                    if name is None:
+                        alpha = 1.0
+                    else:
+                        alpha = name
+
+                    # color_layer.data[index] may contain more than 4 values.
+                    # Blockland only supports four colors per quad so only the first four values are stored.
+                    colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, alpha))
 
             # ================
             # BLB texture name
@@ -1356,7 +1398,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
                 texture = "SIDE"
 
-             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
+            # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
             quads.append([positions, normals, uvs, colors, texture])
 
     if count_tris > 0:

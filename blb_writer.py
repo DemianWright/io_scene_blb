@@ -143,13 +143,13 @@ def write_file(filepath, blb_data):
                 for uv_vector in uvs:
                     __write_sequence(file, uv_vector)
 
-                # Vertex normals.
-                file.write("NORMALS:\n")  # Optional.
-                for normal in normals:
-                    __write_sequence(file, normal)
-
                 # Vertex colors, if any.
                 if colors is not None:
                     file.write("COLORS:\n")  # Optional.
                     for color in colors:
                         __write_sequence(file, color)
+
+                # Vertex normals.
+                file.write("NORMALS:\n")  # Optional.
+                for normal in normals:
+                    __write_sequence(file, normal)
