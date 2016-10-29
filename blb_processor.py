@@ -684,7 +684,7 @@ def __get_object_sequence(context, properties):
     if properties.use_selection:
         logger.info("Exporting selection to BLB.")
         objects = context.selected_objects
-        logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "", "No objects selected."))
+        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects selected."))
 
     # If user wants to export the whole scene.
     # Or if user wanted to export only the selected objects but nothing was selected.
@@ -692,7 +692,7 @@ def __get_object_sequence(context, properties):
     if len(objects) == 0:
         logger.info("Exporting scene to BLB.")
         objects = context.scene.objects
-        logger.info(logger.build_countable_message("Found ", len(objects), (" object", " objects"), "", "Scene has no objects."))
+        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "Scene has no objects."))
 
     return objects
 
@@ -1288,7 +1288,8 @@ def __process_mesh_data(properties, bounds_data, meshes):
     count_ngon = 0
 
     for obj in meshes:
-        logger.info("Exporting mesh: {}".format(obj.name))
+        object_name = obj.name
+        logger.info("Exporting mesh: {}".format(object_name))
 
         current_data = obj.data
 
@@ -1296,15 +1297,51 @@ def __process_mesh_data(properties, bounds_data, meshes):
         if current_data.uv_layers:
             # Is there more than one UV layer?
             if len(current_data.uv_layers) > 1:
-                logger.warning("Object '{}' has {} UV layers, only using the first.".format(obj.name, len(current_data.uv_layers)))
+                logger.warning("  Object '{}' has {} UV layers, only using the first.".format(object_name, len(current_data.uv_layers)))
 
             uv_data = current_data.uv_layers[0].data
         else:
             uv_data = None
 
+        # =============
+        # Object Colors
+        # =============
+        colors = None
+        name = object_name.lower()
+
+        # If the fourth last character of the name is a period, remove the last four characters.
+        # Blender adds .### to the end of objects with duplicate names which can be confused for a floating point value.
+        if len(name) > 3 and name[-4] == '.':
+            name = name[:-4]
+
+        # TODO: Document this feature in UI.
+        # Replace commas with dots because the decimals in object names must be defined using a comma.
+        # Split object name at whitespaces.
+        values = name.replace(',', '.').split()
+
+        # Does the object name begin with the letter C and a whitespace character signifying that it defines the object's color?
+        if values[0] == "c":
+            # Convert all elements to floats and ignore elements that would be None.
+            # It does do the function twice but I doubt the object names will be so long that this will be an issue plus the function is simple.
+            floats = [__to_float_or_none(val) for val in values if __to_float_or_none(val) is not None]
+            size = len(floats)
+
+            # Are all four values defined?
+            if size >= 4:
+                if size > 4:
+                    logger.info("  More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name))
+
+                    # We're only interested in the first 4 values: R G B A
+                    floats = floats[:4]
+
+                # Add the RGBA values to the colors, 4 vertices per quad.
+                colors = ([tuple(floats)] * 4)
+            elif size > 0:
+                logger.info(
+                    "  Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name))
+
         # Process quad data.
         for poly in current_data.polygons:
-
             # ===================
             # Vertex loop indices
             # ===================
@@ -1365,29 +1402,34 @@ def __process_mesh_data(properties, bounds_data, meshes):
             # =============
             # Vertex Colors
             # =============
-            if len(current_data.vertex_colors) == 0:
-                colors = None
-            else:
-                colors = []
-                # Vertex winding order is reversed compared to Blockland.
-                for index in reversed(loop_indices):
-                    # Only use the first color layer.
-                    loop_color = current_data.vertex_colors[0].data[index]
+            # Object colors override vertex colors since they are easier to use.
+            if colors is None:
+                # A vertex color layer exists.
+                if len(current_data.vertex_colors) != 0:
+                    colors = []
+                    # Vertex winding order is reversed compared to Blockland.
+                    for index in reversed(loop_indices):
+                        if len(current_data.vertex_colors) > 1:
+                            logger.warning("  Object '{}' has {} vertex color layers, only using the first.".format(
+                                object_name, len(current_data.vertex_colors)))
 
-                    # TODO: Document this feature in UI.
-                    # Use the color layer name as the value for alpha, if it is numerical.
-                    # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
-                    # Well actually the game can render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                    name = __to_float_or_none(current_data.vertex_colors[0].name)
+                        # Only use the first color layer.
+                        loop_color = current_data.vertex_colors[0].data[index]
 
-                    if name is None:
-                        alpha = 1.0
-                    else:
-                        alpha = name
+                        # TODO: Document this feature in UI.
+                        # Use the color layer name as the value for alpha, if it is numerical.
+                        # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
+                        # Well actually the game can render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
+                        name = __to_float_or_none(current_data.vertex_colors[0].name)
 
-                    # color_layer.data[index] may contain more than 4 values.
-                    # Blockland only supports four colors per quad so only the first four values are stored.
-                    colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, alpha))
+                        if name is None:
+                            alpha = 1.0
+                        else:
+                            alpha = name
+
+                        # color_layer.data[index] may contain more than 4 values.
+                        # Blockland only supports four colors per quad so only the first four values are stored.
+                        colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, alpha))
 
             # ================
             # BLB texture name
@@ -1402,10 +1444,10 @@ def __process_mesh_data(properties, bounds_data, meshes):
             quads.append([positions, normals, uvs, colors, texture])
 
     if count_tris > 0:
-        logger.warning("{} triangles degenerated to quads.".format(count_tris))
+        logger.warning("  {} triangles degenerated to quads.".format(count_tris))
 
     if count_ngon > 0:
-        logger.warning("{} n-gons skipped.".format(count_ngon))
+        logger.warning("  {} n-gons skipped.".format(count_ngon))
 
     # Create an empty list for each quad section.
     # This is my workaround to making a sort of dictionary where the keys are in insertion order.
