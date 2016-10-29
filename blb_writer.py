@@ -22,9 +22,7 @@ A module for writing data into a BLB file.
 '''
 
 # Blender requires imports from ".".
-from . import common, const
-
-# TODO: Remove all data manipulation logic from this class. This class should only write the given data in the correct order.
+from . import const
 
 
 def __write_sequence(file, sequence, new_line=True, decimal_digits=None):
@@ -55,44 +53,26 @@ def __write_sequence(file, sequence, new_line=True, decimal_digits=None):
         file.write("\n")
 
 
-def __mirror(xyz, forward_axis):
-    """Mirrors the given XYZ sequence according to the specified forward axis.
-
-    Args:
-        xyz (sequence): A sequence of elements to be mirrored.
-        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
-
-    Returns:
-        A new list of XYZ values."""
-    mirrored = xyz
-
-    if forward_axis == "POSITIVE_X" or forward_axis == "NEGATIVE_X":
-        mirrored[const.Y] = -mirrored[const.Y]
-    else:
-        mirrored[const.X] = -mirrored[const.X]
-
-    return mirrored
-
-
-def write_file(filepath, forward_axis, blb_data):
+def write_file(filepath, blb_data):
     """Writes the BLB file.
 
     Args:
         filepath (string): Path to the BLB file to be written.
-        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
         blb_data (BLBData): A BLBData object containing the data to be written."""
     with open(filepath, "w") as file:
-        # Write brick size.
-        # Swizzle the values according to the forward axis.
-        if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
-            __write_sequence(file, common.swizzle(blb_data.brick_size, "bac"))
-        else:
-            __write_sequence(file, blb_data.brick_size)
+        # ----------
+        # Brick Size
+        # ----------
+        __write_sequence(file, blb_data.brick_size)
 
-        # Write brick type.
+        # ----------
+        # Brick Type
+        # ----------
         file.write("SPECIAL\n\n")
 
-        # Write brick grid.
+        # ----------
+        # Brick Grid
+        # ----------
         for axis_slice in blb_data.brick_grid:
             for row in axis_slice:
                 # Join each Y-axis of data without a separator.
@@ -101,7 +81,9 @@ def write_file(filepath, forward_axis, blb_data):
             # A new line after each axis slice.
             file.write("\n")
 
-        # Write collisions.
+        # ---------
+        # Collision
+        # ---------
         if len(blb_data.collision) == 0:
             # Write default collision.
 
@@ -112,11 +94,7 @@ def write_file(filepath, forward_axis, blb_data):
             file.write("0 0 0\n")
 
             # The size of the cuboid is the size of the bounds.
-            # Swizzle the values according to the forward axis.
-            if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
-                __write_sequence(file, common.swizzle(blb_data.brick_size, "bac"))
-            else:
-                __write_sequence(file, blb_data.brick_size)
+            __write_sequence(file, blb_data.brick_size)
         else:
             # Write defined collisions.
 
@@ -126,21 +104,19 @@ def write_file(filepath, forward_axis, blb_data):
 
             for (center, dimensions) in blb_data.collision:
                 file.write("\n")
-                # Mirror center according to the forward axis. No idea why but it works.
-                # Swizzle the values according to the forward axis.
-                if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
-                    __write_sequence(file, common.swizzle(__mirror(center, forward_axis), "bac"))
-                    __write_sequence(file, common.swizzle(dimensions, "bac"))
-                else:
-                    __write_sequence(file, __mirror(center, forward_axis))
-                    __write_sequence(file, dimensions)
+                __write_sequence(file, center)
+                __write_sequence(file, dimensions)
 
-        # Write coverage.
+        # --------
+        # Coverage
+        # --------
         file.write("COVERAGE:\n")
         for (hide_adjacent, plate_count) in blb_data.coverage:
             file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
 
-        # Write quad data.
+        # -----
+        # Quads
+        # -----
         for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
             # TODO: Terse mode where optional stuff is excluded.
 
@@ -151,27 +127,26 @@ def write_file(filepath, forward_axis, blb_data):
             file.write("{}\n".format(str(len(blb_data.quads[index]))))
 
             for (positions, normals, uvs, colors, texture) in blb_data.quads[index]:
-                # Write face texture name.
+                # Face texture name.
                 file.write("\nTEX:")  # Optional.
                 file.write(texture)
 
-                # Write vertex positions.
+                # Vertex positions.
                 file.write("\nPOSITION:\n")  # Optional.
                 for position in positions:
-                    __write_sequence(file, common.rotate(position, forward_axis), True, const.FLOATING_POINT_DECIMALS)
+                    __write_sequence(file, position, True, const.FLOATING_POINT_DECIMALS)
 
-                # Write face UV coordinates.
+                # Face UV coordinates.
                 file.write("UV COORDS:\n")  # Optional.
                 for uv_vector in uvs:
                     __write_sequence(file, uv_vector)
 
-                # Write vertex normals.
+                # Vertex normals.
                 file.write("NORMALS:\n")  # Optional.
                 for normal in normals:
-                    # Normals also need to rotated.
-                    __write_sequence(file, common.rotate(normal, forward_axis))
+                    __write_sequence(file, normal)
 
-                # Write vertex colors if any.
+                # Vertex colors, if any.
                 if colors is not None:
                     file.write("COLORS:\n")  # Optional.
                     for color in colors:

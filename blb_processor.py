@@ -386,6 +386,24 @@ def __world_to_local(coordinates, new_origin):
     return [old_coord - new_origin[index] for index, old_coord in enumerate(coordinates)]
 
 
+def __mirror(xyz, forward_axis):
+    """Mirrors the given XYZ sequence according to the specified forward axis.
+
+    Args:
+        xyz (sequence): A sequence of elements to be mirrored.
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+
+    Returns:
+        A new list of XYZ values."""
+    mirrored = xyz
+
+    if forward_axis == "POSITIVE_X" or forward_axis == "NEGATIVE_X":
+        mirrored[const.Y] = -mirrored[const.Y]
+    else:
+        mirrored[const.X] = -mirrored[const.X]
+
+    return mirrored
+
 # =================================
 # Blender Data Processing Functions
 # =================================
@@ -1043,7 +1061,7 @@ def __process_collision_definitions(bounds_data, definition_objects):
         definition_objects (a sequence of Blender object): A sequence of Blender objects representing collision definitions.
 
     Returns:
-        A sequence of tuples ready for writing: [ (center coordinates in the local space of the brick, collision cuboid dimensions), ]
+        A sequence of tuples : [ (center coordinates in the local space of the brick, collision cuboid dimensions), ]
     """
     collisions = []
     processed = 0
@@ -1209,7 +1227,7 @@ def __process_definition_objects(properties, objects):
             mesh_objects.append(obj)
 
             # If no bounds object has been defined.
-            if bounds_data.name is None:
+            if bounds_data is None:
                 # Record min/max world coordinates for calculating the bounds.
                 __record_world_min_max(min_world_coordinates, max_world_coordinates, obj)
             # Else a bounds object has been defined, recording the min/max coordinates is pointless.
@@ -1240,7 +1258,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
         meshes (sequence of Blender objects): Meshes to be processed.
 
     Returns:
-        A tuple of mesh data sorted into sections."""
+        A sequence of mesh data sorted into sections."""
     quads = []
     count_tris = 0
     count_ngon = 0
@@ -1305,7 +1323,8 @@ def __process_mesh_data(properties, bounds_data, meshes):
                 normals = [__vert_index_to_normal_vector(obj, index) for index in reversed(loop_indices)]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
-                normals = (poly.normal,) * 4
+                # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
+                normals = [poly.normal, ] * 4
 
             # ===
             # UVs
@@ -1332,7 +1351,8 @@ def __process_mesh_data(properties, bounds_data, meshes):
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
                 texture = "SIDE"
 
-            quads.append((positions, normals, uvs, colors, texture))
+             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
+            quads.append([positions, normals, uvs, colors, texture])
 
     if count_tris > 0:
         logger.warning("{} triangles degenerated to quads.".format(count_tris))
@@ -1343,8 +1363,9 @@ def __process_mesh_data(properties, bounds_data, meshes):
     # Create an empty list for each quad section.
     # This is my workaround to making a sort of dictionary where the keys are in insertion order.
     # The quads must be written in a specific order.
+    # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
     # TODO: Consider using a standard dictionary and worrying about the order when writing.
-    sorted_quads = tuple([[] for i in range(len(const.QUAD_SECTION_ORDER))])
+    sorted_quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
 
     # Sort quads into sections.
     for quad in quads:
@@ -1354,6 +1375,54 @@ def __process_mesh_data(properties, bounds_data, meshes):
         sorted_quads[__sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)].append(quad)
 
     return sorted_quads
+
+
+def __format_blb_data(forward_axis, blb_data):
+    """Formats the specified BLB data into the format required by the game and rotates the brick according to the specified forward axis.
+
+    Args:
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+        blb_data (BLBData): A BLBData object containing the data to be written.
+
+    Returns:
+        The formatted and rotated BLB data ready for writing."""
+
+    # Size
+
+    # Swizzle the values according to the forward axis.
+    if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+        blb_data.brick_size = common.swizzle(blb_data.brick_size, "bac")
+    # Else: Do nothing.
+
+    # Collision
+
+    for index, (center, dimensions) in enumerate(blb_data.collision):
+        # Mirror center according to the forward axis. No idea why, but it works.
+        # Swizzle the values according to the forward axis.
+        if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+            blb_data.collision[index] = (common.swizzle(__mirror(center, forward_axis), "bac"), common.swizzle(dimensions, "bac"))
+        else:
+            blb_data.collision[index] = (__mirror(center, forward_axis), dimensions)
+
+    # Quads
+
+    for section in blb_data.quads:
+        for quad_data in section:
+            # 0: positions
+            # 1: normals
+            # 2: uvs
+            # 3: colors
+            # 4: texture
+
+            # Rotate the quads according to the defined forward axis to visually rotate the brick.
+            for index, position in enumerate(quad_data[0]):
+                quad_data[0][index] = common.rotate(position, forward_axis)
+
+            # Normals also need to rotated.
+            for index, normal in enumerate(quad_data[1]):
+                quad_data[1][index] = common.rotate(normal, forward_axis)
+
+    return blb_data
 
 
 def process_blender_data(context, properties):
@@ -1383,8 +1452,8 @@ def process_blender_data(context, properties):
         # Processes the visible mesh data into the correct format for writing into a BLB file.
         blb_data.quads = __process_mesh_data(properties, bounds_data, meshes)
 
-        # Return the data for writing.
-        return blb_data
+        # Format and return the data for writing.
+        return __format_blb_data(properties.axis_blb_forward, blb_data)
     else:
         logger.error("Nothing to export.")
         return None
