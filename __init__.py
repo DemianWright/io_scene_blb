@@ -180,14 +180,17 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         props = self.properties
         filepath = bpy.path.ensure_ext(self.filepath, self.filename_ext)
-        logpath = bpy.path.ensure_ext(bpy.path.display_name_from_filepath(self.filepath), self.logfile_ext)
 
-        logger.configure(props.write_log, props.write_log_warnings, logpath)
+        # Remove the .BLB extension and change it to the log extension.
+        logpath = bpy.path.ensure_ext(filepath[:-4], self.logfile_ext)
+
+        logger.configure(props.write_log, props.write_log_warnings)
 
         if export_blb.export(context, props, filepath):
-            logger.info("{}{}{}".format("Output file: ", bpy.path.abspath("//"), filepath))
+            # I'm not entirely sure what the bpy.path.abspath("//") does but it works like I want it to.
+            logger.info("Output file: {}{}".format(bpy.path.abspath("//"), filepath))
 
-        logger.write_log()
+        logger.write_log(logpath)
 
         return {'FINISHED'}
 

@@ -24,11 +24,15 @@ A module for exporting Blender data into the BLB format.
 # The export mediator.
 
 
-def export(context, properties, filepath=""):
-    """
-    Processes the data from the scene and writes it to a BLB file.
-    Returns True if the BLB file was written.
-    """
+def export(context, properties, filepath):
+    """Processes the data from the scene and writes it to a BLB file.
+    Args:
+        context (Blender context object): A Blender object containing scene data.
+        properties (Blender properties object): A Blender object containing user preferences.
+        filepath (string): The path to the BLB to be written, with the extension.
+
+    Returns:
+        True if the BLB file was written."""
 
     from . import blb_processor, blb_writer
 
@@ -41,6 +45,7 @@ def export(context, properties, filepath=""):
     # The properties variable contains all user-defined settings to take into account when processing the data.
     blb_data = blb_processor.process_blender_data(context, properties)
 
+    # The program has crashed long before reaching this line if blb_data is None...
     if blb_data is not None:
         # Write the data to a file.
         # TODO: Actually return true only if the file was written.
