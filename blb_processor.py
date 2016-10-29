@@ -49,8 +49,7 @@ class BrickBounds(object):
         - object dimensions,
         - object's location in world coordinates,
         - minimum vertex world coordinate,
-        - and maximum vertex world coordinate.
-    """
+        - and maximum vertex world coordinate."""
 
     def __init__(self):
         # The name of the Blender object.
@@ -82,8 +81,7 @@ class BLBData(object):
         - brick grid,
         - collision objects,
         - coverage,
-        - and sorted quads.
-    """
+        - and sorted quads."""
 
     def __init__(self):
         # Brick XYZ integer size in plates.

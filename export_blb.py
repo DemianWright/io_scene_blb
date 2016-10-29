@@ -43,10 +43,8 @@ def export(context, properties, filepath=""):
 
     if blb_data is not None:
         # Write the data to a file.
-        writer = blb_writer.BLBWriter(filepath, properties.axis_blb_forward, blb_data)
-
         # TODO: Actually return true only if the file was written.
-        writer.write_file()
+        blb_writer.write_file(filepath, properties.axis_blb_forward, blb_data)
         return True
 
     return False

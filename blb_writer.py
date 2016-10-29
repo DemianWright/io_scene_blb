@@ -24,158 +24,155 @@ A module for writing data into a BLB file.
 # Blender requires imports from ".".
 from . import common, const
 
+# TODO: Remove all data manipulation logic from this class. This class should only write the given data in the correct order.
 
-class BLBWriter(object):
-    """Handles writing sorted quads and definitions to a BLB file."""
 
-    # TODO: Remove all data manipulation logic from this class. This class should only write the given data in the correct order.
+def __write_sequence(file, sequence, new_line=True, decimal_digits=None):
+    """Writes the values of the specified sequence separated with spaces into the specified file.
+    An optional new line character is added at the end of the line by default.
 
-    def __init__(self, filepath, forward_axis, blb_data):
-        """Initializes the private class variables."""
-        self.__filepath = filepath
-        self.__data = blb_data
-        self.__forward_axis = forward_axis
-
-        # For clarity.
-        self.__size_x = self.__data.brick_size[const.X]
-        self.__size_y = self.__data.brick_size[const.Y]
-        self.__size_z = self.__data.brick_size[const.Z]
-
-    @classmethod
-    def __write_sequence(cls, file, sequence, new_line=True, decimal_digits=None):
-        """
-        Writes the values of the given sequence separated with spaces into the given file.
-        An optional new line character is added at the end of the line by default.
-        """
-
-        for index, value in enumerate(sequence):
-            if index != 0:
-                # Write a space before each value except the first one.
-                file.write(" ")
-            if value == 0:
-                # Handle zeros.
-                file.write("0")
+    Args:
+        file (object): The file to be written to.
+        sequence (sequence): A sequence of data to be written.
+        new_line (bool): Add a newline character at the end of the line?
+        decimal_digits (int): The number of decimal digits to write if the sequence contains floating point values."""
+    for index, value in enumerate(sequence):
+        if index != 0:
+            # Write a space before each value except the first one.
+            file.write(" ")
+        if value == 0:
+            # Handle zeros.
+            file.write("0")
+        else:
+            # TODO: The trimming should be a property.
+            # Format the value into string, remove all zeros from the end, then remove all periods.
+            if decimal_digits is None:
+                file.write("{}".format(value).rstrip('0').rstrip('.'))
             else:
-                # TODO: The trimming should be a property.
-                # Format the value into string, remove all zeros from the end, then remove all periods.
-                if decimal_digits is None:
-                    file.write("{}".format(value).rstrip('0').rstrip('.'))
-                else:
-                    file.write("{0:.{1}f}".format(value, decimal_digits).rstrip('0').rstrip('.'))
-        if new_line:
-            # Write a new line after all values.
+                file.write("{0:.{1}f}".format(value, decimal_digits).rstrip('0').rstrip('.'))
+    if new_line:
+        # Write a new line after all values.
+        file.write("\n")
+
+
+def __mirror(xyz, forward_axis):
+    """Mirrors the given XYZ sequence according to the specified forward axis.
+
+    Args:
+        xyz (sequence): A sequence of elements to be mirrored.
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+
+    Returns:
+        A new list of XYZ values."""
+    mirrored = xyz
+
+    if forward_axis == "POSITIVE_X" or forward_axis == "NEGATIVE_X":
+        mirrored[const.Y] = -mirrored[const.Y]
+    else:
+        mirrored[const.X] = -mirrored[const.X]
+
+    return mirrored
+
+
+def write_file(filepath, forward_axis, blb_data):
+    """Writes the BLB file.
+
+    Args:
+        filepath (string): Path to the BLB file to be written.
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+        blb_data (BLBData): A BLBData object containing the data to be written."""
+    with open(filepath, "w") as file:
+        # Write brick size.
+        # Swizzle the values according to the forward axis.
+        if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+            __write_sequence(file, common.swizzle(blb_data.brick_size, "bac"))
+        else:
+            __write_sequence(file, blb_data.brick_size)
+
+        # Write brick type.
+        file.write("SPECIAL\n\n")
+
+        # Write brick grid.
+        for axis_slice in blb_data.brick_grid:
+            for row in axis_slice:
+                # Join each Y-axis of data without a separator.
+                file.write("".join(row) + "\n")
+
+            # A new line after each axis slice.
             file.write("\n")
 
-    def __mirror(self, xyz):
-        """
-        Mirrors the given XYZ sequence according to the specified forward axis.
-        Returns a new list of XYZ values.
-        """
+        # Write collisions.
+        if len(blb_data.collision) == 0:
+            # Write default collision.
 
-        mirrored = xyz
+            file.write("1\n")
+            file.write("\n")
 
-        if self.__forward_axis == "POSITIVE_X" or self.__forward_axis == "NEGATIVE_X":
-            mirrored[const.Y] = -mirrored[const.Y]
-        else:
-            mirrored[const.X] = -mirrored[const.X]
+            # Center of the cuboid is at the middle of the brick.
+            file.write("0 0 0\n")
 
-        return mirrored
-
-    def write_file(self):
-        """Writes the BLB file."""
-
-        with open(self.__filepath, "w") as file:
-            # Write brick size.
+            # The size of the cuboid is the size of the bounds.
             # Swizzle the values according to the forward axis.
-            if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                self.__write_sequence(file, common.swizzle(self.__data.brick_size, "bac"))
+            if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+                __write_sequence(file, common.swizzle(blb_data.brick_size, "bac"))
             else:
-                self.__write_sequence(file, self.__data.brick_size)
+                __write_sequence(file, blb_data.brick_size)
+        else:
+            # Write defined collisions.
 
-            # Write brick type.
-            file.write("SPECIAL\n\n")
+            # Write the number of collision cuboids.
+            file.write(str(len(blb_data.collision)))
+            file.write("\n")
 
-            # Write brick grid.
-            for axis_slice in self.__data.brick_grid:
-                for row in axis_slice:
-                    # Join each Y-axis of data without a separator.
-                    file.write("".join(row) + "\n")
-
-                # A new line after each axis slice.
+            for (center, dimensions) in blb_data.collision:
                 file.write("\n")
-
-            # Write collisions.
-            if len(self.__data.collision) == 0:
-                # Write default collision.
-
-                file.write("1\n")
-                file.write("\n")
-
-                # Center of the cuboid is at the middle of the brick.
-                file.write("0 0 0\n")
-
-                # The size of the cuboid is the size of the bounds.
+                # Mirror center according to the forward axis. No idea why but it works.
                 # Swizzle the values according to the forward axis.
-                if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                    self.__write_sequence(file, common.swizzle(self.__data.brick_size, "bac"))
+                if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+                    __write_sequence(file, common.swizzle(__mirror(center, forward_axis), "bac"))
+                    __write_sequence(file, common.swizzle(dimensions, "bac"))
                 else:
-                    self.__write_sequence(file, self.__data.brick_size)
-            else:
-                # Write defined collisions.
+                    __write_sequence(file, __mirror(center, forward_axis))
+                    __write_sequence(file, dimensions)
 
-                # Write the number of collision cuboids.
-                file.write(str(len(self.__data.collision)))
-                file.write("\n")
+        # Write coverage.
+        file.write("COVERAGE:\n")
+        for (hide_adjacent, plate_count) in blb_data.coverage:
+            file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
 
-                for (center, dimensions) in self.__data.collision:
-                    file.write("\n")
-                    # Mirror center according to the forward axis. No idea why but it works.
-                    # Swizzle the values according to the forward axis.
-                    if self.__forward_axis == "POSITIVE_Y" or self.__forward_axis == "NEGATIVE_Y":
-                        self.__write_sequence(file, common.swizzle(self.__mirror(center), "bac"))
-                        self.__write_sequence(file, common.swizzle(dimensions, "bac"))
-                    else:
-                        self.__write_sequence(file, self.__mirror(center))
-                        self.__write_sequence(file, dimensions)
+        # Write quad data.
+        for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
+            # TODO: Terse mode where optional stuff is excluded.
 
-            # Write coverage.
-            file.write("COVERAGE:\n")
-            for (hide_adjacent, plate_count) in self.__data.coverage:
-                file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
+            # Write section name.
+            file.write("--{} QUADS--\n".format(section_name))  # Optional.
 
-            # Write quad data.
-            for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
-                # TODO: Terse mode where optional stuff is excluded.
+            # Write section length.
+            file.write("{}\n".format(str(len(blb_data.quads[index]))))
 
-                # Write section name.
-                file.write("--{} QUADS--\n".format(section_name))  # Optional.
+            for (positions, normals, uvs, colors, texture) in blb_data.quads[index]:
+                # Write face texture name.
+                file.write("\nTEX:")  # Optional.
+                file.write(texture)
 
-                # Write section length.
-                file.write("{}\n".format(str(len(self.__data.quads[index]))))
+                # Write vertex positions.
+                file.write("\nPOSITION:\n")  # Optional.
+                for position in positions:
+                    __write_sequence(file, common.rotate(position, forward_axis), True, const.FLOATING_POINT_DECIMALS)
 
-                for (positions, normals, uvs, colors, texture) in self.__data.quads[index]:
-                    # Write face texture name.
-                    file.write("\nTEX:")  # Optional.
-                    file.write(texture)
+                # Write face UV coordinates.
+                file.write("UV COORDS:\n")  # Optional.
+                for uv_vector in uvs:
+                    __write_sequence(file, uv_vector)
 
-                    # Write vertex positions.
-                    file.write("\nPOSITION:\n")  # Optional.
-                    for position in positions:
-                        self.__write_sequence(file, common.rotate(position, self.__forward_axis), True, const.FLOATING_POINT_DECIMALS)
+                # Write vertex normals.
+                file.write("NORMALS:\n")  # Optional.
+                for normal in normals:
+                    # Normals also need to rotated.
+                    __write_sequence(file, common.rotate(normal, forward_axis))
 
-                    # Write face UV coordinates.
-                    file.write("UV COORDS:\n")  # Optional.
-                    for uv_vector in uvs:
-                        self.__write_sequence(file, uv_vector)
-
-                    # Write vertex normals.
-                    file.write("NORMALS:\n")  # Optional.
-                    for normal in normals:
-                        # Normals also need to rotated.
-                        self.__write_sequence(file, common.rotate(normal, self.__forward_axis))
-
-                    # Write vertex colors if any.
-                    if colors is not None:
-                        file.write("COLORS:\n")  # Optional.
-                        for color in colors:
-                            self.__write_sequence(file, color)
+                # Write vertex colors if any.
+                if colors is not None:
+                    file.write("COLORS:\n")  # Optional.
+                    for color in colors:
+                        __write_sequence(file, color)
