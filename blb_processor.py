@@ -47,7 +47,7 @@ class BrickBounds(object):
     Stores the following data:
         - Blender object name,
         - object dimensions,
-        - object's location in world coordinates, 
+        - object's location in world coordinates,
         - minimum vertex world coordinate,
         - and maximum vertex world coordinate.
     """
@@ -107,7 +107,7 @@ class BLBData(object):
 # ==============
 
 
-def is_even(value):
+def __is_even(value):
     """Checks if the specified value is even.
 
     Args:
@@ -119,7 +119,7 @@ def is_even(value):
     return value % 2 == 0
 
 
-def to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
+def __to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
     """Creates a Decimal number of the specified value and rounds it to the closest specified quantize value.
     The number of decimal digits in the quantize value will determine the number of decimal digits in the returned value.
 
@@ -158,7 +158,7 @@ def to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
     return ((value * fraction).quantize(Decimal("1")) / fraction).quantize(quantize)
 
 
-def to_decimals(values, quantize=const.FLOATING_POINT_PRECISION):
+def __to_decimals(values, quantize=const.FLOATING_POINT_PRECISION):
     """Creates Decimal numbers out of the values in the specified sequence and rounds them to the specified round_to_value.
     The number of decimal digits in the quantize value will determine the number of decimal digits in the returned values.
 
@@ -174,12 +174,12 @@ def to_decimals(values, quantize=const.FLOATING_POINT_PRECISION):
     result = []
 
     for val in values:
-        result.append(to_decimal(val, quantize))
+        result.append(__to_decimal(val, quantize))
 
     return result
 
 
-def force_to_int(values):
+def __force_to_int(values):
     """Casts all values in the specified sequence to ints.
 
     Args:
@@ -191,7 +191,7 @@ def force_to_int(values):
     return [int(val) for val in values]
 
 
-def are_ints(values):
+def __are_ints(values):
     """Checks if all values in the specified sequence are ints.
 
     Args:
@@ -207,7 +207,7 @@ def are_ints(values):
     return True
 
 
-def get_world_min(obj):
+def __get_world_min(obj):
     """Gets the world space coordinates of the vertex in the specified object that is the closest to the world origin.
 
     Args:
@@ -229,7 +229,7 @@ def get_world_min(obj):
     return vec_min
 
 
-def record_world_min_max(sequence_min, sequence_max, obj):
+def __record_world_min_max(sequence_min, sequence_max, obj):
     """Checks if the specified Blender object's vertices' world space coordinates are smaller or greater than the coordinates stored in their respective
     minimum and maximum sequences and updates the values in those sequences with the object's coordinates if they are smaller or greater.
 
@@ -246,7 +246,7 @@ def record_world_min_max(sequence_min, sequence_max, obj):
             sequence_max[i] = max(sequence_max[i], coordinates[i])
 
 
-def vert_index_to_world_coordinate(obj, index):
+def __vert_index_to_world_coord(obj, index):
     """Calculates the world coordinates for the vertex at the specified index in the specified Blender object.
 
     Args:
@@ -259,7 +259,7 @@ def vert_index_to_world_coordinate(obj, index):
     return obj.matrix_world * obj.data.vertices[index].co
 
 
-def vert_index_to_normal_vector(obj, index):
+def __vert_index_to_normal_vector(obj, index):
     """Calculates the normalized vertex normal vector for the vertex at the specified index in the specified Blender object.
 
     Args:
@@ -272,7 +272,7 @@ def vert_index_to_normal_vector(obj, index):
     return (obj.matrix_world.to_3x3() * obj.data.vertices[obj.data.loops[index].vertex_index].normal).normalized()
 
 
-def all_within_bounds(local_coordinates, bounding_dimensions):
+def __all_within_bounds(local_coordinates, bounding_dimensions):
     """Checks if all the values in the specified local coordinates are within the specified bounding box dimensions.
     Assumes that both sequences have the same number of elements.
 
@@ -301,20 +301,20 @@ def all_within_bounds(local_coordinates, bounding_dimensions):
     return True
 
 
-def sequence_z_to_plates(xyz):
+def __sequence_z_to_plates(xyz):
     """
-    Performs to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
+    Performs __to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
     If the given sequence does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
     """
     if len(xyz) == 3:
-        sequence = to_decimals(xyz)
+        sequence = __to_decimals(xyz)
         sequence[const.Z] /= const.PLATE_HEIGHT
         return sequence
     else:
         return xyz
 
 
-def round_to_plate_coordinates(local_coordinates, brick_dimensions):
+def __round_to_plate_coordinates(local_coordinates, brick_dimensions):
     """Rounds the specified sequence of local space XYZ coordinates to the nearest valid plate coordinates in a brick with the specified dimensions.
 
     Args:
@@ -329,26 +329,26 @@ def round_to_plate_coordinates(local_coordinates, brick_dimensions):
     # 1 plate is 1.0 Blender units wide and deep.
     # Plates can only be 1.0 units long on the X and Y axes.
     # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
-    if is_even(brick_dimensions[const.X]):
-        result.append(to_decimal(local_coordinates[const.X], "1.0"))
+    if __is_even(brick_dimensions[const.X]):
+        result.append(__to_decimal(local_coordinates[const.X], "1.0"))
     else:
-        result.append(to_decimal(local_coordinates[const.X], "0.5"))
+        result.append(__to_decimal(local_coordinates[const.X], "0.5"))
 
-    if is_even(brick_dimensions[const.Y]):
-        result.append(to_decimal(local_coordinates[const.Y], "1.0"))
+    if __is_even(brick_dimensions[const.Y]):
+        result.append(__to_decimal(local_coordinates[const.Y], "1.0"))
     else:
-        result.append(to_decimal(local_coordinates[const.Y], "0.5"))
+        result.append(__to_decimal(local_coordinates[const.Y], "0.5"))
 
     # Round to the nearest full plate height. (Half is rounded up)
-    if is_even(brick_dimensions[const.Z] / const.PLATE_HEIGHT):
-        result.append(to_decimal(local_coordinates[const.Z], const.PLATE_HEIGHT))
+    if __is_even(brick_dimensions[const.Z] / const.PLATE_HEIGHT):
+        result.append(__to_decimal(local_coordinates[const.Z], const.PLATE_HEIGHT))
     else:
-        result.append(to_decimal(local_coordinates[const.Z], (const.PLATE_HEIGHT / Decimal("2.0"))))
+        result.append(__to_decimal(local_coordinates[const.Z], (const.PLATE_HEIGHT / Decimal("2.0"))))
 
     return result
 
 
-def calculate_center(object_minimum_coordinates, object_dimensions):
+def __calculate_center(object_minimum_coordinates, object_dimensions):
     """Calculates the coordinates of the center of a 3D object.
 
     Args:
@@ -365,7 +365,7 @@ def calculate_center(object_minimum_coordinates, object_dimensions):
             object_minimum_coordinates[const.Z] + (object_dimensions[const.Z] / Decimal("2.0")))
 
 
-def world_to_local(coordinates, new_origin):
+def __world_to_local(coordinates, new_origin):
     """Translates the specified coordinates to be relative to the specified new origin coordinates.
 
     Commonly used to translate coordinates from world space (centered on (0, 0, 0)) to local space (arbitrary center).
@@ -379,11 +379,11 @@ def world_to_local(coordinates, new_origin):
     """
     # Make the coordinates Decimals if all of them are not.
     if not all(isinstance(coord, Decimal) for coord in coordinates):
-        coordinates = to_decimals(coordinates)
+        coordinates = __to_decimals(coordinates)
 
     # Make the new origin Decimals if all of them are not.
     if not all(isinstance(coord, Decimal) for coord in new_origin):
-        new_origin = to_decimals(new_origin)
+        new_origin = __to_decimals(new_origin)
 
     return [old_coord - new_origin[index] for index, old_coord in enumerate(coordinates)]
 
@@ -403,7 +403,7 @@ class ZeroSizeException(Exception):
     pass
 
 
-def modify_brick_grid(brick_grid, volume, symbol):
+def __modify_brick_grid(brick_grid, volume, symbol):
     """Modifies the specified brick grid by adding the specified symbol to every grid slot specified by the volume.
 
     Will crash if specified volume extends beyond the 3D space defined by the brick grid.
@@ -445,7 +445,7 @@ def modify_brick_grid(brick_grid, volume, symbol):
                 brick_grid[w][h][d] = symbol
 
 
-def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None, forward_axis=None):
+def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None, forward_axis=None):
     """Calculates the BLB coverage data for a brick.
 
     Args:
@@ -516,7 +516,7 @@ def calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None,
     return coverage
 
 
-def sort_quad(quad, bounds_dimensions, forward_axis):
+def __sort_quad(quad, bounds_dimensions, forward_axis):
     """Calculates the section (brick side) for the specified quad within the specified bounds dimensions.
 
     The section is determined by whether all vertices of the quad are in the same plane as one of the planes (brick sides) defined by the (cuboid) brick bounds.
@@ -535,7 +535,7 @@ def sort_quad(quad, bounds_dimensions, forward_axis):
 
     # Divide all dimension values by 2 to get the local bounding plane values.
     # The dimensions are in Blender units so Z height needs to be converted to plates.
-    local_bounds = sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions])
+    local_bounds = __sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions])
 
     # Assume omni direction until otherwise proven.
     direction = 6
@@ -630,7 +630,7 @@ def sort_quad(quad, bounds_dimensions, forward_axis):
         return (direction + 1) % 4 + 2
 
 
-def get_object_sequence(context, properties):
+def __get_object_sequence(context, properties):
     """Determines the sequence of Blender objects to be processed.
 
     Args:
@@ -658,7 +658,7 @@ def get_object_sequence(context, properties):
     return objects
 
 
-def record_defined_bounds(blb_data, obj):
+def __record_defined_bounds(blb_data, obj):
     """Adds the brick bounds data to the specified BLB data object.
 
     Args:
@@ -669,10 +669,10 @@ def record_defined_bounds(blb_data, obj):
         The modified blb_data object containing the bounds data.
     """
     # Get the dimensions of the Blender object and convert the height to plates.
-    bounds_size = sequence_z_to_plates(obj.dimensions)
+    bounds_size = __sequence_z_to_plates(obj.dimensions)
 
     # Are the dimensions of the bounds object not integers?
-    if not are_ints(bounds_size):
+    if not __are_ints(bounds_size):
         logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
                                                                                                                 bounds_size[const.Y],
                                                                                                                 bounds_size[const.Z],
@@ -682,12 +682,12 @@ def record_defined_bounds(blb_data, obj):
             bounds_size[index] = round(const.HUMAN_ERROR * round(value / const.HUMAN_ERROR))
 
     # The value type must be int because you can't have partial plates. Returns a list.
-    blb_data.brick_size = force_to_int(bounds_size)
+    blb_data.brick_size = __force_to_int(bounds_size)
 
     return blb_data
 
 
-def record_calculated_bounds(blb_data, bounds_data):
+def __record_calculated_bounds(blb_data, bounds_data):
     """Adds the brick bounds data to the specified BLB data object.
 
     Args:
@@ -698,10 +698,10 @@ def record_calculated_bounds(blb_data, bounds_data):
         The modified blb_data object containing the bounds data.
     """
     # Convert height to plates.
-    bounds_size = sequence_z_to_plates(bounds_data.dimensions)
+    bounds_size = __sequence_z_to_plates(bounds_data.dimensions)
 
     # Are the dimensions of the bounds object not integers?
-    if not are_ints(bounds_size):
+    if not __are_ints(bounds_size):
         logger.warning("Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[const.X],
                                                                                                 bounds_size[const.Y],
                                                                                                 bounds_size[const.Z]))
@@ -711,12 +711,12 @@ def record_calculated_bounds(blb_data, bounds_data):
             bounds_size[index] = ceil(value)
 
     # The value type must be int because you can't have partial plates. Returns a list.
-    blb_data.brick_size = force_to_int(bounds_size)
+    blb_data.brick_size = __force_to_int(bounds_size)
 
     return blb_data
 
 
-def calculate_bounds(min_world_coordinates, max_world_coordinates):
+def __calculate_bounds(min_world_coordinates, max_world_coordinates):
     """Calculates the brick bounds data from the recorded minimum and maximum vertex world coordinates.
 
     Args:
@@ -732,23 +732,23 @@ def calculate_bounds(min_world_coordinates, max_world_coordinates):
 
     # Get the dimensions defined by the vectors.
     # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
-    bounds_size = to_decimals((max_world_coordinates[const.X] - min_world_coordinates[const.X],
-                               max_world_coordinates[const.Y] - min_world_coordinates[const.Y],
-                               (max_world_coordinates[const.Z] - min_world_coordinates[const.Z])))
+    bounds_size = __to_decimals((max_world_coordinates[const.X] - min_world_coordinates[const.X],
+                                 max_world_coordinates[const.Y] - min_world_coordinates[const.Y],
+                                 (max_world_coordinates[const.Z] - min_world_coordinates[const.Z])))
 
     bounds_data.name = None
     bounds_data.dimensions = bounds_size
 
     # The minimum and maximum calculated world coordinates.
-    bounds_data.world_coords_min = to_decimals(min_world_coordinates)
-    bounds_data.world_coords_max = to_decimals(max_world_coordinates)
+    bounds_data.world_coords_min = __to_decimals(min_world_coordinates)
+    bounds_data.world_coords_max = __to_decimals(max_world_coordinates)
 
-    bounds_data.world_center = calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
+    bounds_data.world_center = __calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
 
     return bounds_data
 
 
-def process_bounds_object(obj):
+def __process_bounds_object(obj):
     """Processes a manually defined bounds Blender object.
 
     Args:
@@ -764,23 +764,23 @@ def process_bounds_object(obj):
     bounds_data.name = obj.name
 
     # ROUND & CAST: defined bounds object dimensions into Decimals for accuracy.
-    bounds_data.dimensions = to_decimals(obj.dimensions)
+    bounds_data.dimensions = __to_decimals(obj.dimensions)
 
     # Find the minimum and maximum world coordinates for the bounds object.
     bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
     bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-    record_world_min_max(bounds_min, bounds_max, obj)
+    __record_world_min_max(bounds_min, bounds_max, obj)
 
     # ROUND & CAST: defined bounds object min/max world coordinates into Decimals for accuracy.
-    bounds_data.world_coords_min = to_decimals(bounds_min)
-    bounds_data.world_coords_max = to_decimals(bounds_max)
+    bounds_data.world_coords_min = __to_decimals(bounds_min)
+    bounds_data.world_coords_max = __to_decimals(bounds_max)
 
-    bounds_data.world_center = calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
+    bounds_data.world_center = __calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
 
     return bounds_data
 
 
-def process_coverage(properties, blb_data):
+def __process_coverage(properties, blb_data):
     """Calculates the coverage data if the user has defined so in the properties.
     If user does not want coverage, default coverage data will be used.
 
@@ -806,15 +806,15 @@ def process_coverage(properties, blb_data):
                           properties.coverage_south_hide,
                           properties.coverage_west_hide))
 
-        return calculate_coverage(blb_data.brick_size,
-                                  calculate_side,
-                                  hide_adjacent,
-                                  properties.axis_blb_forward)
+        return __calculate_coverage(blb_data.brick_size,
+                                    calculate_side,
+                                    hide_adjacent,
+                                    properties.axis_blb_forward)
     else:
-        return calculate_coverage()
+        return __calculate_coverage()
 
 
-def grid_object_to_volume(properties, bounds_data, grid_obj):
+def __grid_object_to_volume(properties, bounds_data, grid_obj):
     """Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the specified object.
     The indices represent a three dimensional volume in the local space of the bounds object where the origin is in the -X +Y +Z corner.
     Can raise OutOfBoundsException and ZeroSizeException.
@@ -832,17 +832,17 @@ def grid_object_to_volume(properties, bounds_data, grid_obj):
     # Find the minimum and maximum coordinates for the brick grid object.
     grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
     grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-    record_world_min_max(grid_min, grid_max, grid_obj)
+    __record_world_min_max(grid_min, grid_max, grid_obj)
 
     # Recenter the coordinates to the bounds. (Also rounds the values.)
-    grid_min = world_to_local(grid_min, bounds_data.world_center)
-    grid_max = world_to_local(grid_max, bounds_data.world_center)
+    grid_min = __world_to_local(grid_min, bounds_data.world_center)
+    grid_max = __world_to_local(grid_max, bounds_data.world_center)
 
     # Round coordinates to the nearest plate.
-    grid_min = round_to_plate_coordinates(grid_min, bounds_data.dimensions)
-    grid_max = round_to_plate_coordinates(grid_max, bounds_data.dimensions)
+    grid_min = __round_to_plate_coordinates(grid_min, bounds_data.dimensions)
+    grid_max = __round_to_plate_coordinates(grid_max, bounds_data.dimensions)
 
-    if all_within_bounds(grid_min, bounds_data.dimensions) and all_within_bounds(grid_max, bounds_data.dimensions):
+    if __all_within_bounds(grid_min, bounds_data.dimensions) and __all_within_bounds(grid_max, bounds_data.dimensions):
         # Convert the coordinates into brick grid sequence indices.
 
         # Minimum indices.
@@ -917,8 +917,8 @@ def grid_object_to_volume(properties, bounds_data, grid_obj):
             grid_max[const.X] = abs(temp)
         # Else properties.axis_blb_forward == "POSITIVE_Y": do nothing
 
-        grid_min = force_to_int(grid_min)
-        grid_max = force_to_int(grid_max)
+        grid_min = __force_to_int(grid_min)
+        grid_max = __force_to_int(grid_max)
 
         zero_size = False
 
@@ -945,7 +945,7 @@ def grid_object_to_volume(properties, bounds_data, grid_obj):
         raise OutOfBoundsException()
 
 
-def process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
+def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
     """Processes the specified brick grid definitions.
 
     Args:
@@ -967,7 +967,7 @@ def process_grid_definitions(properties, blb_data, bounds_data, definition_objec
             # Get the index of the definition list.
             # And append the definition data to the list.
             index = const.GRID_DEF_OBJ_PREFIX_PRIORITY.index(grid_obj.name.lower()[:5])
-            definition_volumes[index].append(grid_object_to_volume(properties, bounds_data, grid_obj))
+            definition_volumes[index].append(__grid_object_to_volume(properties, bounds_data, grid_obj))
             processed += 1
         except OutOfBoundsException:
             # Do nothing, definition is ignored.
@@ -1032,12 +1032,12 @@ def process_grid_definitions(properties, blb_data, bounds_data, definition_objec
             symbol = const.GRID_DEFINITIONS_PRIORITY[index]
             for volume in volumes:
                 # Modify the grid by adding the symbol to the correct locations.
-                modify_brick_grid(brick_grid, volume, symbol)
+                __modify_brick_grid(brick_grid, volume, symbol)
 
     return brick_grid
 
 
-def process_collision_definitions(bounds_data, definition_objects):
+def __process_collision_definitions(bounds_data, definition_objects):
     """Processes the specified collision definitions.
 
     Args:
@@ -1073,13 +1073,13 @@ def process_collision_definitions(bounds_data, definition_objects):
         # Find the minimum and maximum coordinates for the collision object.
         col_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         col_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-        record_world_min_max(col_min, col_max, obj)
+        __record_world_min_max(col_min, col_max, obj)
 
         # Recenter the coordinates to the bounds. (Also rounds the values.)
-        col_min = world_to_local(col_min, bounds_data.world_center)
-        col_max = world_to_local(col_max, bounds_data.world_center)
+        col_min = __world_to_local(col_min, bounds_data.world_center)
+        col_max = __world_to_local(col_max, bounds_data.world_center)
 
-        if all_within_bounds(col_min, bounds_data.dimensions) and all_within_bounds(col_max, bounds_data.dimensions):
+        if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
             zero_size = False
 
             # Check for zero size.
@@ -1105,7 +1105,7 @@ def process_collision_definitions(bounds_data, definition_objects):
 
             # Add the center and dimensions to the definition data as a tuple.
             # The coordinates and dimensions are in plates.
-            collisions.append((sequence_z_to_plates(center), sequence_z_to_plates(dimensions)))
+            collisions.append((__sequence_z_to_plates(center), __sequence_z_to_plates(dimensions)))
         else:
             if bounds_data.name is None:
                 logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
@@ -1133,7 +1133,7 @@ def process_collision_definitions(bounds_data, definition_objects):
     return collisions
 
 
-def process_definition_objects(properties, objects):
+def __process_definition_objects(properties, objects):
     """"Processes all definition objects that are not exported as a 3D model but will affect the brick properties.
 
     Processed definition objects:
@@ -1186,8 +1186,8 @@ def process_definition_objects(properties, objects):
         # Is the current object a bounds definition object?
         elif obj_name.startswith(const.BOUNDS_NAME_PREFIX):
             if bounds_data is None:
-                bounds_data = process_bounds_object(obj)
-                blb_data = record_defined_bounds(blb_data, obj)
+                bounds_data = __process_bounds_object(obj)
+                blb_data = __record_defined_bounds(blb_data, obj)
 
                 logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
                                                                                            blb_data.brick_size[const.Y],
@@ -1213,27 +1213,27 @@ def process_definition_objects(properties, objects):
             # If no bounds object has been defined.
             if bounds_data.name is None:
                 # Record min/max world coordinates for calculating the bounds.
-                record_world_min_max(min_world_coordinates, max_world_coordinates, obj)
+                __record_world_min_max(min_world_coordinates, max_world_coordinates, obj)
             # Else a bounds object has been defined, recording the min/max coordinates is pointless.
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
-        bounds_data = calculate_bounds(min_world_coordinates, max_world_coordinates)
-        blb_data = record_calculated_bounds(blb_data, bounds_data)
+        bounds_data = __calculate_bounds(min_world_coordinates, max_world_coordinates)
+        blb_data = __record_calculated_bounds(blb_data, bounds_data)
 
         logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
                                                                                       blb_data.brick_size[const.Y],
                                                                                       blb_data.brick_size[const.Z]))
 
     # Process brick grid and collision definitions now that a bounds definition exists.
-    blb_data.brick_grid = process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects)
-    blb_data.collision = process_collision_definitions(bounds_data, collision_objects)
+    blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects)
+    blb_data.collision = __process_collision_definitions(bounds_data, collision_objects)
 
     # Return the data.
     return (blb_data, bounds_data, mesh_objects)
 
 
-def process_mesh_data(properties, bounds_data, meshes):
+def __process_mesh_data(properties, bounds_data, meshes):
     """Gets all the necessary data from the specified Blender objects and sorts all the quads of the meshes into sections for brick coverage to work.
 
     Args:
@@ -1294,7 +1294,7 @@ def process_mesh_data(properties, bounds_data, meshes):
                 # Center the position to the current bounds object: coordinates are now in local object space.
                 # TODO: Why on earth am I rounding the vertex coordinates to the closest
                 # plate height? This needs to be a property, not something done automatically!
-                positions.append(sequence_z_to_plates(world_to_local(vert_index_to_world_coordinate(obj, vert_index), bounds_data.world_center)))
+                positions.append(__sequence_z_to_plates(__world_to_local(__vert_index_to_world_coord(obj, vert_index), bounds_data.world_center)))
 
             # =======
             # Normals
@@ -1304,7 +1304,7 @@ def process_mesh_data(properties, bounds_data, meshes):
             if poly.use_smooth:
                 # Smooth shading.
                 # For every vertex index in the loop_indices, calculate the vertex normal and add it to the list.
-                normals = [vert_index_to_normal_vector(obj, index) for index in reversed(loop_indices)]
+                normals = [__vert_index_to_normal_vector(obj, index) for index in reversed(loop_indices)]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 normals = (poly.normal,) * 4
@@ -1353,7 +1353,7 @@ def process_mesh_data(properties, bounds_data, meshes):
         # Calculate the section name the quad belongs to.
         # Get the index of that section name in the QUAD_SECTION_ORDER list.
         # Append the quad data to the list in the tuple at that index.
-        sorted_quads[sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)].append(quad)
+        sorted_quads[__sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)].append(quad)
 
     return sorted_quads
 
@@ -1369,21 +1369,21 @@ def process_blender_data(context, properties):
         A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or None if there is no Blender data to export.
     """
     # Determine which objects to process.
-    object_sequence = get_object_sequence(context, properties)
+    object_sequence = __get_object_sequence(context, properties)
 
     if len(object_sequence) > 0:
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible meshes from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
-        result = process_definition_objects(properties, object_sequence)
+        result = __process_definition_objects(properties, object_sequence)
         blb_data = result[0]
         bounds_data = result[1]
         meshes = result[2]
 
         # Calculate the coverage data based on the brick size.
-        blb_data.coverage = process_coverage(properties, blb_data)
+        blb_data.coverage = __process_coverage(properties, blb_data)
 
         # Processes the visible mesh data into the correct format for writing into a BLB file.
-        blb_data.quads = process_mesh_data(properties, bounds_data, meshes)
+        blb_data.quads = __process_mesh_data(properties, bounds_data, meshes)
 
         # Return the data for writing.
         return blb_data
