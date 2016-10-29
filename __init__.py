@@ -54,7 +54,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ==========
 
     # TODO: Scale.
-    # TODO: Allow disabling warnings by category.
 
     # TODO: Change this to enum: Selection, Layer, Scene
     use_selection = BoolProperty(

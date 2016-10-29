@@ -49,7 +49,8 @@ class BrickBounds(object):
         - object dimensions,
         - object's location in world coordinates,
         - minimum vertex world coordinate,
-        - and maximum vertex world coordinate."""
+        - and maximum vertex world coordinate.
+    """
 
     def __init__(self):
         # The name of the Blender object.
@@ -81,7 +82,8 @@ class BLBData(object):
         - brick grid,
         - collision objects,
         - coverage,
-        - and sorted quads."""
+        - and sorted quads.
+    """
 
     def __init__(self):
         # Brick XYZ integer size in plates.
@@ -117,7 +119,7 @@ def __is_even(value):
     return value % 2 == 0
 
 
-def __to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
+def __to_decimal(value, quantize=const.CALCULATION_FP_PRECISION_STR):
     """Creates a Decimal number of the specified value and rounds it to the closest specified quantize value.
     The number of decimal digits in the quantize value will determine the number of decimal digits in the returned value.
 
@@ -156,7 +158,7 @@ def __to_decimal(value, quantize=const.FLOATING_POINT_PRECISION):
     return ((value * fraction).quantize(Decimal("1")) / fraction).quantize(quantize)
 
 
-def __to_decimals(values, quantize=const.FLOATING_POINT_PRECISION):
+def __to_decimals(values, quantize=const.CALCULATION_FP_PRECISION_STR):
     """Creates Decimal numbers out of the values in the specified sequence and rounds them to the specified round_to_value.
     The number of decimal digits in the quantize value will determine the number of decimal digits in the returned values.
 
@@ -394,7 +396,8 @@ def __mirror(xyz, forward_axis):
         forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
 
     Returns:
-        A new list of XYZ values."""
+        A new list of XYZ values.
+    """
     mirrored = xyz
 
     if forward_axis == "POSITIVE_X" or forward_axis == "NEGATIVE_X":
@@ -654,7 +657,8 @@ def __get_object_sequence(context, properties):
         properties (Blender properties object): A Blender object containing user preferences.
 
     Returns:
-        The sequence of Blender objects from the specified Blender context to be exported according to the specified user preferences."""
+        The sequence of Blender objects from the specified Blender context to be exported according to the specified user preferences.
+    """
     objects = []
 
     # Use selected objects?
@@ -1258,7 +1262,8 @@ def __process_mesh_data(properties, bounds_data, meshes):
         meshes (sequence of Blender objects): Meshes to be processed.
 
     Returns:
-        A sequence of mesh data sorted into sections."""
+        A sequence of mesh data sorted into sections.
+    """
     quads = []
     count_tris = 0
     count_ngon = 0
@@ -1385,8 +1390,8 @@ def __format_blb_data(forward_axis, blb_data):
         blb_data (BLBData): A BLBData object containing the data to be written.
 
     Returns:
-        The formatted and rotated BLB data ready for writing."""
-
+        The formatted and rotated BLB data ready for writing.
+    """
     # Size
 
     # Swizzle the values according to the forward axis.

@@ -77,6 +77,10 @@ GRID_DEFINITIONS_PRIORITY = (GRID_INSIDE,
                              GRID_DOWN,
                              GRID_BOTH)
 
-# Number of decimal places to round floating point numbers.
-FLOATING_POINT_DECIMALS = 6
-FLOATING_POINT_PRECISION = "0.000001"
+# Maximum number of decimal places to write to file.
+MAX_FP_DECIMALS_TO_WRITE = 16
+# Number of decimal places to round floating point numbers to when performing calculations.
+# The value was chosen to eliminate most floating points errors but it does
+# have the side effect of quantizing the positions of all vertices to
+# multiples of the value since everything is rounded using this precision.
+CALCULATION_FP_PRECISION_STR = "0.000001"

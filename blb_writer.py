@@ -25,15 +25,17 @@ A module for writing data into a BLB file.
 from . import const
 
 
-def __write_sequence(file, sequence, new_line=True, decimal_digits=None):
+def __write_sequence(file, sequence, new_line=True, decimal_digits=const.MAX_FP_DECIMALS_TO_WRITE):
     """Writes the values of the specified sequence separated with spaces into the specified file.
     An optional new line character is added at the end of the line by default.
 
     Args:
         file (object): The file to be written to.
         sequence (sequence): A sequence of data to be written.
-        new_line (bool): Add a newline character at the end of the line?
-        decimal_digits (int): The number of decimal digits to write if the sequence contains floating point values."""
+        new_line (bool): Add a newline character at the end of the line? (Default: True)
+        decimal_digits (int): The number of decimal digits to write if the sequence contains floating point values or None to ignore. (Default: const.MAX_FP_DECIMALS_TO_WRITE)
+                              The default value prevents very small values from being written in scientific notation, which the game does not understand.
+    """
     for index, value in enumerate(sequence):
         if index != 0:
             # Write a space before each value except the first one.
@@ -42,8 +44,7 @@ def __write_sequence(file, sequence, new_line=True, decimal_digits=None):
             # Handle zeros.
             file.write("0")
         else:
-            # TODO: The trimming should be a property.
-            # Format the value into string, remove all zeros from the end, then remove all periods.
+            # Format the value into string, remove all zeros from the end (if any), then remove all periods from the end (if any).
             if decimal_digits is None:
                 file.write("{}".format(value).rstrip('0').rstrip('.'))
             else:
@@ -58,7 +59,8 @@ def write_file(filepath, blb_data):
 
     Args:
         filepath (string): Path to the BLB file to be written.
-        blb_data (BLBData): A BLBData object containing the data to be written."""
+        blb_data (BLBData): A BLBData object containing the data to be written.
+    """
     with open(filepath, "w") as file:
         # ----------
         # Brick Size
@@ -134,7 +136,7 @@ def write_file(filepath, blb_data):
                 # Vertex positions.
                 file.write("\nPOSITION:\n")  # Optional.
                 for position in positions:
-                    __write_sequence(file, position, True, const.FLOATING_POINT_DECIMALS)
+                    __write_sequence(file, position)
 
                 # Face UV coordinates.
                 file.write("UV COORDS:\n")  # Optional.
