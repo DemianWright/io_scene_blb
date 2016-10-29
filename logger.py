@@ -103,6 +103,7 @@ def build_countable_message(message_start, count, alternatives, message_end="", 
 
 def write_log():
     """Writes a log file (if so configured) to the path specified at logger creation."""
+    # TODO: Add brick name to the start of the log.
     # Write a log file? Anything to write?
     if __WRITE_FILE and len(__LOG_LINES) > 0:
         if __WARNINGS_ONLY:

@@ -21,6 +21,8 @@ A module for exporting Blender data into the BLB format.
 @author: Demian Wright
 '''
 
+# The export mediator.
+
 
 def export(context, properties, filepath=""):
     """
@@ -34,11 +36,10 @@ def export(context, properties, filepath=""):
     # TODO: Exporting multiple bricks from a single file.
     # TODO: Move this function into init?
 
-    # Process the data.
+    # Create a new processor and process the data.
     # The context variable contains all the Blender data.
     # The properties variable contains all user-defined settings to take into account when processing the data.
-    processor = blb_processor.BLBProcessor(context, properties)
-    blb_data = processor.process()
+    blb_data = blb_processor.process_blender_data(context, properties)
 
     if blb_data is not None:
         # Write the data to a file.
