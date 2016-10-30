@@ -54,7 +54,7 @@ def __write_sequence(file, sequence, new_line=True, decimal_digits=const.MAX_FP_
         file.write("\n")
 
 
-def write_file(filepath, blb_data):
+def write_file(properties, filepath, blb_data):
     """Writes the BLB file.
 
     Args:
@@ -88,12 +88,8 @@ def write_file(filepath, blb_data):
         # ---------
         if len(blb_data.collision) == 0:
             # Write default collision.
-
-            file.write("1\n")
-            file.write("\n")
-
             # Center of the cuboid is at the middle of the brick.
-            file.write("0 0 0\n")
+            file.write("1\n\n0 0 0\n")
 
             # The size of the cuboid is the size of the bounds.
             __write_sequence(file, blb_data.brick_size)
@@ -101,8 +97,7 @@ def write_file(filepath, blb_data):
             # Write defined collisions.
 
             # Write the number of collision cuboids.
-            file.write(str(len(blb_data.collision)))
-            file.write("\n")
+            file.write("{}\n".format(str(len(blb_data.collision))))
 
             for (center, dimensions) in blb_data.collision:
                 file.write("\n")
@@ -112,44 +107,42 @@ def write_file(filepath, blb_data):
         # --------
         # Coverage
         # --------
-        file.write("COVERAGE:\n")
+        file.write("COVERAGE:\n")  # Not optional.
         for (hide_adjacent, plate_count) in blb_data.coverage:
-            file.write(str(int(hide_adjacent)) + " : " + str(plate_count) + "\n")
+            file.write("{} : {}\n".format(str(int(hide_adjacent)), str(plate_count)))
 
         # -----
         # Quads
         # -----
         for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
-            # TODO: Terse mode where optional stuff is excluded.
-
             # Write section name.
-            file.write("--{} QUADS--\n".format(section_name))  # Optional.
+            file.write("{}\n".format("" if properties.terse_mode else "---------------- {} QUADS ----------------".format(section_name)))
 
             # Write section length.
-            file.write("{}\n".format(str(len(blb_data.quads[index]))))
+            file.write("{}\n\n".format(str(len(blb_data.quads[index]))))
 
             for (positions, normals, uvs, colors, texture) in blb_data.quads[index]:
                 # Face texture name.
-                file.write("\nTEX:")  # Optional.
-                file.write(texture)
+                file.write("{}{}\n".format("" if properties.terse_mode else "TEX:", texture))
 
                 # Vertex positions.
-                file.write("\nPOSITION:\n")  # Optional.
+                file.write("{}\n".format("" if properties.terse_mode else "POSITION:"))
+
                 for position in positions:
                     __write_sequence(file, position)
 
                 # Face UV coordinates.
-                file.write("UV COORDS:\n")  # Optional.
+                file.write("{}\n".format("" if properties.terse_mode else "UV COORDS:"))
                 for uv_vector in uvs:
                     __write_sequence(file, uv_vector)
 
                 # Vertex colors, if any.
                 if colors is not None:
-                    file.write("COLORS:\n")  # Optional.
+                    file.write("{}\n".format("" if properties.terse_mode else "COLORS:"))
                     for color in colors:
                         __write_sequence(file, color)
 
                 # Vertex normals.
-                file.write("NORMALS:\n")  # Optional.
+                file.write("{}\n".format("" if properties.terse_mode else "NORMALS:"))
                 for normal in normals:
                     __write_sequence(file, normal)

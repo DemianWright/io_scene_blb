@@ -153,6 +153,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=False,
     )
 
+    terse_mode = BoolProperty(
+        name="Terse Mode",
+        description="Exclude optional text from the BLB file making it slightly smaller but harder to read",
+        default=False,
+    )
+
     write_log = BoolProperty(
         name="Write Log",
         description="Write a log file after exporting",
@@ -251,6 +257,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_coverage_property("East", "east", self.coverage_east_calculate)
             draw_coverage_property("South", "south", self.coverage_east_calculate)
             draw_coverage_property("West", "west", self.coverage_west_calculate)
+
+        # Property: Terse Mode
+        layout = self.layout
+        layout.prop(self, "terse_mode")
 
         # Property: Write Log
         row = layout.row()
