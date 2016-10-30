@@ -1204,6 +1204,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
             0. A BLBData object containing the bounds, brick grid, and collision data.
             1. A BrickBounds object containing the brick bounds data.
             2. A sequence of mesh objects that will be exported as visible 3D models.
+        Or an error message to be displayed to the user.
     """
     blb_data = BLBData()
     bounds_data = None
@@ -1231,8 +1232,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         # If the object name has "." as the fourth last character, it could mean that Blender has added the index (e.g. ".002") to the end of the object name because an object with the same name already exists.
         # Removing the end of the name fixes an issue where for example two grid definition objects exist with identical names (which is very common) "gridx" and "gridx.001".
         # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
-
-        if obj_name[-4] == '.':
+        if len(obj_name) > 4 and obj_name[-4] == '.':
             # Remove the last 4 characters of from the name before splitting at whitespace.
             # I do not want to modify the obj_name variable as it is more useful to the user in full.
             obj_name_elements = obj_name[:-4].lower().split()
@@ -1309,12 +1309,22 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
                                                                                       blb_data.brick_size[const.Y],
                                                                                       blb_data.brick_size[const.Z]))
 
-    # Process brick grid and collision definitions now that a bounds definition exists.
-    blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects, grid_definitions_priority)
-    blb_data.collision = __process_collision_definitions(properties.export_scale, bounds_data, collision_objects)
+    # Bounds have been defined, check that brick size is within the limits.
+    if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
+        # Process brick grid and collision definitions now that a bounds definition exists.
+        blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects, grid_definitions_priority)
+        blb_data.collision = __process_collision_definitions(properties.export_scale, bounds_data, collision_objects)
 
-    # Return the data.
-    return (blb_data, bounds_data, mesh_objects)
+        # Return the data.
+        return (blb_data, bounds_data, mesh_objects)
+    else:
+        # The formatter fails miserably if this return is on one line so I've broken it in two.
+        msg = "Brick size ({0}x{1}x{2}) exceeds the maximum brick size of {3} wide {3} deep and {4} plates tall.".format(blb_data.brick_size[const.X],
+                                                                                                                         blb_data.brick_size[const.Y],
+                                                                                                                         blb_data.brick_size[const.Z],
+                                                                                                                         const.MAX_BRICK_HORIZONTAL_PLATES,
+                                                                                                                         const.MAX_BRICK_VERTICAL_PLATES)
+        return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
 def __process_mesh_data(properties, bounds_data, meshes):
@@ -1580,18 +1590,22 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible meshes from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
         result = __process_definition_objects(properties, object_sequence, grid_def_obj_prefix_priority, grid_definitions_priority)
-        blb_data = result[0]
-        bounds_data = result[1]
-        meshes = result[2]
 
-        # Calculate the coverage data based on the brick size.
-        blb_data.coverage = __process_coverage(properties, blb_data)
+        if isinstance(result, str):
+            # Something went wrong, return error message.
+            return result
+        else:
+            blb_data = result[0]
+            bounds_data = result[1]
+            meshes = result[2]
 
-        # Processes the visible mesh data into the correct format for writing into a BLB file.
-        blb_data.quads = __process_mesh_data(properties, bounds_data, meshes)
+            # Calculate the coverage data based on the brick size.
+            blb_data.coverage = __process_coverage(properties, blb_data)
 
-        # Format and return the data for writing.
-        return __format_blb_data(properties.axis_blb_forward, blb_data)
+            # Processes the visible mesh data into the correct format for writing into a BLB file.
+            blb_data.quads = __process_mesh_data(properties, bounds_data, meshes)
+
+            # Format and return the data for writing.
+            return __format_blb_data(properties.axis_blb_forward, blb_data)
     else:
-        logger.error("Nothing to export.")
         return "No objects to export."

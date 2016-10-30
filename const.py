@@ -27,6 +27,10 @@ X = 0
 Y = 1
 Z = 2
 
+# Blockland does not accept bricks that are wide/deeper than 64 bricks or taller than 256 plates.
+MAX_BRICK_HORIZONTAL_PLATES = 64
+MAX_BRICK_VERTICAL_PLATES = 256
+
 # Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
 # Used for rounding vertex positions to the brick grid.
 HUMAN_ERROR = Decimal("0.1")
