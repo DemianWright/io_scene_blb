@@ -131,7 +131,8 @@ def write_log(logpath):
             print("Writing log (warnings only) to: {}{}".format(bpy.path.abspath("//"), logpath))
         else:
             print("Writing log to: {}{}".format(bpy.path.abspath("//"), logpath))
-
+        # TODO: Clear log file before each write.
+        # TODO: Write full log on warnings.
         # Write the log file.
         with open(logpath, "w") as file:
             for line in __LOG_LINES:

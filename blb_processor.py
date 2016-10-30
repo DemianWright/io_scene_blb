@@ -567,6 +567,8 @@ def __sort_quad(quad, bounds_dimensions, forward_axis):
     Returns:
         The index of the section name in const.QUAD_SECTION_ORDER sequence.
     """
+    # TODO: Manual quad sorting.
+
     # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
     positions = quad[0]
 
@@ -953,7 +955,6 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
                 break
 
         if zero_size:
-            logger.error("Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(grid_obj.name))
             raise ZeroSizeException()
         else:
             # Return the index ranges as a tuple: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
@@ -961,63 +962,63 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
                     (grid_min[const.Y], grid_max[const.Y]),
                     (grid_min[const.Z], grid_max[const.Z]))
     else:
-        if bounds_data.object_name is None:
-            logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name))
-        else:
-            logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                grid_obj.name, bounds_data.object_name))
         raise OutOfBoundsException()
 
 
-def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
+def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects, grid_definitions_priority):
     """Processes the specified brick grid definitions.
 
     Args:
         properties (Blender properties object): A Blender object containing user preferences.
         blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
-        definition_objects (a sequence of Blender object): A sequence of Blender objects representing brick grid definitions.
+        definition_objects (a sequence of sequences of Blender objects): A sequence containing five sequences of Blender objects representing brick grid definitions.
+                                                                        The second sequences must ordered in the reverse priority order.
+        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in reverse priority order.
 
     Returns:
         A three dimensional array of brick grid symbols, ready for writing to a file.
     """
-    # Make one empty list for each brick grid definition.
-    definition_volumes = [[] for i in range(len(const.GRID_DEF_OBJ_PREFIX_PRIORITY))]
+    # Make one empty list for each of the 5 brick grid definition.
+    definition_volumes = [[] for i in range(5)]
     processed = 0
+    total_definitions = 0
 
-    for grid_obj in definition_objects:
-        try:
-            # The first 5 characters of the Blender object name must be the grid definition prefix.
-            # Get the index of the definition list.
-            # And append the definition data to the list.
-            index = const.GRID_DEF_OBJ_PREFIX_PRIORITY.index(grid_obj.name.lower()[:5])
-            definition_volumes[index].append(__grid_object_to_volume(properties, bounds_data, grid_obj))
-            processed += 1
-        except OutOfBoundsException:
-            # Do nothing, definition is ignored.
-            pass
-        except ZeroSizeException:
-            # Do nothing, definition is ignored.
-            pass
+    for index in range(5):
+        for grid_obj in definition_objects[index]:
+            total_definitions += 1
+
+            try:
+                definition_volumes[index].append(__grid_object_to_volume(properties, bounds_data, grid_obj))
+                processed += 1
+            except OutOfBoundsException:
+                if bounds_data.object_name is None:
+                    logger.error(
+                        "Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name))
+                else:
+                    logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
+                        grid_obj.name, bounds_data.object_name))
+            except ZeroSizeException:
+                logger.error("Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(grid_obj.name))
 
     # Log messages for brick grid definitions.
-    if len(definition_objects) == 0:
+    if total_definitions == 0:
         logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.")
-    elif len(definition_objects) == 1:
+    elif total_definitions == 1:
         if processed == 0:
             logger.warning(
-                "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
+                "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(total_definitions))
         else:
-            logger.info("Processed {} of {} brick grid definition.".format(processed, len(definition_objects)))
+            logger.info("Processed {} of {} brick grid definition.".format(processed, total_definitions))
     else:
         # Found more than one.
         if processed == 0:
             logger.warning(
-                "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(len(definition_objects)))
+                "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(total_definitions))
         else:
-            logger.info("Processed {} of {} brick grid definitions.".format(processed, len(definition_objects)))
+            logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions))
 
-    # The brick grid is a special case where I do need to take the custom forward axis already into account when processing the data.
+    # Take the custom forward axis into account.
     if properties.axis_blb_forward == "POSITIVE_X" or properties.axis_blb_forward == "NEGATIVE_X":
         grid_width = blb_data.brick_size[const.X]
         grid_depth = blb_data.brick_size[const.Y]
@@ -1030,7 +1031,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
     # Initialize the brick grid with the empty symbol with the dimensions of the brick.
     brick_grid = [[[const.GRID_OUTSIDE for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
 
-    if len(definition_objects) == 0:
+    if total_definitions == 0:
         # Write the default brick grid.
         for d in range(grid_depth):
             for h in range(grid_height):
@@ -1053,7 +1054,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
         # Write the calculated definition_volumes into the brick grid.
         for index, volumes in enumerate(definition_volumes):
             # Get the symbol for these volumes.
-            symbol = const.GRID_DEFINITIONS_PRIORITY[index]
+            symbol = grid_definitions_priority[index]
             for volume in volumes:
                 # Modify the grid by adding the symbol to the correct locations.
                 __modify_brick_grid(brick_grid, volume, symbol)
@@ -1157,7 +1158,7 @@ def __process_collision_definitions(bounds_data, definition_objects):
     return collisions
 
 
-def __process_definition_objects(properties, objects):
+def __process_definition_objects(properties, objects, grid_def_obj_prefix_priority, grid_definitions_priority):
     """"Processes all definition objects that are not exported as a 3D model but will affect the brick properties.
 
     Processed definition objects:
@@ -1170,6 +1171,8 @@ def __process_definition_objects(properties, objects):
     Args:
         properties (Blender properties object): A Blender object containing user preferences.
         objects (sequence of Blender objects): The sequence of objects to be processed.
+        grid_def_obj_prefix_priority (sequence): A sequence containing the brick grid definition object prefixes in reverse priority order.
+        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_prefix_priority.
 
     Returns:
         A tuple containing:
@@ -1179,8 +1182,12 @@ def __process_definition_objects(properties, objects):
     """
     blb_data = BLBData()
     bounds_data = None
-    brick_grid_objects = []
     collision_objects = []
+
+    # There are 5 brick grid definitions.
+    # During this first pass of the objects in the scene we can already sort the definition objects.
+    brick_grid_objects = [[] for i in range(5)]
+
     mesh_objects = []
 
     # These are vectors because Blender vertex coordinates are stored as vectors.
@@ -1194,21 +1201,41 @@ def __process_definition_objects(properties, objects):
     # The objects in the sequence are sorted so that the oldest created object is last.
     # Process the objects in reverse: from oldest to newest.
     for obj in reversed(objects):
-        obj_name = obj.name.lower()
+        obj_name = obj.name
+
+        # If the object name has "." as the fourth last character, it could mean that Blender has added the index (e.g. ".002") to the end of the object name because an object with the same name already exists.
+        # Removing the end of the name fixes an issue where for example two grid definition objects exist with identical names (which is very common) "gridx" and "gridx.001".
+        # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
+
+        if obj_name[-4] == ".":
+            # Remove the last 4 characters of from the name before splitting at whitespace.
+            # I do not want to modify the obj_name variable as it is more useful to the user in full.
+            obj_name_elements = obj_name[:-4].lower().split()
+        else:
+            # Split the object name at whitespace.
+            obj_name_elements = obj_name.lower().split()
+
+        # Convert name list and definition prefixes into sets.
+        # Get their intersection.
+        # Sort the set according to the order the elements were in the object name.
+        # object_grid_definitions now contains all the grid definition prefixes found in the object name.
+        # It has zero or more values from the grid_def_obj_prefix_priority tuple.
+        object_grid_definitions = sorted(set(obj_name_elements) & set(grid_def_obj_prefix_priority), key=obj_name_elements.index)
 
         # Ignore non-mesh objects
         if obj.type != "MESH":
-            if obj_name.startswith(const.BOUNDS_NAME_PREFIX):
-                logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj.name))
-            elif obj_name.startswith(const.GRID_DEF_OBJ_PREFIX_PRIORITY):
-                logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj.name))
-            elif obj_name.startswith(const.COLLISION_PREFIX):
-                logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj.name))
+            if obj_name.startswith(properties.defprefix_bounds):
+                logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name))
+            elif obj_name.startswith(grid_def_obj_prefix_priority):
+                logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name))
+            elif obj_name.startswith(properties.defprefix_collision):
+                logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name))
 
+            # Skip the rest of the if.
             continue
 
         # Is the current object a bounds definition object?
-        elif obj_name.startswith(const.BOUNDS_NAME_PREFIX):
+        elif properties.defprefix_bounds in obj_name_elements:
             if bounds_data is None:
                 bounds_data = __process_bounds_object(obj)
                 blb_data = __record_bounds_data(blb_data, bounds_data)
@@ -1217,18 +1244,25 @@ def __process_definition_objects(properties, objects):
                                                                                            blb_data.brick_size[const.Y],
                                                                                            blb_data.brick_size[const.Z]))
             else:
-                logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj.name))
+                logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name))
                 continue
 
-        # Is the current object a brick grid definition object?
-        elif obj_name.startswith(const.GRID_DEF_OBJ_PREFIX_PRIORITY):
-            # Brick grid definition objects cannot be processed until after the bounds have been defined.
-            brick_grid_objects.append(obj)
-
         # Is the current object a collision definition object?
-        elif obj_name.startswith(const.COLLISION_PREFIX):
+        elif properties.defprefix_collision in obj_name_elements:
             # Collision definition objects cannot be processed until after the bounds have been defined.
             collision_objects.append(obj)
+
+        # Is the current object a brick grid definition object?
+        elif len(object_grid_definitions) > 0:
+            if len(object_grid_definitions) > 1:
+                logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name))
+
+            # Get the priority index of this grid definition.
+            index = grid_def_obj_prefix_priority.index(object_grid_definitions[0])
+
+            # Brick grid definition objects cannot be processed until after the bounds have been defined.
+            # Append the current definition object into the appropriate list.
+            brick_grid_objects[index].append(obj)
 
         # Else the object must be a regular mesh that is exported as a 3D model.
         else:
@@ -1242,7 +1276,7 @@ def __process_definition_objects(properties, objects):
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
-        logger.warning("No '" + const.BOUNDS_NAME_PREFIX + "' definition found. Automatically calculated brick size may be undesirable.")
+        logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.")
         bounds_data = __calculate_bounds(min_world_coordinates, max_world_coordinates)
         blb_data = __record_bounds_data(blb_data, bounds_data)
 
@@ -1251,7 +1285,7 @@ def __process_definition_objects(properties, objects):
                                                                                       blb_data.brick_size[const.Z]))
 
     # Process brick grid and collision definitions now that a bounds definition exists.
-    blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects)
+    blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects, grid_definitions_priority)
     blb_data.collision = __process_collision_definitions(bounds_data, collision_objects)
 
     # Return the data.
@@ -1500,12 +1534,14 @@ def __format_blb_data(forward_axis, blb_data):
     return blb_data
 
 
-def process_blender_data(context, properties):
+def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority):
     """Processes the specified Blender data into a format that can be written in a BLB file.
 
     Args:
         context (Blender context object): A Blender object containing scene data.
         properties (Blender properties object): A Blender object containing user preferences.
+        grid_def_obj_prefix_priority (sequence): A sequence containing the brick grid definition object prefixes in reverse priority order.
+        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_prefix_priority.
 
     Returns:
         A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or None if there is no Blender data to export.
@@ -1516,7 +1552,7 @@ def process_blender_data(context, properties):
     if len(object_sequence) > 0:
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible meshes from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
-        result = __process_definition_objects(properties, object_sequence)
+        result = __process_definition_objects(properties, object_sequence, grid_def_obj_prefix_priority, grid_definitions_priority)
         blb_data = result[0]
         bounds_data = result[1]
         meshes = result[2]

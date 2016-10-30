@@ -21,7 +21,46 @@ A module for exporting Blender data into the BLB format.
 @author: Demian Wright
 '''
 
+from . import const, logger
+
 # The export mediator.
+
+
+def build_grid_priority_tuples(properties):
+    """Sorts the grid definition object name prefixes into reverse priority order according the user properties.
+    Definitions earlier in the sequence are overwritten by prefixes later in the sequence.
+
+    Args:
+        properties (Blender properties object): A Blender object containing user preferences.
+
+    Returns:
+        A tuple containing the grid definition object prefixes in the first element and the grid symbols in the same order in the second element or None if one or more definition had the same priority which leads to undefined behavior and is disallowed.
+    """
+    # There are exactly 5 prefixes.
+    # Initialize a 5 element list.
+    prefixes = [None] * 5
+    print(prefixes)
+
+    # Go through every priority individually.
+    prefixes[properties.defprefix_gridx_priority] = properties.defprefix_gridx
+    prefixes[properties.defprefix_griddash_priority] = properties.defprefix_griddash
+    prefixes[properties.defprefix_gridu_priority] = properties.defprefix_gridu
+    prefixes[properties.defprefix_gridd_priority] = properties.defprefix_gridd
+    prefixes[properties.defprefix_gridb_priority] = properties.defprefix_gridb
+
+    if None in prefixes:
+        logger.error("Two or more brick grid definitions had the same priority. Unable to proceed.")
+        return None
+    else:
+        symbols = [None] * 5
+
+        symbols[properties.defprefix_gridx_priority] = const.GRID_INSIDE
+        symbols[properties.defprefix_griddash_priority] = const.GRID_OUTSIDE
+        symbols[properties.defprefix_gridu_priority] = const.GRID_UP
+        symbols[properties.defprefix_gridd_priority] = const.GRID_DOWN
+        symbols[properties.defprefix_gridb_priority] = const.GRID_BOTH
+
+        return (tuple(prefixes), tuple(symbols))
 
 
 def export(context, properties, filepath):
@@ -33,23 +72,33 @@ def export(context, properties, filepath):
         filepath (string): The path to the BLB to be written, with the extension.
 
     Returns:
-        True if the BLB file was written.
+        None if the BLB file was written or a string containing the error message to display to the user if the file was not written.
     """
 
     from . import blb_processor, blb_writer
 
     # TODO: Exporting multiple bricks from a single file.
 
-    # Create a new processor and process the data.
-    # The context variable contains all the Blender data.
-    # The properties variable contains all user-defined settings to take into account when processing the data.
-    blb_data = blb_processor.process_blender_data(context, properties)
+    # Process the user properties into a usable format.
 
-    # The program has crashed long before reaching this line if blb_data is None...
-    if blb_data is not None:
-        # Write the data to a file.
-        # TODO: Actually return true only if the file was written.
-        blb_writer.write_file(properties, filepath, blb_data)
-        return True
+    # Build the brick grid definition prefix and symbol priority tuple.
+    # Contains the brick grid definition object name prefixes in reverse priority order.
+    result = build_grid_priority_tuples(properties)
 
-    return False
+    if result is None:
+        return "Two or more brick grid definitions had the same priority."
+    else:
+        grid_def_obj_prefix_priority = result[0]
+        grid_definitions_priority = result[1]
+
+        # Process Blender data into a writable format.
+        # The context variable contains all the Blender data.
+        # The properties variable contains all user-defined settings to take into account when processing the data.
+        blb_data = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority)
+
+        # The program has crashed long before reaching this line if blb_data is None...
+        if blb_data is not None:
+            # Write the data to a file.
+            # TODO: Actually return true only if the file was written.
+            blb_writer.write_file(properties, filepath, blb_data)
+            return None

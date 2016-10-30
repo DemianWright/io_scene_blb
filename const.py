@@ -27,22 +27,9 @@ X = 0
 Y = 1
 Z = 2
 
-# TODO: Make most of these into properties.
-
-# Definition object name const.
-BOUNDS_NAME_PREFIX = "bounds"
-COLLISION_PREFIX = "collision"
-
 # Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
 # Used for rounding vertex positions to the brick grid.
 HUMAN_ERROR = Decimal("0.1")
-
-# Brick grid definition object name prefixes in reverse priority order.
-GRID_DEF_OBJ_PREFIX_PRIORITY = ("gridx",
-                                "grid-",
-                                "gridu",
-                                "gridd",
-                                "gridb")
 
 # Quad and coverage section IDs and directions for sorting.
 QUAD_SECTION_IDX_TOP = 0
@@ -68,14 +55,6 @@ GRID_OUTSIDE = "-"  # Allow building in empty space.
 GRID_UP = "u"  # Allow placing bricks above this plate.
 GRID_DOWN = "d"  # Allow placing bricks below this plate.
 GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
-
-# Brick grid definitions in reverse priority order.
-# I.e. GRID_DOWN will overwrite GRID_OUTSIDE.
-GRID_DEFINITIONS_PRIORITY = (GRID_INSIDE,
-                             GRID_OUTSIDE,
-                             GRID_UP,
-                             GRID_DOWN,
-                             GRID_BOTH)
 
 # Maximum number of decimal places to write to file.
 MAX_FP_DECIMALS_TO_WRITE = 16
