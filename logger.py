@@ -25,7 +25,6 @@ A module for printing messages to the console and optionally writing the message
 # I could not figure out a way to do that with the standard logging library so it was just faster to write it myself.
 
 import bpy
-import os
 
 __LOG_LINES = []
 __WRITE_FILE = True

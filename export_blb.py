@@ -39,7 +39,6 @@ def build_grid_priority_tuples(properties):
     # There are exactly 5 prefixes.
     # Initialize a 5 element list.
     prefixes = [None] * 5
-    print(prefixes)
 
     # Go through every priority individually.
     prefixes[properties.defprefix_gridx_priority] = properties.defprefix_gridx

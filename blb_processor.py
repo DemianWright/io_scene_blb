@@ -425,6 +425,19 @@ def __to_float_or_none(value):
     except ValueError:
         return None
 
+
+def __sequence_multiply(multiplier, sequence):
+    """Multiplies every value in the specified sequence with a number.
+
+    Args:
+        multiplier (numerical value): A number to multiply with.
+        sequence (sequence of numerical values): The sequence to whose elements to multiply.
+
+    Returns:
+        A new sequence with the values of the specified sequence multiplied with the specified multiplier.
+    """
+    return [multiplier * value for value in sequence]
+
 # =================================
 # Blender Data Processing Functions
 # =================================
@@ -690,9 +703,6 @@ def __get_object_sequence(context, properties):
     # Use objects in visible layers?
     if properties.export_objects == "LAYERS":
         logger.info("Exporting objects in visible layers to BLB.")
-        print(context.scene.layers)
-        # objects = [obj for obj in context.scene.objects for index in range(
-        #    len(context.scene.layers)) if True == obj.layers[index] == context.scene.layers[index]]
         # For every object in the scene.
         for obj in context.scene.objects:
             # For every layer in the scene.
@@ -755,10 +765,11 @@ def __record_bounds_data(blb_data, bounds_data):
     return blb_data
 
 
-def __calculate_bounds(min_world_coordinates, max_world_coordinates):
+def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinates):
     """Calculates the brick bounds data from the recorded minimum and maximum vertex world coordinates.
 
     Args:
+        export_scale (float): A user defined percentage value to scale all values by.
         min_world_coordinates (sequence of numbers): A sequence containing the minimum world coordinates of the brick to be exported.
         max_world_coordinates (sequence of numbers): A sequence containing the maximum world coordinates of the brick to be exported.
 
@@ -767,27 +778,32 @@ def __calculate_bounds(min_world_coordinates, max_world_coordinates):
     """
     bounds_data = BrickBounds()
 
+    # USER SCALE: Multiply by user defined scale.
+    min_coord = __sequence_multiply(export_scale / 100.0, min_world_coordinates)
+    max_coord = __sequence_multiply(export_scale / 100.0, max_world_coordinates)
+
     # Get the dimensions defined by the vectors.
     # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
-    bounds_size = __to_decimals((max_world_coordinates[const.X] - min_world_coordinates[const.X],
-                                 max_world_coordinates[const.Y] - min_world_coordinates[const.Y],
-                                 (max_world_coordinates[const.Z] - min_world_coordinates[const.Z])))
+    bounds_size = __to_decimals((max_coord[const.X] - min_coord[const.X],
+                                 max_coord[const.Y] - min_coord[const.Y],
+                                 (max_coord[const.Z] - min_coord[const.Z])))
 
     bounds_data.dimensions = bounds_size
 
     # The minimum and maximum calculated world coordinates.
-    bounds_data.world_coords_min = __to_decimals(min_world_coordinates)
-    bounds_data.world_coords_max = __to_decimals(max_world_coordinates)
+    bounds_data.world_coords_min = __to_decimals(min_coord)
+    bounds_data.world_coords_max = __to_decimals(max_coord)
 
     bounds_data.world_center = __calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
 
     return bounds_data
 
 
-def __process_bounds_object(obj):
+def __process_bounds_object(export_scale, obj):
     """Processes a manually defined bounds Blender object.
 
     Args:
+        export_scale (float): A user defined percentage value to scale all values by.
         obj (Blender object): The Blender object defining the bounds of the brick that the user created.
 
     Returns:
@@ -798,7 +814,7 @@ def __process_bounds_object(obj):
     bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
     __record_world_min_max(bounds_min, bounds_max, obj)
 
-    bounds_data = __calculate_bounds(bounds_min, bounds_max)
+    bounds_data = __calculate_bounds(export_scale, bounds_min, bounds_max)
 
     # Store the name for logging and determining whether the bounds were defined or automatically calculated.
     bounds_data.object_name = obj.name
@@ -859,6 +875,10 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
     grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
     grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
     __record_world_min_max(grid_min, grid_max, grid_obj)
+
+    # USER SCALE: Multiply by user defined scale.
+    grid_min = __sequence_multiply(properties.export_scale / 100.0, grid_min)
+    grid_max = __sequence_multiply(properties.export_scale / 100.0, grid_max)
 
     # Recenter the coordinates to the bounds. (Also rounds the values.)
     grid_min = __world_to_local(grid_min, bounds_data.world_center)
@@ -1062,10 +1082,11 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
     return brick_grid
 
 
-def __process_collision_definitions(bounds_data, definition_objects):
+def __process_collision_definitions(export_scale, bounds_data, definition_objects):
     """Processes the specified collision definitions.
 
     Args:
+        export_scale (float): A user defined percentage value to scale all values by.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         definition_objects (a sequence of Blender object): A sequence of Blender objects representing collision definitions.
 
@@ -1092,13 +1113,17 @@ def __process_collision_definitions(bounds_data, definition_objects):
             continue
         elif vert_count > 8:
             logger.warning(
-                "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. Bounding box of this mesh will be used.".format(obj.name))
+                "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(obj.name))
             # The mesh is still valid.
 
         # Find the minimum and maximum coordinates for the collision object.
         col_min = Vector((float("+inf"), float("+inf"), float("+inf")))
         col_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         __record_world_min_max(col_min, col_max, obj)
+
+        # USER SCALE: Multiply by user defined scale.
+        col_min = __sequence_multiply(export_scale / 100.0, col_min)
+        col_max = __sequence_multiply(export_scale / 100.0, col_max)
 
         # Recenter the coordinates to the bounds. (Also rounds the values.)
         col_min = __world_to_local(col_min, bounds_data.world_center)
@@ -1207,7 +1232,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         # Removing the end of the name fixes an issue where for example two grid definition objects exist with identical names (which is very common) "gridx" and "gridx.001".
         # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
 
-        if obj_name[-4] == ".":
+        if obj_name[-4] == '.':
             # Remove the last 4 characters of from the name before splitting at whitespace.
             # I do not want to modify the obj_name variable as it is more useful to the user in full.
             obj_name_elements = obj_name[:-4].lower().split()
@@ -1237,7 +1262,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         # Is the current object a bounds definition object?
         elif properties.defprefix_bounds in obj_name_elements:
             if bounds_data is None:
-                bounds_data = __process_bounds_object(obj)
+                bounds_data = __process_bounds_object(properties.export_scale, obj)
                 blb_data = __record_bounds_data(blb_data, bounds_data)
 
                 logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
@@ -1277,7 +1302,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
         logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.")
-        bounds_data = __calculate_bounds(min_world_coordinates, max_world_coordinates)
+        bounds_data = __calculate_bounds(properties.export_scale, min_world_coordinates, max_world_coordinates)
         blb_data = __record_bounds_data(blb_data, bounds_data)
 
         logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
@@ -1286,7 +1311,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
 
     # Process brick grid and collision definitions now that a bounds definition exists.
     blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects, grid_definitions_priority)
-    blb_data.collision = __process_collision_definitions(bounds_data, collision_objects)
+    blb_data.collision = __process_collision_definitions(properties.export_scale, bounds_data, collision_objects)
 
     # Return the data.
     return (blb_data, bounds_data, mesh_objects)
@@ -1392,7 +1417,9 @@ def __process_mesh_data(properties, bounds_data, meshes):
                 # Center the position to the current bounds object: coordinates are now in local object space.
                 # TODO: Why on earth am I rounding the vertex coordinates to the closest
                 # plate height? This needs to be a property, not something done automatically!
-                positions.append(__sequence_z_to_plates(__world_to_local(__vert_index_to_world_coord(obj, vert_index), bounds_data.world_center)))
+                # USER SCALE: Multiply by user defined scale.
+                coords = __sequence_multiply(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, vert_index))
+                positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center)))
 
             # =======
             # Normals

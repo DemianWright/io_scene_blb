@@ -33,7 +33,7 @@ bl_info = {
     "category": "Import-Export"}
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty
+from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, FloatProperty
 from bpy_extras.io_utils import ExportHelper
 
 # TODO: Rewrite all docstrings to follow the Google style guide or something.
@@ -87,7 +87,20 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="POSITIVE_Y"
     )
 
-    # TODO: Scale.
+    # -----
+    # Scale
+    # -----
+
+    export_scale = FloatProperty(
+        name="Scale",
+        description="The scale to export the brick at",
+        subtype='PERCENTAGE',
+        precision=3,
+        step=1.0,
+        default=100.0,
+        min=0.001,
+        soft_max=400.0,
+    )
 
     # --------
     # Coverage
@@ -354,6 +367,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         split = split.split()
         row = split.row()
         row.prop(self, "axis_blb_forward", expand=True)
+
+        # Property: Export Scale
+        layout.prop(self, "export_scale")
 
         # Properties: Coverage
         layout.prop(self, "calculate_coverage")
