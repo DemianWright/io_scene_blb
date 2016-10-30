@@ -54,7 +54,7 @@ class BrickBounds(object):
 
     def __init__(self):
         # The name of the Blender object.
-        self.name = None
+        self.object_name = None
 
         # The dimensions are stored separately even though it is trivial to calculate them from the coordinates because they are used often.
         self.dimensions = []
@@ -66,7 +66,7 @@ class BrickBounds(object):
         self.world_coords_max = []
 
     def __repr__(self):
-        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(self.name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
+        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
 
 
 # =============
@@ -178,7 +178,7 @@ def __to_decimals(values, quantize=const.CALCULATION_FP_PRECISION_STR):
     return result
 
 
-def __force_to_int(values):
+def __force_to_ints(values):
     """Casts all values in the specified sequence to ints.
 
     Args:
@@ -714,60 +714,41 @@ def __get_object_sequence(context, properties):
     return objects
 
 
-def __record_defined_bounds(blb_data, obj):
+def __record_bounds_data(blb_data, bounds_data):
     """Adds the brick bounds data to the specified BLB data object.
 
     Args:
         blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
-        obj (Blender object): The Blender object defining the bounds of the brick that the user created.
+        bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
 
     Returns:
         The modified blb_data object containing the bounds data.
     """
     # Get the dimensions of the Blender object and convert the height to plates.
-    bounds_size = __sequence_z_to_plates(obj.dimensions)
-
-    # Are the dimensions of the bounds object not integers?
-    if not __are_ints(bounds_size):
-        logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
-                                                                                                                bounds_size[const.Y],
-                                                                                                                bounds_size[const.Z],
-                                                                                                                const.HUMAN_ERROR))
-        for index, value in enumerate(bounds_size):
-            # Round to the specified error amount.
-            bounds_size[index] = round(const.HUMAN_ERROR * round(value / const.HUMAN_ERROR))
-
-    # The value type must be int because you can't have partial plates. Returns a list.
-    blb_data.brick_size = __force_to_int(bounds_size)
-
-    return blb_data
-
-
-def __record_calculated_bounds(blb_data, bounds_data):
-    """Adds the brick bounds data to the specified BLB data object.
-
-    Args:
-        blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
-        bounds_data (BrickBounds): A BrickBounds object containing the bounds data that was automatically calculated.
-
-    Returns:
-        The modified blb_data object containing the bounds data.
-    """
-    # Convert height to plates.
     bounds_size = __sequence_z_to_plates(bounds_data.dimensions)
 
     # Are the dimensions of the bounds object not integers?
     if not __are_ints(bounds_size):
-        logger.warning("Calculated bounds has a non-integer size {} {} {}, rounding up.".format(bounds_size[const.X],
-                                                                                                bounds_size[const.Y],
-                                                                                                bounds_size[const.Z]))
+        if bounds_data.object_name is None:
+            logger.warning("Calculated bounds have a non-integer size {} {} {}, rounding up.".format(bounds_size[const.X],
+                                                                                                     bounds_size[const.Y],
+                                                                                                     bounds_size[const.Z]))
 
-        # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
-        for index, value in enumerate(bounds_size):
-            bounds_size[index] = ceil(value)
+            # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
+            for index, value in enumerate(bounds_size):
+                bounds_size[index] = ceil(value)
+        else:
+            logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
+                                                                                                                    bounds_size[const.Y],
+                                                                                                                    bounds_size[const.Z],
+                                                                                                                    const.HUMAN_ERROR))
+
+            for index, value in enumerate(bounds_size):
+                # Round to the specified error amount.
+                bounds_size[index] = round(const.HUMAN_ERROR * round(value / const.HUMAN_ERROR))
 
     # The value type must be int because you can't have partial plates. Returns a list.
-    blb_data.brick_size = __force_to_int(bounds_size)
+    blb_data.brick_size = __force_to_ints(bounds_size)
 
     return blb_data
 
@@ -782,8 +763,6 @@ def __calculate_bounds(min_world_coordinates, max_world_coordinates):
     Returns:
         A BrickBounds object containg the brick bounds data.
     """
-    logger.warning("No '" + const.BOUNDS_NAME_PREFIX + "' definition found. Automatically calculated brick size may be undesirable.")
-
     bounds_data = BrickBounds()
 
     # Get the dimensions defined by the vectors.
@@ -792,7 +771,6 @@ def __calculate_bounds(min_world_coordinates, max_world_coordinates):
                                  max_world_coordinates[const.Y] - min_world_coordinates[const.Y],
                                  (max_world_coordinates[const.Z] - min_world_coordinates[const.Z])))
 
-    bounds_data.name = None
     bounds_data.dimensions = bounds_size
 
     # The minimum and maximum calculated world coordinates.
@@ -813,25 +791,15 @@ def __process_bounds_object(obj):
     Returns:
         A BrickBounds object.
     """
-    # TODO: Make use of __calculate_bounds to reduce duplicate code.
-    bounds_data = BrickBounds()
-
-    # Store the name for logging.
-    bounds_data.name = obj.name
-
-    # ROUND & CAST: defined bounds object dimensions into Decimals for accuracy.
-    bounds_data.dimensions = __to_decimals(obj.dimensions)
-
     # Find the minimum and maximum world coordinates for the bounds object.
     bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
     bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
     __record_world_min_max(bounds_min, bounds_max, obj)
 
-    # ROUND & CAST: defined bounds object min/max world coordinates into Decimals for accuracy.
-    bounds_data.world_coords_min = __to_decimals(bounds_min)
-    bounds_data.world_coords_max = __to_decimals(bounds_max)
+    bounds_data = __calculate_bounds(bounds_min, bounds_max)
 
-    bounds_data.world_center = __calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
+    # Store the name for logging and determining whether the bounds were defined or automatically calculated.
+    bounds_data.object_name = obj.name
 
     return bounds_data
 
@@ -973,8 +941,8 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             grid_max[const.X] = abs(temp)
         # Else properties.axis_blb_forward == "POSITIVE_Y": do nothing
 
-        grid_min = __force_to_int(grid_min)
-        grid_max = __force_to_int(grid_max)
+        grid_min = __force_to_ints(grid_min)
+        grid_max = __force_to_ints(grid_max)
 
         zero_size = False
 
@@ -993,11 +961,11 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
                     (grid_min[const.Y], grid_max[const.Y]),
                     (grid_min[const.Z], grid_max[const.Z]))
     else:
-        if bounds_data.name is None:
+        if bounds_data.object_name is None:
             logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name))
         else:
             logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                grid_obj.name, bounds_data.name))
+                grid_obj.name, bounds_data.object_name))
         raise OutOfBoundsException()
 
 
@@ -1163,11 +1131,11 @@ def __process_collision_definitions(bounds_data, definition_objects):
             # The coordinates and dimensions are in plates.
             collisions.append((__sequence_z_to_plates(center), __sequence_z_to_plates(dimensions)))
         else:
-            if bounds_data.name is None:
+            if bounds_data.object_name is None:
                 logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
             else:
                 logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                    obj.name, bounds_data.name))
+                    obj.name, bounds_data.object_name))
 
     # Log messages for collision definitions.
     if len(definition_objects) == 0:
@@ -1243,7 +1211,7 @@ def __process_definition_objects(properties, objects):
         elif obj_name.startswith(const.BOUNDS_NAME_PREFIX):
             if bounds_data is None:
                 bounds_data = __process_bounds_object(obj)
-                blb_data = __record_defined_bounds(blb_data, obj)
+                blb_data = __record_bounds_data(blb_data, bounds_data)
 
                 logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
                                                                                            blb_data.brick_size[const.Y],
@@ -1274,8 +1242,9 @@ def __process_definition_objects(properties, objects):
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
+        logger.warning("No '" + const.BOUNDS_NAME_PREFIX + "' definition found. Automatically calculated brick size may be undesirable.")
         bounds_data = __calculate_bounds(min_world_coordinates, max_world_coordinates)
-        blb_data = __record_calculated_bounds(blb_data, bounds_data)
+        blb_data = __record_bounds_data(blb_data, bounds_data)
 
         logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
                                                                                       blb_data.brick_size[const.Y],
