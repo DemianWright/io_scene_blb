@@ -98,7 +98,6 @@ class BLBData(object):
         # Brick coverage data sequences.
         self.coverage = []
 
-        # TODO: Full breakdown of the quad data.
         # Sorted quad data sequences.
         self.quads = []
 
