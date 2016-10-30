@@ -22,12 +22,12 @@ Handles registering the add-on into Blender and drawing properties to the UI.
 '''
 
 bl_info = {
-    "name": "Blockland Brick Format",
-    "author": "Demian Wright & Nick Smith (Port)",
+    "name": "Export: Blockland Brick (.blb)",
+    "author": "Demian Wright & Nick Smith",
     "version": (0, 1),
     "blender": (2, 76, 0),
     "location": "File > Export > Blockland Brick (.blb)",
-    "description": "Export Blockland Brick (.blb)",
+    "description": "Export Blockland brick format",
     "warning": "",
     "wiki_url": "",
     "category": "Import-Export"}
