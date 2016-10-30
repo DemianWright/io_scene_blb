@@ -201,7 +201,7 @@ def __are_ints(values):
         True if all values in the specified sequence are numerically equal to their integer counterparts.
     """
     for value in values:
-        if value != int(value):  # TODO: Fix OverflowError & crash when nothing is selected and exporting only selection.
+        if value != int(value):
             return False
 
     return True
