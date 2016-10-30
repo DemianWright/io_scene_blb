@@ -25,10 +25,12 @@ A module for printing messages to the console and optionally writing the message
 # I could not figure out a way to do that with the standard logging library so it was just faster to write it myself.
 
 import bpy
+import os
 
 __LOG_LINES = []
-__WRITE_FILE = False
-__WARNINGS_ONLY = True
+__WRITE_FILE = True
+__ON_WARNINGS_ONLY = True
+__HAS_WARNINGS = False
 
 
 def configure(write_file, write_only_on_warnings):
@@ -36,11 +38,12 @@ def configure(write_file, write_only_on_warnings):
 
     Args:
         write_file (bool): Write log to a file?
-        write_only_on_warnings (bool): Write log to a file but only if warnings were logged."""
-    global __WRITE_FILE, __WARNINGS_ONLY
+        write_only_on_warnings (bool): Write log to a file but only if warnings were logged?
+    """
+    global __WRITE_FILE, __ON_WARNINGS_ONLY
 
     __WRITE_FILE = write_file
-    __WARNINGS_ONLY = write_only_on_warnings
+    __ON_WARNINGS_ONLY = write_only_on_warnings
 
 
 def __log(message, is_warning):
@@ -48,27 +51,26 @@ def __log(message, is_warning):
 
     Args:
         message (string): Log message.
-        is_warning (bool): Is the message a warning?"""
+        is_warning (bool): Is the message a warning?
+    """
+    global __HAS_WARNINGS
+
     print(message)
 
     # If log will be written to a file, append the message to the sequence for writing later.
     if __WRITE_FILE:
-        # If log file will only be written when a warning is encountered.
-        if __WARNINGS_ONLY:
-            # Check that current message is a warning.
-            if is_warning:
-                __LOG_LINES.append(message)
-            # Otherwise ignore the message.
-        else:
-            # Else if all messages are written to a log file, append the message to the sequence.
-            __LOG_LINES.append(message)
+        __LOG_LINES.append(message)
+
+        if is_warning and not __HAS_WARNINGS:
+            __HAS_WARNINGS = True
 
 
 def info(message):
     """Prints the given message to the console and additionally to a log file if so specified at logger configuration.
 
     Args:
-        message (string): Log message."""
+        message (string): Log message.
+    """
     __log(message, False)
 
 
@@ -76,7 +78,8 @@ def warning(message):
     """Prefixes the message with '[WARNING] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
 
     Args:
-        message (string): Log message."""
+        message (string): Log message.
+    """
     __log("[WARNING] " + message, True)
 
 
@@ -84,7 +87,8 @@ def error(message):
     """Prefixes the message with '[ERROR] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
 
     Args:
-        message (string): Log message."""
+        message (string): Log message.
+    """
     __log("[ERROR] " + message, True)
 
 
@@ -124,17 +128,25 @@ def build_countable_message(message_start, count, alternatives, message_end="", 
 
 
 def write_log(logpath):
-    """Writes a log file (if so configured) to the specified path."""
-    # Write a log file? Anything to write?
-    if __WRITE_FILE and len(__LOG_LINES) > 0:
-        if __WARNINGS_ONLY:
-            print("Writing log (warnings only) to: {}{}".format(bpy.path.abspath("//"), logpath))
-        else:
-            print("Writing log to: {}{}".format(bpy.path.abspath("//"), logpath))
-        # TODO: Clear log file before each write.
-        # TODO: Write full log on warnings.
+    """Writes a log file (if so configured) to the specified path.
+
+    Args:
+        logpath (string): A path to the log file to write, including the extension.
+    """
+    global __LOG_LINES, __HAS_WARNINGS
+
+    # Write a log file?
+    # Anything to write?
+    # Are we only writing a log if warnings were generated and warnings exist?
+    # Are we writing a log regardless if warnings were generated?
+    if (__WRITE_FILE and len(__LOG_LINES) > 0) and (__ON_WARNINGS_ONLY and __HAS_WARNINGS) or not __ON_WARNINGS_ONLY:
+        print("Writing log to: {}{}".format(bpy.path.abspath("//"), logpath))
+
         # Write the log file.
         with open(logpath, "w") as file:
             for line in __LOG_LINES:
-                file.write(line)
-                file.write("\n")
+                file.write("{}\n".format(line))
+
+    # Clear old log lines.
+    __LOG_LINES = []
+    __HAS_WARNINGS = False
