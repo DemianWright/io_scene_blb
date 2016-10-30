@@ -1544,7 +1544,7 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
         grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_prefix_priority.
 
     Returns:
-        A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or None if there is no Blender data to export.
+        A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or an error message to display to the user.
     """
     # Determine which objects to process.
     object_sequence = __get_object_sequence(context, properties)
@@ -1567,4 +1567,4 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
         return __format_blb_data(properties.axis_blb_forward, blb_data)
     else:
         logger.error("Nothing to export.")
-        return None
+        return "No objects to export."

@@ -74,7 +74,6 @@ def export(context, properties, filepath):
     Returns:
         None if the BLB file was written or a string containing the error message to display to the user if the file was not written.
     """
-
     from . import blb_processor, blb_writer
 
     # TODO: Exporting multiple bricks from a single file.
@@ -94,11 +93,12 @@ def export(context, properties, filepath):
         # Process Blender data into a writable format.
         # The context variable contains all the Blender data.
         # The properties variable contains all user-defined settings to take into account when processing the data.
-        blb_data = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority)
+        result = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority)
 
-        # The program has crashed long before reaching this line if blb_data is None...
-        if blb_data is not None:
+        if isinstance(result, blb_processor.BLBData):
             # Write the data to a file.
             # TODO: Actually return true only if the file was written.
-            blb_writer.write_file(properties, filepath, blb_data)
+            blb_writer.write_file(properties, filepath, result)
             return None
+        else:
+            return result
