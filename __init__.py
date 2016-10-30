@@ -206,6 +206,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="collision",
     )
 
+    defprefix_color = StringProperty(
+        name="Object Color",
+        description="Prefix for specifying a color for an object. Prefix must be followed by 4 values (red green blue alpha) separated with spaces using a comma (,) as decimal separator. Vertex colors are overridden by colors defined in object names.",
+        default="c",
+    )
+
     defprefix_gridx = StringProperty(
         name="Brick Grid x",
         description="Prefix for objects that define a volume within the brick bounds that will be filled with the 'x' symbol in the brick grid signifying that other bricks cannot be placed there",
@@ -459,7 +465,8 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             # This has duplicate data but I don't know how to access the property names defined earlier since self.defprefix_bounds.name doesn't seem to work.
             # For some reason self.defprefix_bounds = "defprefix_bounds" instead of an instance of StringProperty.
             draw_definition_property("Brick Bounds", "defprefix_bounds")
-            draw_definition_property("Collision Cuboid", "defprefix_collision")
+            draw_definition_property("Collision Cuboids", "defprefix_collision")
+            draw_definition_property("Object Colors", "defprefix_color")
 
             # Grid definitions.
 

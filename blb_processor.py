@@ -1369,13 +1369,12 @@ def __process_mesh_data(properties, bounds_data, meshes):
         if len(name) > 3 and name[-4] == '.':
             name = name[:-4]
 
-        # TODO: Document this feature in UI.
         # Replace commas with dots because the decimals in object names must be defined using a comma.
         # Split object name at whitespaces.
         values = name.replace(',', '.').split()
 
         # Does the object name begin with the letter C and a whitespace character signifying that it defines the object's color?
-        if values[0] == "c":
+        if values[0] == properties.defprefix_color:
             # Convert all elements to floats and ignore elements that would be None.
             # It does do the function twice but I doubt the object names will be so long that this will be an issue plus the function is simple.
             floats = [__to_float_or_none(val) for val in values if __to_float_or_none(val) is not None]
@@ -1476,7 +1475,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
                         # TODO: Document this feature in UI.
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
-                        # Well actually the game can render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
+                        # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
                         name = __to_float_or_none(current_data.vertex_colors[0].name)
 
                         if name is None:
