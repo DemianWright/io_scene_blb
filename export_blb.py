@@ -26,19 +26,19 @@ A module for exporting Blender data into the BLB format.
 
 def export(context, properties, filepath):
     """Processes the data from the scene and writes it to a BLB file.
+
     Args:
         context (Blender context object): A Blender object containing scene data.
         properties (Blender properties object): A Blender object containing user preferences.
         filepath (string): The path to the BLB to be written, with the extension.
 
     Returns:
-        True if the BLB file was written."""
+        True if the BLB file was written.
+    """
 
     from . import blb_processor, blb_writer
 
-    # TODO: Layer support.
     # TODO: Exporting multiple bricks from a single file.
-    # TODO: Move this function into init?
 
     # Create a new processor and process the data.
     # The context variable contains all the Blender data.

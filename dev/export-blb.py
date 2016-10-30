@@ -1,18 +1,18 @@
 import bpy
 import sys
- 
+
 argv = sys.argv
-argv = argv[argv.index("--") + 1:] # get all args after "--"
+argv = argv[argv.index("--") + 1:]  # get all args after "--"
 
 blb_out = argv[0]
-selection = argv[1].lower() == "true"
+export = argv[1].upper()
 log = argv[2].lower() == "true"
 log_warnings = argv[3].lower() == "true"
 forward = argv[4].upper()
 coverage = argv[5].lower() == "true"
- 
+
 bpy.ops.export_scene.blb(filepath=blb_out,
-                         use_selection=selection,
+                         export_objects=export,
                          write_log=log,
                          write_log_warnings=log_warnings,
                          axis_blb_forward=forward,

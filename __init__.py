@@ -55,11 +55,13 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     # TODO: Scale.
 
-    # TODO: Change this to enum: Selection, Layer, Scene
-    use_selection = BoolProperty(
-        name="Selection Only",
-        description="Export selected objects only",
-        default=True,
+    export_objects = EnumProperty(
+        items=[("SELECTION", "Selection", "Export only selected objects"),
+               ("LAYERS", "Layers", "Export all objects in the visible layers"),
+               ("SCENE", "Scene", "Export all objects in the active scene")],
+        name="Export Objects In:",
+        description="Only export the specified objects",
+        default="SELECTION"
     )
 
     # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
@@ -205,10 +207,27 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     def draw(self, context):
         """Draws the UI in the export menu."""
-
-        # Property: Use Selection
         layout = self.layout
-        layout.prop(self, "use_selection")
+
+        # Property: Export Objects
+        row = layout.row()
+        split = row.split(percentage=0.21)
+        row = split.row()
+        row.label("Export:")
+
+        split = split.split()
+        row = split.row()
+        row.prop(self, "export_objects", expand=True)
+
+        # Property: BLB Forward Axis
+        row = layout.row()
+        split = row.split(percentage=0.4)
+        row = split.row()
+        row.label("Forward Axis:")
+
+        split = split.split()
+        row = split.row()
+        row.prop(self, "axis_blb_forward", expand=True)
 
         # Properties: Coverage
         layout.prop(self, "calculate_coverage")
@@ -276,16 +295,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             split.active = self.write_log
             col = split.column()
             col.prop(self, "write_log_warnings")
-
-        # Property: BLB Forward Axis
-        row = layout.row()
-        split = row.split(percentage=0.4)
-        row = split.row()
-        row.label("Forward Axis:")
-
-        split = split.split()
-        row = split.row()
-        row.prop(self, "axis_blb_forward", expand=True)
 
 
 # =============

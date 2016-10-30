@@ -681,18 +681,36 @@ def __get_object_sequence(context, properties):
     objects = []
 
     # Use selected objects?
-    if properties.use_selection:
-        logger.info("Exporting selection to BLB.")
+    if properties.export_objects == "SELECTION":
+        logger.info("Exporting selected objects to BLB.")
         objects = context.selected_objects
-        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects selected."))
+        logger.info(logger.build_countable_message("  Found ", len(objects), (" object.", " objects."), "", "  No objects selected."))
+
+    # Use objects in visible layers?
+    if properties.export_objects == "LAYERS":
+        logger.info("Exporting objects in visible layers to BLB.")
+        print(context.scene.layers)
+        # objects = [obj for obj in context.scene.objects for index in range(
+        #    len(context.scene.layers)) if True == obj.layers[index] == context.scene.layers[index]]
+        # For every object in the scene.
+        for obj in context.scene.objects:
+            # For every layer in the scene.
+            for index in range(len(context.scene.layers)):
+                # If this layer is visible.
+                # And this object is in the layer.
+                if True == obj.layers[index] == context.scene.layers[index]:
+                    # Append to the list of objects.
+                    objects.append(obj)
+
+        logger.info(logger.build_countable_message("  Found ", len(objects), (" object.", " objects."), "", "  No objects in visible layers."))
 
     # If user wants to export the whole scene.
-    # Or if user wanted to export only the selected objects but nothing was selected.
+    # Or if user wanted to export only the selected objects or layers but they contained nothing.
     # Get all scene objects.
-    if len(objects) == 0:
+    if properties.export_objects == "SCENE" or len(objects) == 0:
         logger.info("Exporting scene to BLB.")
         objects = context.scene.objects
-        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "Scene has no objects."))
+        logger.info(logger.build_countable_message("  Found ", len(objects), (" object.", " objects."), "", "  Scene has no objects."))
 
     return objects
 
