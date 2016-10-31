@@ -22,6 +22,9 @@ Various constants used in multiple classes.
 '''
 from decimal import Decimal
 
+# The BLB file extension.
+BLB_EXT = '.blb'
+
 # Generic.
 X = 0
 Y = 1
@@ -45,7 +48,7 @@ QUAD_SECTION_IDX_WEST = 5
 QUAD_SECTION_IDX_OMNI = 6
 
 # The quad sections in the correct order for writing to a BLB file.
-QUAD_SECTION_ORDER = ["TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI"]
+QUAD_SECTION_ORDER = ['TOP', 'BOTTOM', 'NORTH', 'EAST', 'SOUTH', 'WEST', 'OMNI']
 
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 DEFAULT_COVERAGE = 9999

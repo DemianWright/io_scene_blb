@@ -20,8 +20,9 @@ A module for exporting Blender data into the BLB format.
 
 @author: Demian Wright
 '''
-
 from . import const, logger
+
+# TODO: merge these functions into __init__
 
 # The export mediator.
 
@@ -62,16 +63,20 @@ def build_grid_priority_tuples(properties):
         return (tuple(prefixes), tuple(symbols))
 
 
-def export(context, properties, filepath):
+def export(context, properties, export_dir, export_file, file_name):
     """Processes the data from the scene and writes it to a BLB file.
 
     Args:
         context (Blender context object): A Blender object containing scene data.
         properties (Blender properties object): A Blender object containing user preferences.
-        filepath (string): The path to the BLB to be written, with the extension.
+        export_dir (string): The absolute path to the directory where to write the BLB file.
+        export_file (string): The name of the file to be written with the extension or None if brick name is to be retrieved from the bounds definition object.
+        file_name (string):  The name of the .blend file with the BLB extension to be used as a fall back option.
 
     Returns:
-        None if the BLB file was written or a string containing the error message to display to the user if the file was not written.
+        A dictionary that contains zero or more of the following keys:
+            - brick_name: the name of the brick that was written to file
+            - error_message: a string containing an error message to display to the user if the file was not written
     """
     from . import blb_processor, blb_writer
 
@@ -84,7 +89,7 @@ def export(context, properties, filepath):
     result = build_grid_priority_tuples(properties)
 
     if result is None:
-        return "Two or more brick grid definitions had the same priority."
+        return {'error_message': 'Two or more brick grid definitions had the same priority.'}
     else:
         grid_def_obj_prefix_priority = result[0]
         grid_definitions_priority = result[1]
@@ -92,12 +97,27 @@ def export(context, properties, filepath):
         # Process Blender data into a writable format.
         # The context variable contains all the Blender data.
         # The properties variable contains all user-defined settings to take into account when processing the data.
-        result = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority)
+        data = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority)
 
-        if isinstance(result, blb_processor.BLBData):
+        # Got the BLBData we need.
+        if isinstance(data, blb_processor.BLBData):
+            # Name was sourced from the bounds object.
+            if export_file is None:
+                # No name was actually found?
+                if data.brick_name is None:
+                    # Fall back to file name.
+                    export_file = file_name
+                else:
+                    # Use the found name.
+                    export_file = "{}{}".format(data.brick_name, const.BLB_EXT)
+
+            export_path = "{}{}".format(export_dir, export_file)
+
             # Write the data to a file.
             # TODO: Actually return true only if the file was written.
-            blb_writer.write_file(properties, filepath, result)
-            return None
+            blb_writer.write_file(properties, export_path, data)
+
+            return {'export_file_name': export_file}
         else:
-            return result
+            # Something went wrong, pass on the message.
+            return {'error_message': data}

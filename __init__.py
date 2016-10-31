@@ -41,13 +41,14 @@ from bpy_extras.io_utils import ExportHelper
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
+    from . import const
 
     bl_idname = "export_scene.blb"
     bl_label = "Export BLB"
 
-    filename_ext = ".blb"
+    filename_ext = const.BLB_EXT
     logfile_ext = ".log"
-    filter_glob = StringProperty(default="*.blb", options={'HIDDEN'})
+    filter_glob = StringProperty(default="*" + const.BLB_EXT, options={'HIDDEN'})
 
     # ==========
     # Properties
@@ -56,6 +57,18 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ==========
     # Processing
     # ==========
+
+    # ----------
+    # Brick Name
+    # ----------
+
+    brick_name_source = EnumProperty(
+        items=[("FILE", "File", "Brick name is the same as this .blend file name"),
+               ("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space")],
+        name="Brick Name From:",
+        description="Where to get the name of the exported brick by default (can be changed manually in the file dialog)",
+        default="FILE"
+    )
 
     # -------
     # Objects
@@ -324,21 +337,41 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         print("\n____STARTING BLB EXPORT____")
 
         props = self.properties
-        filepath = bpy.path.ensure_ext(self.filepath, self.filename_ext)
+        # The name of the file suffixed with the BLB extension.
+        file_name = bpy.path.ensure_ext(bpy.path.display_name_from_filepath(self.filepath), self.filename_ext)
 
-        # Remove the .BLB extension and change it to the log extension.
-        logpath = bpy.path.ensure_ext(filepath[:-4], self.logfile_ext)
+        # The absolute path to the directory where the currently open file is in.
+        export_dir = bpy.path.abspath("//")
+
+        # The name of the BLB file to export.
+        export_file = None
 
         logger.configure(props.write_log, props.write_log_warnings)
-        message = export_blb.export(context, props, filepath)
 
-        if message is None:
-            # I'm not entirely sure what the bpy.path.abspath("//") does but it works like I want it to.
-            logger.info("Output file: {}{}".format(bpy.path.abspath("//"), filepath))
+        if props.brick_name_source == 'FILE':
+            # Get the current filepath which may or may not be the absolute path to the currently open .blend file.
+            # Get only the name of the file from the filepath.
+            # Add in the BLB extension.
+            export_file = file_name
+
+        result = export_blb.export(context, props, export_dir, export_file, file_name)
+
+        if 'error_message' in result:
+            self.report({'ERROR'}, result['error_msg'])
         else:
-            self.report({'ERROR'}, message)
+            if props.brick_name_source == 'BOUNDS':
+                file_name = result['export_file_name']
 
-        logger.write_log(logpath)
+            # Remove the .BLB extension and change it to the log extension.
+            logname = bpy.path.ensure_ext(file_name[:-4], self.logfile_ext)
+
+            # Build the full path.
+            logpath = "{}{}".format(export_dir, logname)
+
+            logger.info("Output file: {}{}".format(export_dir, file_name))
+
+            # Only write log if no error occurred.
+            logger.write_log(logpath)
 
         return {'FINISHED'}
 
@@ -353,6 +386,16 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # ==========
         # Processing
         # ==========
+
+        # Property: Brick Name
+        row = layout.row()
+        split = row.split(percentage=0.49)
+        row = split.row()
+        row.label("Brick Name From:")
+
+        split = split.split()
+        row = split.row()
+        row.prop(self, "brick_name_source", expand=True)
 
         # Property: Export Objects
         row = layout.row()

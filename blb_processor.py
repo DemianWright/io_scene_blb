@@ -78,14 +78,18 @@ class BLBData(object):
     """A class for storing the brick data to be written to a BLB file.
 
     Stores the following data:
+        - BLB file name without extension
         - size (dimensions) in plates,
-        - brick grid,
-        - collision objects,
-        - coverage,
-        - and sorted quads.
+        - brick grid data,
+        - collision cuboids,
+        - coverage data,
+        - and sorted quad data.
     """
 
     def __init__(self):
+        # Brick BLB file name.
+        self.brick_name = None
+
         # Brick XYZ integer size in plates.
         self.brick_size = []
 
@@ -726,10 +730,11 @@ def __get_object_sequence(context, properties):
     return objects
 
 
-def __record_bounds_data(blb_data, bounds_data):
+def __record_bounds_data(properties, blb_data, bounds_data):
     """Adds the brick bounds data to the specified BLB data object.
 
     Args:
+        properties (Blender properties object): A Blender object containing user preferences.
         blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
 
@@ -761,6 +766,22 @@ def __record_bounds_data(blb_data, bounds_data):
 
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
+
+    if properties.brick_name_source == 'BOUNDS':
+        if bounds_data.object_name is None:
+            logger.warning(
+                "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.")
+        else:
+            # Split the bounds object name at whitespace.
+            name_elements = bounds_data.object_name.split()
+
+            if len(name_elements) == 1:
+                logger.warning(
+                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.")
+            else:
+                # Brick name follows the bounds definition, spaces are not allowed.
+                blb_data.brick_name = name_elements[name_elements.index(properties.defprefix_bounds) + 1]
+                logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name))
 
     return blb_data
 
@@ -1263,7 +1284,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         elif properties.defprefix_bounds in obj_name_elements:
             if bounds_data is None:
                 bounds_data = __process_bounds_object(properties.export_scale, obj)
-                blb_data = __record_bounds_data(blb_data, bounds_data)
+                blb_data = __record_bounds_data(properties, blb_data, bounds_data)
 
                 logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
                                                                                            blb_data.brick_size[const.Y],
@@ -1303,7 +1324,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
     if bounds_data is None:
         logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.")
         bounds_data = __calculate_bounds(properties.export_scale, min_world_coordinates, max_world_coordinates)
-        blb_data = __record_bounds_data(blb_data, bounds_data)
+        blb_data = __record_bounds_data(properties, blb_data, bounds_data)
 
         logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
                                                                                       blb_data.brick_size[const.Y],
@@ -1580,7 +1601,7 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
         grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_prefix_priority.
 
     Returns:
-        A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or an error message to display to the user.
+        A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or an error message string to display to the user.
     """
     # Determine which objects to process.
     object_sequence = __get_object_sequence(context, properties)
