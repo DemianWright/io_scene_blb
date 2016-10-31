@@ -30,6 +30,7 @@ bl_info = {
     "description": "Export Blockland brick format",
     "warning": "",
     "wiki_url": "",
+    "tracker_url": "",
     "category": "Import-Export"}
 
 import bpy
@@ -40,14 +41,12 @@ from bpy_extras.io_utils import ExportHelper
 # Blender requires imports from "." for self-defined modules.
 from . import export_blb, const, logger
 
-# TODO: Rewrite all docstrings to follow the Google style guide or something.
-# TODO: Save properties.
-
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
     bl_idname = "export_scene.blb"
     bl_label = "Export BLB"
+    bl_options = {'REGISTER', 'PRESET'}
 
     filename_ext = const.BLB_EXT
     logfile_ext = const.LOG_EXT
@@ -399,7 +398,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ===============
 
     def execute(self, context):
-        """Export the scene."""
+        """Export the objects."""
         print("\n____STARTING BLB EXPORT____")
 
         props = self.properties

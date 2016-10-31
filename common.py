@@ -26,14 +26,17 @@ from . import const
 
 
 def swizzle(sequence, order):
-    """
-    Changes the order of the elements in the specified sequence. (Max 26 elements.)
-    The new order of the sequence must be specified as string or a sequence of lower case Latin letters.
-    Sequence indices are represented using lower case letters a-z of the Latin alphabet.
-    I.e. "a" signifies the index 0 and "z" stands for index 25.
-    Duplicating elements is possible by specifying the the same letter multiple times.
-    Returns a new sequence of values shallowly copied from the specified sequence in the specified order.
-    The new sequence will only contain the elements specified in the order.
+    """Changes the order of the elements in the specified sequence. (Maximum of 26 elements.)
+
+    Args:
+        sequence (sequence): A sequence of objects.
+        order (sequence or string): The new order of the sequence as string or a sequence of lower case Latin letters.
+                                    Sequence indices are represented using lower case letters a-z of the Latin alphabet.
+                                    I.e. "a" signifies the index 0 and "z" stands for index 25.
+                                    Duplicating elements is possible by specifying the the same letter multiple times.
+    Returns:
+        A new list of objects shallowly copied from the specified sequence in the specified order.
+        The new sequence will only contain the elements specified in the order, elements not specified in the new order are discarded.
     """
     # For every letter in the specified order.
     # Get the index of the letter in the ascii_lowercase string.
@@ -44,10 +47,15 @@ def swizzle(sequence, order):
 
 
 def rotate(xyz, forward_axis):
-    """
-    Rotates the specified XYZ coordinate sequence according to the specified forward axis so the points will be correctly represented in the game.
+    """Rotates the specified XYZ coordinate sequence according to the specified forward axis so the coordinates will be correctly represented in the game.
     By default Blockland assumes that coordinates are relative to +X axis being the brick forward axis pointing away from the player.
-    Returns a new list of XYZ coordinates.
+
+    Args:
+        xyz (sequence of numbers): A sequence of XYZ coordinates. Only the first 3 values are taken into account even if more are specified.
+        forward_axis (string): The name of the enum value representing the user-specified forward axis.
+
+    Returns:
+        A new list of XYZ coordinates.
     """
     rotated = []
 

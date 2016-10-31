@@ -93,9 +93,7 @@ def export(context, properties, export_dir, export_file, file_name):
         file_name (string):  The name of the .blend file with the BLB extension to be used as a fall back option.
 
     Returns:
-        A dictionary that contains zero or more of the following keys:
-            - brick_name: the name of the brick that was written to file
-            - error_message: a string containing an error message to display to the user if the file was not written
+        None if everything went OK or a string containing an error message to display to the user if the file was not written
     """
     # TODO: Exporting multiple bricks from a single file.
 

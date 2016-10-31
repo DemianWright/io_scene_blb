@@ -315,9 +315,14 @@ def __all_within_bounds(local_coordinates, bounding_dimensions):
 
 
 def __sequence_z_to_plates(xyz):
-    """
-    Performs __to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
+    """Performs __to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
     If the given sequence does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
+
+    Args:
+        xyz (sequence of numbers): A sequence of three numerical values.
+
+    Returns:
+        A list of three Decimal type numbers.
     """
     if len(xyz) == 3:
         # ROUND & CAST
