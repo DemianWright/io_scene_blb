@@ -25,6 +25,9 @@ from decimal import Decimal
 # The BLB file extension.
 BLB_EXT = '.blb'
 
+# The log file extension.
+LOG_EXT = '.log'
+
 # Generic.
 X = 0
 Y = 1

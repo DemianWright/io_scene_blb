@@ -24,8 +24,6 @@ A module for printing messages to the console and optionally writing the message
 # I've implemented this myself instead of using the standard logging because I needed a feature where the log file is only written if there were warnings logged.
 # I could not figure out a way to do that with the standard logging library so it was just faster to write it myself.
 
-import bpy
-
 __LOG_LINES = []
 __WRITE_FILE = True
 __ON_WARNINGS_ONLY = True
@@ -139,7 +137,7 @@ def write_log(logpath):
     # Are we only writing a log if warnings were generated and warnings exist?
     # Are we writing a log regardless if warnings were generated?
     if (__WRITE_FILE and len(__LOG_LINES) > 0) and (__ON_WARNINGS_ONLY and __HAS_WARNINGS) or not __ON_WARNINGS_ONLY:
-        print("Writing log to: {}{}".format(bpy.path.abspath("//"), logpath))
+        print("Writing log to: {}".format(logpath))
 
         # Write the log file.
         with open(logpath, "w") as file:

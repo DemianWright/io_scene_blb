@@ -22,8 +22,6 @@ A module for exporting Blender data into the BLB format.
 '''
 from . import const, logger
 
-# TODO: merge these functions into __init__
-
 # The export mediator.
 
 
@@ -78,18 +76,20 @@ def export(context, properties, export_dir, export_file, file_name):
             - brick_name: the name of the brick that was written to file
             - error_message: a string containing an error message to display to the user if the file was not written
     """
+    import bpy
     from . import blb_processor, blb_writer
 
     # TODO: Exporting multiple bricks from a single file.
 
-    # Process the user properties into a usable format.
+    logger.configure(properties.write_log, properties.write_log_warnings)
 
+    # Process the user properties into a usable format.
     # Build the brick grid definition prefix and symbol priority tuple.
     # Contains the brick grid definition object name prefixes in reverse priority order.
     result = build_grid_priority_tuples(properties)
 
     if result is None:
-        return {'error_message': 'Two or more brick grid definitions had the same priority.'}
+        return 'Two or more brick grid definitions had the same priority.'
     else:
         grid_def_obj_prefix_priority = result[0]
         grid_definitions_priority = result[1]
@@ -114,10 +114,17 @@ def export(context, properties, export_dir, export_file, file_name):
             export_path = "{}{}".format(export_dir, export_file)
 
             # Write the data to a file.
-            # TODO: Actually return true only if the file was written.
             blb_writer.write_file(properties, export_path, data)
 
-            return {'export_file_name': export_file}
+            logger.info("Output file: {}".format(export_path))
+
+            # Remove the .BLB extension and change it to the log extension.
+            logname = bpy.path.ensure_ext(export_file[:-4], const.LOG_EXT)
+
+            # Build the full path and write the log.
+            logger.write_log("{}{}".format(export_dir, logname))
+
+            return None
         else:
             # Something went wrong, pass on the message.
-            return {'error_message': data}
+            return data

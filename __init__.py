@@ -47,7 +47,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     bl_label = "Export BLB"
 
     filename_ext = const.BLB_EXT
-    logfile_ext = ".log"
+    logfile_ext = const.LOG_EXT
     filter_glob = StringProperty(default="*" + const.BLB_EXT, options={'HIDDEN'})
 
     # ==========
@@ -332,46 +332,31 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         """Export the scene."""
 
         # Blender requires that I import from "." so it can find the modules.
-        from . import export_blb, logger
+        from . import export_blb
 
         print("\n____STARTING BLB EXPORT____")
 
         props = self.properties
-        # The name of the file suffixed with the BLB extension.
+
+        # Get the current filepath which may or may not be the absolute path to the currently open .blend file.
+        # Get only the name of the file from the filepath.
+        # Add in the BLB extension.
         file_name = bpy.path.ensure_ext(bpy.path.display_name_from_filepath(self.filepath), self.filename_ext)
 
         # The absolute path to the directory where the currently open file is in.
         export_dir = bpy.path.abspath("//")
 
         # The name of the BLB file to export.
-        export_file = None
-
-        logger.configure(props.write_log, props.write_log_warnings)
-
         if props.brick_name_source == 'FILE':
-            # Get the current filepath which may or may not be the absolute path to the currently open .blend file.
-            # Get only the name of the file from the filepath.
-            # Add in the BLB extension.
             export_file = file_name
-
-        result = export_blb.export(context, props, export_dir, export_file, file_name)
-
-        if 'error_message' in result:
-            self.report({'ERROR'}, result['error_msg'])
         else:
-            if props.brick_name_source == 'BOUNDS':
-                file_name = result['export_file_name']
+            export_file = None
 
-            # Remove the .BLB extension and change it to the log extension.
-            logname = bpy.path.ensure_ext(file_name[:-4], self.logfile_ext)
+        message = export_blb.export(context, props, export_dir, export_file, file_name)
 
-            # Build the full path.
-            logpath = "{}{}".format(export_dir, logname)
-
-            logger.info("Output file: {}{}".format(export_dir, file_name))
-
-            # Only write log if no error occurred.
-            logger.write_log(logpath)
+        if isinstance(message, str):
+            self.report({'ERROR'}, message)
+        # Else: No error message, everything is OK.
 
         return {'FINISHED'}
 
