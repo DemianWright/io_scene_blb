@@ -1498,7 +1498,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                        name = __to_float_or_none(current_data.vertex_colors[0].name)
+                        name = __to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
 
                         if vertex_color_alpha is None:
                             if name is None:
