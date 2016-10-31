@@ -33,6 +33,7 @@ bl_info = {
     "category": "Import-Export"}
 
 import bpy
+import os
 from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, FloatProperty
 from bpy_extras.io_utils import ExportHelper
 
@@ -408,9 +409,8 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Add in the BLB extension.
         file_name = bpy.path.ensure_ext(bpy.path.display_name_from_filepath(self.filepath), self.filename_ext)
 
-        # The absolute path to the directory where the currently open file is in.
-        # TODO: This is wrong, should be the path in the export dialog.
-        export_dir = bpy.path.abspath("//")
+        # The absolute path to the directory user has specified in the export dialog.
+        export_dir = os.path.split(self.filepath)[0] + os.sep
 
         # The name of the BLB file to export.
         if props.brick_name_source == 'FILE':
@@ -423,6 +423,8 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         if isinstance(message, str):
             self.report({'ERROR'}, message)
         # Else: No error message, everything is OK.
+
+        # FIXME: Clear log here instead of on write.
 
         return {'FINISHED'}
 
