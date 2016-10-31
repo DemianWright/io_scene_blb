@@ -430,7 +430,7 @@ def __mirror(xyz, forward_axis):
     return mirrored
 
 
-def __sequence_multiply(multiplier, sequence):
+def __multiply_sequence(multiplier, sequence):
     """Multiplies every value in the specified sequence with a number.
 
     Args:
@@ -441,6 +441,23 @@ def __sequence_multiply(multiplier, sequence):
         A new sequence with the values of the specified sequence multiplied with the specified multiplier.
     """
     return [multiplier * value for value in sequence]
+
+
+def __sequence_product(sequence):
+    """Multiplies all values in the specified sequence together.
+
+    Args:
+        sequence (sequence of numerical values): The sequence to get the product of.
+
+    Returns:
+        The product of the sequence.
+    """
+    product = 1
+
+    for value in sequence:
+        product *= value
+
+    return product
 
 # =================================
 # Blender Data Processing Functions
@@ -847,8 +864,8 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
     bounds_data = BrickBounds()
 
     # USER SCALE: Multiply by user defined scale.
-    min_coord = __sequence_multiply(export_scale / 100.0, min_world_coordinates)
-    max_coord = __sequence_multiply(export_scale / 100.0, max_world_coordinates)
+    min_coord = __multiply_sequence(export_scale / 100.0, min_world_coordinates)
+    max_coord = __multiply_sequence(export_scale / 100.0, max_world_coordinates)
 
     # Get the dimensions defined by the vectors.
     # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
@@ -945,8 +962,8 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
     __record_world_min_max(grid_min, grid_max, grid_obj)
 
     # USER SCALE: Multiply by user defined scale.
-    grid_min = __sequence_multiply(properties.export_scale / 100.0, grid_min)
-    grid_max = __sequence_multiply(properties.export_scale / 100.0, grid_max)
+    grid_min = __multiply_sequence(properties.export_scale / 100.0, grid_min)
+    grid_max = __multiply_sequence(properties.export_scale / 100.0, grid_max)
 
     # Recenter the coordinates to the bounds. (Also rounds the values.)
     grid_min = __world_to_local(grid_min, bounds_data.world_center)
@@ -1190,8 +1207,8 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
         __record_world_min_max(col_min, col_max, obj)
 
         # USER SCALE: Multiply by user defined scale.
-        col_min = __sequence_multiply(export_scale / 100.0, col_min)
-        col_max = __sequence_multiply(export_scale / 100.0, col_max)
+        col_min = __multiply_sequence(export_scale / 100.0, col_min)
+        col_max = __multiply_sequence(export_scale / 100.0, col_max)
 
         # Recenter the coordinates to the bounds. (Also rounds the values.)
         col_min = __world_to_local(col_min, bounds_data.world_center)
@@ -1362,16 +1379,18 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
                                                                                       blb_data.brick_size[const.Y],
                                                                                       blb_data.brick_size[const.Z]))
 
-    # FIXME: Abort if brick volume is 0.
-
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
-        # Process brick grid and collision definitions now that a bounds definition exists.
-        blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects, grid_definitions_priority)
-        blb_data.collision = __process_collision_definitions(properties.export_scale, bounds_data, collision_objects)
 
-        # Return the data.
-        return (blb_data, bounds_data, mesh_objects)
+        if __sequence_product(blb_data.brick_size) < 1.0:
+            return 'Brick has no volume, brick could not be rendered in-game.'
+        else:
+            # Process brick grid and collision definitions now that a bounds definition exists.
+            blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects, grid_definitions_priority)
+            blb_data.collision = __process_collision_definitions(properties.export_scale, bounds_data, collision_objects)
+
+            # Return the data.
+            return (blb_data, bounds_data, mesh_objects)
     else:
         # The formatter fails miserably if this return is on one line so I've broken it in two.
         msg = "Brick size ({0}x{1}x{2}) exceeds the maximum brick size of {3} wide {3} deep and {4} plates tall.".format(blb_data.brick_size[const.X],
@@ -1392,7 +1411,7 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
         mesh_objects (sequence of Blender objects): Meshes to be processed.
 
     Returns:
-        A sequence of mesh data sorted into sections.
+        A sequence of mesh data sorted into sections or a string containing an error message to display to the user.
     """
     quads = []
     count_tris = 0
@@ -1502,7 +1521,7 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
                 # Get the vertex world position from the vertex index.
                 # Center the position to the current bounds object: coordinates are now in local object space.
                 # USER SCALE: Multiply by user defined scale.
-                coords = __sequence_multiply(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, vert_index))
+                coords = __multiply_sequence(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, vert_index))
                 # ROUND & CAST
                 positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center)))
 
@@ -1589,34 +1608,37 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
     if count_ngon > 0:
         logger.warning("  {} n-gons skipped.".format(count_ngon))
 
-    # Create an empty list for each quad section.
-    # This is my workaround to making a sort of dictionary where the keys are in insertion order.
-    # The quads must be written in a specific order.
-    # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-    # TODO: Consider using a standard dictionary and worrying about the order when writing.
-    sorted_quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
+    if len(quads) == 0:
+        return 'No faces to export.'
+    else:
+        # Create an empty list for each quad section.
+        # This is my workaround to making a sort of dictionary where the keys are in insertion order.
+        # The quads must be written in a specific order.
+        # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
+        # TODO: Consider using a standard dictionary and worrying about the order when writing.
+        sorted_quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
 
-    # Sort quads into sections.
-    for quad in quads:
-        section_idx = const.QUAD_SECTION_IDX_OMNI
+        # Sort quads into sections.
+        for quad in quads:
+            section_idx = const.QUAD_SECTION_IDX_OMNI
 
-        # Does user want to automatically sort quads?
-        # And the current quad does not have a manual definition?
-        if properties.auto_sort_quads and quad[5] is None:
-            # Calculate the section name the quad belongs to.
-            # Get the index of that section name in the QUAD_SECTION_ORDER list.
-            section_idx = __sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)
-        # Else: No automatic sorting or the quad had a manual sort, in which case there is no point in calculating the section.
+            # Does user want to automatically sort quads?
+            # And the current quad does not have a manual definition?
+            if properties.auto_sort_quads and quad[5] is None:
+                # Calculate the section name the quad belongs to.
+                # Get the index of that section name in the QUAD_SECTION_ORDER list.
+                section_idx = __sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)
+            # Else: No automatic sorting or the quad had a manual sort, in which case there is no point in calculating the section.
 
-        # Regardless of automatic sorting, manual sort is always available.
-        if quad[5] is not None:
-            section_idx = quad[5]
+            # Regardless of automatic sorting, manual sort is always available.
+            if quad[5] is not None:
+                section_idx = quad[5]
 
-        # Append the quad data to the list in the tuple at the index of the section.
-        # Drop the section index from the data since it is no longer needed.
-        sorted_quads[section_idx].append(quad[:-1])
+            # Append the quad data to the list in the tuple at the index of the section.
+            # Drop the section index from the data since it is no longer needed.
+            sorted_quads[section_idx].append(quad[:-1])
 
-    return sorted_quads
+        return sorted_quads
 
 
 def __format_blb_data(forward_axis, blb_data):
@@ -1715,7 +1737,13 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
             blb_data.coverage = __process_coverage(properties, blb_data)
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            blb_data.quads = __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_objects)
+            quads = __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_objects)
+
+            if isinstance(quads, str):
+                # Something went wrong.
+                return quads
+            else:
+                blb_data.quads = quads
 
             # Format and return the data for writing.
             return __format_blb_data(properties.axis_blb_forward, blb_data)
