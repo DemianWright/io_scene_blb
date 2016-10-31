@@ -1365,7 +1365,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
 
     for obj in meshes:
         object_name = obj.name
-        logger.info("Exporting mesh: {}".format(object_name))
+        logger.info("Exporting object: {}".format(object_name))
 
         current_data = obj.data
 
@@ -1414,6 +1414,9 @@ def __process_mesh_data(properties, bounds_data, meshes):
             elif size > 0:
                 logger.info(
                     "  Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name))
+
+        # Alpha is per-object.
+        vertex_color_alpha = None
 
         # Process quad data.
         for poly in current_data.polygons:
@@ -1491,20 +1494,23 @@ def __process_mesh_data(properties, bounds_data, meshes):
                         # Only use the first color layer.
                         loop_color = current_data.vertex_colors[0].data[index]
 
-                        # TODO: Document this feature in UI.
+                        # TODO: Document this feature.
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
                         name = __to_float_or_none(current_data.vertex_colors[0].name)
 
-                        if name is None:
-                            alpha = 1.0
-                        else:
-                            alpha = name
+                        if vertex_color_alpha is None:
+                            if name is None:
+                                vertex_color_alpha = 1.0
+                                logger.warning('  No alpha value set in vertex color layer name, using 1.0.')
+                            else:
+                                vertex_color_alpha = name
+                                logger.info("  Vertex color layer alpha set to {}.".format(vertex_color_alpha))
 
                         # color_layer.data[index] may contain more than 4 values.
                         # Blockland only supports four colors per quad so only the first four values are stored.
-                        colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, alpha))
+                        colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
             # ================
             # BLB texture name
