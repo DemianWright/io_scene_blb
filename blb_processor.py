@@ -1362,6 +1362,8 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
                                                                                       blb_data.brick_size[const.Y],
                                                                                       blb_data.brick_size[const.Z]))
 
+    # FIXME: Abort if brick volume is 0.
+
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
         # Process brick grid and collision definitions now that a bounds definition exists.

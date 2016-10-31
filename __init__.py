@@ -38,7 +38,7 @@ from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, F
 from bpy_extras.io_utils import ExportHelper
 
 # Blender requires imports from "." for self-defined modules.
-from . import export_blb, const
+from . import export_blb, const, logger
 
 # TODO: Rewrite all docstrings to follow the Google style guide or something.
 # TODO: Save properties.
@@ -424,7 +424,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             self.report({'ERROR'}, message)
         # Else: No error message, everything is OK.
 
-        # FIXME: Clear log here instead of on write.
+        logger.clear_log()
 
         return {'FINISHED'}
 

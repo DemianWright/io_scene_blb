@@ -124,14 +124,20 @@ def build_countable_message(message_start, count, alternatives, message_end="", 
     return "{}{}{}{}".format(message_start, count, alternatives[message_index], message_end)
 
 
+def clear_log():
+    """Deletes all log lines and resets the warning flag"""
+    global __LOG_LINES, __HAS_WARNINGS
+
+    __LOG_LINES = []
+    __HAS_WARNINGS = False
+
+
 def write_log(logpath):
     """Writes a log file (if so configured) to the specified path.
 
     Args:
         logpath (string): A path to the log file to write, including the extension.
     """
-    global __LOG_LINES, __HAS_WARNINGS
-
     # Write a log file?
     # Anything to write?
     # Are we only writing a log if warnings were generated and warnings exist?
@@ -143,7 +149,3 @@ def write_log(logpath):
         with open(logpath, "w") as file:
             for line in __LOG_LINES:
                 file.write("{}\n".format(line))
-
-    # Clear old log lines.
-    __LOG_LINES = []
-    __HAS_WARNINGS = False
