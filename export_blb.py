@@ -20,7 +20,9 @@ A module for exporting Blender data into the BLB format.
 
 @author: Demian Wright
 '''
-from . import const, logger
+
+import bpy
+from . import const, logger, blb_processor, blb_writer
 
 # The export mediator.
 
@@ -95,9 +97,6 @@ def export(context, properties, export_dir, export_file, file_name):
             - brick_name: the name of the brick that was written to file
             - error_message: a string containing an error message to display to the user if the file was not written
     """
-    import bpy
-    from . import blb_processor, blb_writer
-
     # TODO: Exporting multiple bricks from a single file.
 
     logger.configure(properties.write_log, properties.write_log_warnings)

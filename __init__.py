@@ -36,13 +36,14 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, FloatProperty
 from bpy_extras.io_utils import ExportHelper
 
+# Blender requires imports from "." for self-defined modules.
+from . import export_blb, const
+
 # TODO: Rewrite all docstrings to follow the Google style guide or something.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
-    from . import const
-
     bl_idname = "export_scene.blb"
     bl_label = "Export BLB"
 
@@ -386,10 +387,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     def execute(self, context):
         """Export the scene."""
-
-        # Blender requires that I import from "." so it can find the modules.
-        from . import export_blb
-
         print("\n____STARTING BLB EXPORT____")
 
         props = self.properties

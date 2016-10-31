@@ -21,14 +21,8 @@ Various functions and collections used in multiple classes.
 @author: Demian Wright
 '''
 
-from collections import namedtuple
 from string import ascii_lowercase
-
-# Blender requires imports from ".".
 from . import const
-
-# The order of the sides is the same as the one required by BLB coverage data and sorted quads.
-BrickSides = namedtuple('BrickSides', 'top bottom north east south west')
 
 
 def swizzle(sequence, order):

@@ -26,8 +26,6 @@ A module for processing Blender data into the BLB file format for writing.
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
 from math import ceil, isnan
 from mathutils import Vector
-
-# Blender requires imports from "." for self-defined modules.
 from . import logger, common, const
 
 # Set the Decimal number context for operations: 0.5 is rounded up. (Precision can be whatever.)
