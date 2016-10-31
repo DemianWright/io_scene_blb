@@ -1528,8 +1528,6 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
             # =======
             # Normals
             # =======
-            # FIXME: Object rotation affects normals.
-
             if poly.use_smooth:
                 # Smooth shading.
                 # For every vertex index in the loop_indices, calculate the vertex normal and add it to the list.
@@ -1540,8 +1538,9 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
+                # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALs.
                 # ROUND & CAST
-                normals = [__to_decimals(poly.normal), ] * 4
+                normals = [__to_decimals(obj.matrix_world * poly.normal), ] * 4
 
             # ===
             # UVs
