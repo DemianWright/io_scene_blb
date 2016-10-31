@@ -16,10 +16,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 '''
-Various constants used in multiple classes.
+Various constants used in multiple modules.
 
 @author: Demian Wright
 '''
+
 from decimal import Decimal
 
 # The BLB file extension.
@@ -54,7 +55,8 @@ QUAD_SECTION_IDX_OMNI = 6
 QUAD_SECTION_ORDER = ['TOP', 'BOTTOM', 'NORTH', 'EAST', 'SOUTH', 'WEST', 'OMNI']
 
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
-DEFAULT_COVERAGE = 9999
+# The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
+DEFAULT_COVERAGE = 99999
 
 # A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
 PLATE_HEIGHT = Decimal("0.4")
