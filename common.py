@@ -20,7 +20,7 @@ Various functions and collections used in multiple classes.
 
 @author: Demian Wright
 '''
-
+from math import isnan
 from string import ascii_lowercase
 from . import const
 
@@ -74,3 +74,22 @@ def rotate(xyz, forward_axis):
     rotated.append(xyz[const.Z])
 
     return rotated
+
+
+def to_float_or_none(value):
+    """Converts the specified value to a float if it is numerical, or None if it is not.
+
+    Args:
+        value (object): Object to be converted to a float.
+
+    Returns:
+        A float representing the object or None if the object was not numerical.
+    """
+    try:
+        num = float(value)
+
+        if isnan(num):
+            return None
+        return num
+    except ValueError:
+        return None

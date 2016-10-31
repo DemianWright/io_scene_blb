@@ -22,6 +22,7 @@ A module for exporting Blender data into the BLB format.
 '''
 
 import bpy
+
 from . import const, logger, blb_processor, blb_writer
 
 # The export mediator.
@@ -38,7 +39,6 @@ def build_grid_priority_tuples(properties):
         A tuple containing the grid definition object prefixes in the first element and the grid symbols in the same order in the second element or None if one or more definition had the same priority which leads to undefined behavior and is disallowed.
     """
     # There are exactly 5 prefixes.
-    # Initialize a 5 element list.
     prefixes = [None] * 5
 
     # Go through every priority individually.

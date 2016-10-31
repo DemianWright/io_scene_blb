@@ -40,6 +40,7 @@ from bpy_extras.io_utils import ExportHelper
 from . import export_blb, const
 
 # TODO: Rewrite all docstrings to follow the Google style guide or something.
+# TODO: Save properties.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
@@ -110,10 +111,21 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         description="The scale to export the brick at",
         subtype='PERCENTAGE',
         precision=3,
-        step=1.0,
+        step=1,
         default=100.0,
         min=0.001,
         soft_max=400.0,
+    )
+
+    # ---------
+    # Precision
+    # ---------
+    # Smaller values will increase floating point errors in the exported brick.
+    # Larger values will decrease the quality of the visuals as vertex positions will become more deformed
+    float_precision = StringProperty(
+        name="Precision",
+        description="The precision to round all floating point values (e.g. vertex coordinates) to. Changing this value is discouraged unless you know what you're doing. 16 decimal places supported.",
+        default="0.000001",
     )
 
     # --------
@@ -397,6 +409,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         file_name = bpy.path.ensure_ext(bpy.path.display_name_from_filepath(self.filepath), self.filename_ext)
 
         # The absolute path to the directory where the currently open file is in.
+        # TODO: This is wrong, should be the path in the export dialog.
         export_dir = bpy.path.abspath("//")
 
         # The name of the BLB file to export.
@@ -609,10 +622,13 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             col = split.column()
             col.prop(self, "write_log_warnings")
 
+        # Property: Precision
+        layout.prop(self, "float_precision")
 
 # =============
 # Blender Stuff
 # =============
+
 
 def menu_export(self, context):
     """Adds the export option into the export menu."""

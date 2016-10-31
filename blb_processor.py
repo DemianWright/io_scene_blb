@@ -21,10 +21,8 @@ A module for processing Blender data into the BLB file format for writing.
 @author: Demian Wright
 '''
 
-# TODO: Remove all implicit rounding.
-
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
-from math import ceil, isnan
+from math import ceil
 from mathutils import Vector
 from . import logger, common, const
 
@@ -33,6 +31,13 @@ from . import logger, common, const
 # E.g. 1234.56 has a precision of 6, not 2.
 setcontext(Context(rounding=ROUND_HALF_UP))
 
+# Globals.
+
+# Number of decimal places to round floating point numbers to when performing calculations.
+# The value was chosen to eliminate most floating points errors but it does
+# have the side effect of quantizing the positions of all vertices to
+# multiples of the value since everything is rounded using this precision.
+__CALCULATION_FP_PRECISION_STR = None
 
 # =================
 # BrickBounds Class
@@ -120,7 +125,7 @@ def __is_even(value):
     return value % 2 == 0
 
 
-def __to_decimal(value, quantize=const.CALCULATION_FP_PRECISION_STR):
+def __to_decimal(value, quantize=None):
     """Creates a Decimal number of the specified value and rounds it to the closest specified quantize value.
     The number of decimal digits in the quantize value will determine the number of decimal digits in the returned value.
 
@@ -128,11 +133,14 @@ def __to_decimal(value, quantize=const.CALCULATION_FP_PRECISION_STR):
         value (number): A numerical value to create a Decimal out of.
         quantize (string or Decimal): The optional value to round the specified number to.
                                       The value may be given as a string or a Decimal number.
-                                      If no value is specified, the default floating point precision will be used.
+                                      If no value is specified, the user-specified floating point precision will be used.
 
     Returns:
         A Decimal representation of the specified value as the closest multiple of the quantize value, with half rounded up.
     """
+    if quantize is None:
+        quantize = __CALCULATION_FP_PRECISION_STR
+
     # Make a Decimal out of the quantize value if it already isn't.
     if isinstance(quantize, str):
         quantize = Decimal(quantize)
@@ -159,7 +167,7 @@ def __to_decimal(value, quantize=const.CALCULATION_FP_PRECISION_STR):
     return ((value * fraction).quantize(Decimal("1")) / fraction).quantize(quantize)
 
 
-def __to_decimals(values, quantize=const.CALCULATION_FP_PRECISION_STR):
+def __to_decimals(values, quantize=None):
     """Creates Decimal numbers out of the values in the specified sequence and rounds them to the specified round_to_value.
     The number of decimal digits in the quantize value will determine the number of decimal digits in the returned values.
 
@@ -167,14 +175,18 @@ def __to_decimals(values, quantize=const.CALCULATION_FP_PRECISION_STR):
         values (sequence of numbers): A sequence of numerical values to create Decimals out of.
         quantize (string or Decimal): The optional value to round the specified numbers to.
                                       The value may be given as a string or a Decimal number.
-                                      If no value is specified, the default floating point precision will be used.
+                                      If no value is specified, the user-specified floating point precision will be used.
 
     Returns:
         A list of Decimal representations of the specified values as the closest multiple of the quantize value, with half rounded up.
     """
     result = []
 
+    if quantize is None:
+        quantize = __CALCULATION_FP_PRECISION_STR
+
     for val in values:
+        # ROUND & CAST
         result.append(__to_decimal(val, quantize))
 
     return result
@@ -308,6 +320,7 @@ def __sequence_z_to_plates(xyz):
     If the given sequence does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
     """
     if len(xyz) == 3:
+        # ROUND & CAST
         sequence = __to_decimals(xyz)
         sequence[const.Z] /= const.PLATE_HEIGHT
         return sequence
@@ -331,19 +344,25 @@ def __round_to_plate_coordinates(local_coordinates, brick_dimensions):
     # Plates can only be 1.0 units long on the X and Y axes.
     # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
     if __is_even(brick_dimensions[const.X]):
+        # ROUND & CAST
         result.append(__to_decimal(local_coordinates[const.X], "1.0"))
     else:
+        # ROUND & CAST
         result.append(__to_decimal(local_coordinates[const.X], "0.5"))
 
     if __is_even(brick_dimensions[const.Y]):
+        # ROUND & CAST
         result.append(__to_decimal(local_coordinates[const.Y], "1.0"))
     else:
+        # ROUND & CAST
         result.append(__to_decimal(local_coordinates[const.Y], "0.5"))
 
     # Round to the nearest full plate height. (Half is rounded up)
     if __is_even(brick_dimensions[const.Z] / const.PLATE_HEIGHT):
+        # ROUND & CAST
         result.append(__to_decimal(local_coordinates[const.Z], const.PLATE_HEIGHT))
     else:
+        # ROUND & CAST
         result.append(__to_decimal(local_coordinates[const.Z], (const.PLATE_HEIGHT / Decimal("2.0"))))
 
     return result
@@ -368,8 +387,8 @@ def __calculate_center(object_minimum_coordinates, object_dimensions):
 
 def __world_to_local(coordinates, new_origin):
     """Translates the specified coordinates to be relative to the specified new origin coordinates.
-
     Commonly used to translate coordinates from world space (centered on (0, 0, 0)) to local space (arbitrary center).
+    Performs rounding with __to_decimals().
 
     Args:
         coordinates (sequence of numbers): The sequence of XYZ coordinates to be translated.
@@ -380,10 +399,12 @@ def __world_to_local(coordinates, new_origin):
     """
     # Make the coordinates Decimals if all of them are not.
     if not all(isinstance(coord, Decimal) for coord in coordinates):
+        # ROUND & CAST
         coordinates = __to_decimals(coordinates)
 
     # Make the new origin Decimals if all of them are not.
     if not all(isinstance(coord, Decimal) for coord in new_origin):
+        # ROUND & CAST
         new_origin = __to_decimals(new_origin)
 
     return [old_coord - new_origin[index] for index, old_coord in enumerate(coordinates)]
@@ -407,25 +428,6 @@ def __mirror(xyz, forward_axis):
         mirrored[const.X] = -mirrored[const.X]
 
     return mirrored
-
-
-def __to_float_or_none(value):
-    """Converts the specified value to a float if it is numerical, or None if it is not.
-
-    Args:
-        value (object): Object to be converted to a float.
-
-    Returns:
-        A float representing the object or None if the object was not numerical.
-    """
-    try:
-        num = float(value)
-
-        if isnan(num):
-            return None
-        return num
-    except ValueError:
-        return None
 
 
 def __sequence_multiply(multiplier, sequence):
@@ -632,6 +634,7 @@ def __sort_quad(quad, bounds_dimensions, forward_axis):
     # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
     positions = quad[0]
 
+    # ROUND & CAST
     # Divide all dimension values by 2 to get the local bounding plane values.
     # The dimensions are in Blender units so Z height needs to be converted to plates.
     local_bounds = __sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions])
@@ -784,6 +787,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     Returns:
         The modified blb_data object containing the bounds data.
     """
+    # ROUND & CAST
     # Get the dimensions of the Blender object and convert the height to plates.
     bounds_size = __sequence_z_to_plates(bounds_data.dimensions)
 
@@ -854,7 +858,7 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
 
     bounds_data.dimensions = bounds_size
 
-    # The minimum and maximum calculated world coordinates.
+    # ROUND & CAST: The minimum and maximum calculated world coordinates.
     bounds_data.world_coords_min = __to_decimals(min_coord)
     bounds_data.world_coords_max = __to_decimals(max_coord)
 
@@ -1217,6 +1221,7 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
 
             processed += 1
 
+            # ROUND & CAST
             # Add the center and dimensions to the definition data as a tuple.
             # The coordinates and dimensions are in plates.
             collisions.append((__sequence_z_to_plates(center), __sequence_z_to_plates(dimensions)))
@@ -1430,7 +1435,7 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
         if values[0] == properties.defprefix_color:
             # Convert all elements to floats and ignore elements that would be None.
             # It does do the function twice but I doubt the object names will be so long that this will be an issue plus the function is simple.
-            floats = [__to_float_or_none(val) for val in values if __to_float_or_none(val) is not None]
+            floats = [common.to_float_or_none(val) for val in values if common.to_float_or_none(val) is not None]
             size = len(floats)
 
             # Are all four values defined?
@@ -1496,6 +1501,7 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
                 # Center the position to the current bounds object: coordinates are now in local object space.
                 # USER SCALE: Multiply by user defined scale.
                 coords = __sequence_multiply(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, vert_index))
+                # ROUND & CAST
                 positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center)))
 
             # =======
@@ -1506,11 +1512,15 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
             if poly.use_smooth:
                 # Smooth shading.
                 # For every vertex index in the loop_indices, calculate the vertex normal and add it to the list.
+                # Do not round smooth shaded normals, that would cause visual errors.
                 normals = [__vert_index_to_normal_vector(obj, index) for index in reversed(loop_indices)]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-                normals = [poly.normal, ] * 4
+                # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
+                # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
+                # ROUND & CAST
+                normals = [__to_decimals(poly.normal), ] * 4
 
             # ===
             # UVs
@@ -1545,7 +1555,7 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                        name = __to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
+                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
 
                         if vertex_color_alpha is None:
                             if name is None:
@@ -1668,6 +1678,14 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
     Returns:
         A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or an error message string to display to the user.
     """
+    global __CALCULATION_FP_PRECISION_STR
+
+    if common.to_float_or_none(properties.float_precision) is None:
+        return 'Invalid floating point precision value given.'
+    else:
+        logger.info("Using floating point precision: {}".format(properties.float_precision))
+        __CALCULATION_FP_PRECISION_STR = properties.float_precision
+
     # Determine which objects to process.
     object_sequence = __get_object_sequence(context, properties)
 
@@ -1693,4 +1711,4 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
             # Format and return the data for writing.
             return __format_blb_data(properties.axis_blb_forward, blb_data)
     else:
-        return "No objects to export."
+        return 'No objects to export.'
