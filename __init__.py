@@ -124,7 +124,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # Larger values will decrease the quality of the visuals as vertex positions will become more deformed
     float_precision = StringProperty(
         name="Precision",
-        description="The precision to round all floating point values (e.g. vertex coordinates) to. Changing this value is discouraged unless you know what you're doing. 16 decimal places supported.",
+        description="The precision to round all floating point values (e.g. vertex coordinates) to. Changing this value is discouraged unless you know what you're doing. 16 decimal places supported. Use 0 to disable.",
         default="0.000001",
     )
 

@@ -1680,11 +1680,18 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
     """
     global __CALCULATION_FP_PRECISION_STR
 
-    if common.to_float_or_none(properties.float_precision) is None:
+    precision = properties.float_precision
+
+    if common.to_float_or_none(precision) is None:
         return 'Invalid floating point precision value given.'
     else:
-        logger.info("Using floating point precision: {}".format(properties.float_precision))
-        __CALCULATION_FP_PRECISION_STR = properties.float_precision
+        if precision == '0':
+            logger.info("Setting floating point precision to minimum.")
+            # We're only writing 16 decimals anyway.
+            precision = "0.{}1".format('0' * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
+
+        logger.info("Using floating point precision: {}".format(precision))
+        __CALCULATION_FP_PRECISION_STR = precision
 
     # Determine which objects to process.
     object_sequence = __get_object_sequence(context, properties)
