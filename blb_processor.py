@@ -1445,8 +1445,6 @@ def __process_mesh_data(properties, bounds_data, meshes):
 
                 # Get the vertex world position from the vertex index.
                 # Center the position to the current bounds object: coordinates are now in local object space.
-                # TODO: Why on earth am I rounding the vertex coordinates to the closest
-                # plate height? This needs to be a property, not something done automatically!
                 # USER SCALE: Multiply by user defined scale.
                 coords = __sequence_multiply(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, vert_index))
                 positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center)))
