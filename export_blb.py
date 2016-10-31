@@ -61,6 +61,25 @@ def build_grid_priority_tuples(properties):
         return (tuple(prefixes), tuple(symbols))
 
 
+def build_quad_sort_definitions(properties):
+    """Creates tuple of quad section definitions used to sort quads.
+
+    Args:
+        properties (Blender properties object): A Blender object containing user preferences.
+
+    Returns:
+        A tuple containing the definitions for manual quad section sorting in the correct order.
+    """
+    # The definitions must be in the same order as const.QUAD_SECTION_ORDER
+    return (properties.defprefix_quad_sort_top,
+            properties.defprefix_quad_sort_bottom,
+            properties.defprefix_quad_sort_north,
+            properties.defprefix_quad_sort_east,
+            properties.defprefix_quad_sort_south,
+            properties.defprefix_quad_sort_west,
+            properties.defprefix_quad_sort_omni)
+
+
 def export(context, properties, export_dir, export_file, file_name):
     """Processes the data from the scene and writes it to a BLB file.
 
@@ -93,11 +112,12 @@ def export(context, properties, export_dir, export_file, file_name):
     else:
         grid_def_obj_prefix_priority = result[0]
         grid_definitions_priority = result[1]
+        quad_sort_definitions = build_quad_sort_definitions(properties)
 
         # Process Blender data into a writable format.
         # The context variable contains all the Blender data.
         # The properties variable contains all user-defined settings to take into account when processing the data.
-        data = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority)
+        data = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority, quad_sort_definitions)
 
         # Got the BLBData we need.
         if isinstance(data, blb_processor.BLBData):

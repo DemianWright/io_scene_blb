@@ -121,7 +121,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     calculate_coverage = BoolProperty(
         name="Coverage",
-        description="Calculate brick coverage",
+        description="Calculate brick coverage. Coverage relies on the quad section data to be of any use. The coverage system intelligently hides (non-omni) quads on the side of the brick when it is covered by other bricks.",
         default=False,
     )
 
@@ -197,6 +197,16 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=False,
     )
 
+    # -------
+    # Sorting
+    # -------
+
+    auto_sort_quads = BoolProperty(
+        name="Automatic Quad Sorting",
+        description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
+        default=False,
+    )
+
     # -----------
     # Definitions
     # -----------
@@ -224,6 +234,52 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         description="Prefix for specifying a color for an object. Prefix must be followed by 4 values (red green blue alpha) separated with spaces using a comma (,) as decimal separator. Vertex colors are overridden by colors defined in object names.",
         default="c",
     )
+
+    # Sections
+
+    defprefix_quad_sort_top = StringProperty(
+        name="Section, Top",
+        description="Prefix for specifying that the object's vertices belong to the top section of the brick (used in brick coverage for hiding faces to improve performance)",
+        default="st",
+    )
+
+    defprefix_quad_sort_bottom = StringProperty(
+        name="Section, Bottom",
+        description="Prefix for specifying that the object's vertices belong to the bottom section of the brick (used in brick coverage for hiding faces to improve performance)",
+        default="sb",
+    )
+
+    defprefix_quad_sort_north = StringProperty(
+        name="Section, North",
+        description="Prefix for specifying that the object's vertices belong to the north section of the brick (used in brick coverage for hiding faces to improve performance)",
+        default="sn",
+    )
+
+    defprefix_quad_sort_east = StringProperty(
+        name="Section, East",
+        description="Prefix for specifying that the object's vertices belong to the east section of the brick (used in brick coverage for hiding faces to improve performance)",
+        default="se",
+    )
+
+    defprefix_quad_sort_south = StringProperty(
+        name="Section, South",
+        description="Prefix for specifying that the object's vertices belong to the south section of the brick (used in brick coverage for hiding faces to improve performance)",
+        default="ss",
+    )
+
+    defprefix_quad_sort_west = StringProperty(
+        name="Section, West",
+        description="Prefix for specifying that the object's vertices belong to the west section of the brick (used in brick coverage for hiding faces to improve performance)",
+        default="sw",
+    )
+
+    defprefix_quad_sort_omni = StringProperty(
+        name="Section, Omni",
+        description="Prefix for specifying that the object's vertices belong to the omni section of the brick, these vertices will never be hidden",
+        default="so",
+    )
+
+    # Brick Grid
 
     defprefix_gridx = StringProperty(
         name="Brick Grid x",
@@ -304,7 +360,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ----------
     terse_mode = BoolProperty(
         name="Terse Mode",
-        description="Exclude optional text from the BLB file making it slightly smaller but harder to read",
+        description="Exclude optional text from the BLB file making it slightly smaller and harder to read (not recommended, size difference is negligible)",
         default=False,
     )
 
@@ -454,6 +510,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_coverage_property("South", "south", self.coverage_east_calculate)
             draw_coverage_property("West", "west", self.coverage_west_calculate)
 
+        # Properties: Quad Sorting
+        layout.prop(self, "auto_sort_quads")
+
         # Properties: Custom Definition Prefixes
         layout.prop(self, "custom_definitions")
 
@@ -495,6 +554,16 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_definition_property("Brick Bounds", "defprefix_bounds")
             draw_definition_property("Collision Cuboids", "defprefix_collision")
             draw_definition_property("Object Colors", "defprefix_color")
+
+            # Sorting definitions.
+
+            draw_definition_property("Section, Top", "defprefix_quad_sort_top")
+            draw_definition_property("Section, Bottom", "defprefix_quad_sort_bottom")
+            draw_definition_property("Section, North", "defprefix_quad_sort_north")
+            draw_definition_property("Section, East", "defprefix_quad_sort_east")
+            draw_definition_property("Section, South", "defprefix_quad_sort_south")
+            draw_definition_property("Section, West", "defprefix_quad_sort_west")
+            draw_definition_property("Section, Omni", "defprefix_quad_sort_omni")
 
             # Grid definitions.
 

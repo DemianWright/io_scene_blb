@@ -457,6 +457,53 @@ class ZeroSizeException(Exception):
     pass
 
 
+def __split_object_name_to_tokens(name):
+    """Splits a Blender object name into its token parts.
+    Correctly takes into account duplicate object names with .### at the end.
+
+    Args:
+        name (string): A Blender object name.
+
+    Returns:
+        The name split into a list of strings at whitespace characters.
+    """
+    # If the object name has "." as the fourth last character, it could mean that Blender has added the index (e.g. ".002") to the end of the object name because an object with the same name already exists.
+    # Removing the end of the name fixes an issue where for example two grid definition objects exist with identical names (which is very common) "gridx" and "gridx.001".
+    # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
+    if len(name) > 4 and name[-4] == '.':
+        # Remove the last 4 characters of from the name before splitting at whitespace.
+        # I do not want to modify the obj_name variable as it is more useful to the user in full.
+        tokens = name[:-4].lower().split()
+    else:
+        # Split the object name at whitespace.
+        tokens = name.lower().split()
+
+    return tokens
+
+
+def __get_tokens_from_object_name(name, tokens):
+    """Retrieves a set of common tokens from the specified name and sequence of tokens.
+
+    Args:
+        name (string or sequence of strings): A raw Blender object name or a sequence of tokens.
+        tokens (sequence of strings): A sequence of tokens.
+
+    Returns:
+        A set of tokens that exist both in the Blender object name and the specified sequence of tokens, in the order they appeared in the name.
+    """
+    if isinstance(name, str):
+        name_tokens = __split_object_name_to_tokens(name)
+    else:
+        name_tokens = name
+
+    # Convert name tokens and wanted tokens into sets.
+    # Get their intersection.
+    # Sort the set according to the order the elements were in the object tokens.
+    # Returned tokens contain all tokens that were in the object tokens AND in the wanted tokens.
+    # It contains zero or more tokens.
+    return sorted(set(name_tokens) & set(tokens), key=name_tokens.index)
+
+
 def __modify_brick_grid(brick_grid, volume, symbol):
     """Modifies the specified brick grid by adding the specified symbol to every grid slot specified by the volume.
 
@@ -584,8 +631,6 @@ def __sort_quad(quad, bounds_dimensions, forward_axis):
     Returns:
         The index of the section name in const.QUAD_SECTION_ORDER sequence.
     """
-    # TODO: Manual quad sorting.
-
     # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
     positions = quad[0]
 
@@ -1249,24 +1294,8 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
     # Process the objects in reverse: from oldest to newest.
     for obj in reversed(objects):
         obj_name = obj.name
-
-        # If the object name has "." as the fourth last character, it could mean that Blender has added the index (e.g. ".002") to the end of the object name because an object with the same name already exists.
-        # Removing the end of the name fixes an issue where for example two grid definition objects exist with identical names (which is very common) "gridx" and "gridx.001".
-        # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
-        if len(obj_name) > 4 and obj_name[-4] == '.':
-            # Remove the last 4 characters of from the name before splitting at whitespace.
-            # I do not want to modify the obj_name variable as it is more useful to the user in full.
-            obj_name_elements = obj_name[:-4].lower().split()
-        else:
-            # Split the object name at whitespace.
-            obj_name_elements = obj_name.lower().split()
-
-        # Convert name list and definition prefixes into sets.
-        # Get their intersection.
-        # Sort the set according to the order the elements were in the object name.
-        # object_grid_definitions now contains all the grid definition prefixes found in the object name.
-        # It has zero or more values from the grid_def_obj_prefix_priority tuple.
-        object_grid_definitions = sorted(set(obj_name_elements) & set(grid_def_obj_prefix_priority), key=obj_name_elements.index)
+        obj_name_tokens = __split_object_name_to_tokens(obj_name)
+        object_grid_definitions = __get_tokens_from_object_name(obj_name_tokens, grid_def_obj_prefix_priority)
 
         # Ignore non-mesh objects
         if obj.type != "MESH":
@@ -1281,7 +1310,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
             continue
 
         # Is the current object a bounds definition object?
-        elif properties.defprefix_bounds in obj_name_elements:
+        elif properties.defprefix_bounds in obj_name_tokens:
             if bounds_data is None:
                 bounds_data = __process_bounds_object(properties.export_scale, obj)
                 blb_data = __record_bounds_data(properties, blb_data, bounds_data)
@@ -1294,7 +1323,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
                 continue
 
         # Is the current object a collision definition object?
-        elif properties.defprefix_collision in obj_name_elements:
+        elif properties.defprefix_collision in obj_name_tokens:
             # Collision definition objects cannot be processed until after the bounds have been defined.
             collision_objects.append(obj)
 
@@ -1348,13 +1377,14 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
-def __process_mesh_data(properties, bounds_data, meshes):
-    """Gets all the necessary data from the specified Blender objects and sorts all the quads of the meshes into sections for brick coverage to work.
+def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_objects):
+    """Gets all the necessary data from the specified Blender objects and sorts all the quads of the mesh_objects into sections for brick coverage to work.
 
     Args:
         properties (Blender properties object): A Blender object containing user preferences.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
-        meshes (sequence of Blender objects): Meshes to be processed.
+        quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
+        mesh_objects (sequence of Blender objects): Meshes to be processed.
 
     Returns:
         A sequence of mesh data sorted into sections.
@@ -1362,12 +1392,16 @@ def __process_mesh_data(properties, bounds_data, meshes):
     quads = []
     count_tris = 0
     count_ngon = 0
+    count_manually_sorted_quads = 0
 
-    for obj in meshes:
+    for obj in mesh_objects:
         object_name = obj.name
-        logger.info("Exporting object: {}".format(object_name))
-
         current_data = obj.data
+
+        # Alpha is per-object.
+        vertex_color_alpha = None
+
+        logger.info("Exporting object: {}".format(object_name))
 
         # Do UV layers exist?
         if current_data.uv_layers:
@@ -1394,7 +1428,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
         # Split object name at whitespaces.
         values = name.replace(',', '.').split()
 
-        # Does the object name begin with the letter C and a whitespace character signifying that it defines the object's color?
+        # Does the object name begin with the color definition and a whitespace character signifying that it defines the object's color?
         if values[0] == properties.defprefix_color:
             # Convert all elements to floats and ignore elements that would be None.
             # It does do the function twice but I doubt the object names will be so long that this will be an issue plus the function is simple.
@@ -1415,8 +1449,22 @@ def __process_mesh_data(properties, bounds_data, meshes):
                 logger.info(
                     "  Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name))
 
-        # Alpha is per-object.
-        vertex_color_alpha = None
+        # ===================
+        # Manual Quad Sorting
+        # ===================
+        # Manual sorting is per-object.
+        quad_sections = __get_tokens_from_object_name(object_name, quad_sort_definitions)
+        section_count = len(quad_sections)
+
+        if section_count > 1:
+            section = quad_sort_definitions.index(quad_sections[0])
+            logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(object_name, section_count, section))
+            count_manually_sorted_quads += 1
+        elif section_count == 1:
+            section = quad_sort_definitions.index(quad_sections[0])
+            count_manually_sorted_quads += 1
+        else:
+            section = None
 
         # Process quad data.
         for poly in current_data.polygons:
@@ -1475,6 +1523,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
             else:
                 # No UVs present, use the defaults.
                 # These UV coordinates with the SIDE texture lead to a blank textureless face.
+                # TODO: Correct UV calculation according to the texture name.
                 uvs = (Vector((0.5, 0.5)),) * 4
 
             # =============
@@ -1522,7 +1571,7 @@ def __process_mesh_data(properties, bounds_data, meshes):
                 texture = "SIDE"
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-            quads.append([positions, normals, uvs, colors, texture])
+            quads.append([positions, normals, uvs, colors, texture, section])
 
     if count_tris > 0:
         logger.warning("  {} triangles degenerated to quads.".format(count_tris))
@@ -1539,10 +1588,23 @@ def __process_mesh_data(properties, bounds_data, meshes):
 
     # Sort quads into sections.
     for quad in quads:
-        # Calculate the section name the quad belongs to.
-        # Get the index of that section name in the QUAD_SECTION_ORDER list.
-        # Append the quad data to the list in the tuple at that index.
-        sorted_quads[__sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)].append(quad)
+        section_idx = const.QUAD_SECTION_IDX_OMNI
+
+        # Does user want to automatically sort quads?
+        # And the current quad does not have a manual definition?
+        if properties.auto_sort_quads and quad[5] is None:
+            # Calculate the section name the quad belongs to.
+            # Get the index of that section name in the QUAD_SECTION_ORDER list.
+            section_idx = __sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)
+        # Else: No automatic sorting or the quad had a manual sort, in which case there is no point in calculating the section.
+
+        # Regardless of automatic sorting, manual sort is always available.
+        if quad[5] is not None:
+            section_idx = quad[5]
+
+        # Append the quad data to the list in the tuple at the index of the section.
+        # Drop the section index from the data since it is no longer needed.
+        sorted_quads[section_idx].append(quad[:-1])
 
     return sorted_quads
 
@@ -1595,14 +1657,15 @@ def __format_blb_data(forward_axis, blb_data):
     return blb_data
 
 
-def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority):
+def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority, quad_sort_definitions):
     """Processes the specified Blender data into a format that can be written in a BLB file.
 
     Args:
         context (Blender context object): A Blender object containing scene data.
         properties (Blender properties object): A Blender object containing user preferences.
-        grid_def_obj_prefix_priority (sequence): A sequence containing the brick grid definition object prefixes in reverse priority order.
+        grid_def_obj_prefix_priority (sequence): A sequence containing the user-defined brick grid definitions in reverse priority order.
         grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_prefix_priority.
+        quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
 
     Returns:
         A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or an error message string to display to the user.
@@ -1611,7 +1674,7 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
     object_sequence = __get_object_sequence(context, properties)
 
     if len(object_sequence) > 0:
-        # Process the definition objects (collision, brick grid, and bounds) first and separate the visible meshes from the object sequence.
+        # Process the definition objects (collision, brick grid, and bounds) first and separate the visible mesh_objects from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
         result = __process_definition_objects(properties, object_sequence, grid_def_obj_prefix_priority, grid_definitions_priority)
 
@@ -1621,13 +1684,13 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
         else:
             blb_data = result[0]
             bounds_data = result[1]
-            meshes = result[2]
+            mesh_objects = result[2]
 
             # Calculate the coverage data based on the brick size.
             blb_data.coverage = __process_coverage(properties, blb_data)
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            blb_data.quads = __process_mesh_data(properties, bounds_data, meshes)
+            blb_data.quads = __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_objects)
 
             # Format and return the data for writing.
             return __format_blb_data(properties.axis_blb_forward, blb_data)
