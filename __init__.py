@@ -117,6 +117,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         soft_max=400.0,
     )
 
+    # -------------
+    # Use Modifiers
+    # -------------
+    use_modifiers = BoolProperty(
+        name="Apply Modifiers",
+        description="Take modifiers into account (at preview settings) when exporting objects, does not apply the modifiers in the interface",
+        default=True,
+    )
+
     # --------
     # Coverage
     # --------
@@ -473,6 +482,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Export Scale
         layout.prop(self, "export_scale")
+
+        # Property: Export Scale
+        layout.prop(self, "use_modifiers")
 
         # Properties: Coverage
         layout.prop(self, "calculate_coverage")

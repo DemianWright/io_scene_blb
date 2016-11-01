@@ -23,8 +23,12 @@ A module for processing Blender data into the BLB file format for writing.
 
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
 from math import ceil
+import bpy
+
 from mathutils import Vector
+
 from . import logger, common, const
+
 
 # Set the Decimal number context for operations: 0.5 is rounded up. (Precision can be whatever.)
 # NOTE: prec=n limits the number of digits for the whole number.
@@ -259,30 +263,32 @@ def __record_world_min_max(sequence_min, sequence_max, obj):
             sequence_max[i] = max(sequence_max[i], coordinates[i])
 
 
-def __vert_index_to_world_coord(obj, index):
+def __vert_index_to_world_coord(obj, mesh, index):
     """Calculates the world coordinates for the vertex at the specified index in the specified Blender object.
 
     Args:
-        obj (Blender object): The Blender object where the vertex is stored.
-        index (int): The index of the vertex in the specified object's vertex data sequence.
+        obj (Blender object): The Blender object that is the parent of the mesh.
+        mesh (Blender mesh): The Blender mesh where the vertex is stored.
+        index (int): The index of the vertex in the specified mesh's vertex data sequence.
 
     Returns:
         A Vector of the world coordinates of the vertex.
     """
-    return obj.matrix_world * obj.data.vertices[index].co
+    return obj.matrix_world * mesh.vertices[index].co
 
 
-def __vert_index_to_normal_vector(obj, index):
+def __loop_index_to_normal_vector(obj, mesh, index):
     """Calculates the normalized vertex normal vector for the vertex at the specified index in the specified Blender object.
 
     Args:
-        obj (Blender object): The Blender object where the vertex is stored.
-        index (int): The index of the vertex in the specified object's vertex data sequence.
+        obj (Blender object): The Blender object that is the parent of the mesh.
+        mesh (Blender mesh): The Blender mesh where the vertex is stored.
+        index (int): The index of the loop in the specified objects's loop data sequence.
 
     Returns:
         A normalized normal vector of the specified vertex.
     """
-    return (obj.matrix_world.to_3x3() * obj.data.vertices[obj.data.loops[index].vertex_index].normal).normalized()
+    return (obj.matrix_world.to_3x3() * mesh.vertices[mesh.loops[index].vertex_index].normal).normalized()
 
 
 def __all_within_bounds(local_coordinates, bounding_dimensions):
@@ -1406,10 +1412,11 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
-def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_objects):
+def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions, mesh_objects):
     """Gets all the necessary data from the specified Blender objects and sorts all the quads of the mesh_objects into sections for brick coverage to work.
 
     Args:
+        context (Blender context object): A Blender object containing scene data.
         properties (Blender properties object): A Blender object containing user preferences.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
@@ -1421,7 +1428,6 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
     quads = []
     count_tris = 0
     count_ngon = 0
-    count_manually_sorted_quads = 0
 
     for obj in mesh_objects:
         object_name = obj.name
@@ -1488,15 +1494,17 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
         if section_count > 1:
             section = quad_sort_definitions.index(quad_sections[0])
             logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(object_name, section_count, section))
-            count_manually_sorted_quads += 1
         elif section_count == 1:
             section = quad_sort_definitions.index(quad_sections[0])
-            count_manually_sorted_quads += 1
         else:
             section = None
 
+        # This function creates a new mesh datablock.
+        # It needs to be manually deleted later to release the memory, otherwise it will stick around until Blender is closed.
+        mesh = obj.to_mesh(context.scene, properties.use_modifiers, 'PREVIEW', False, False)
+
         # Process quad data.
-        for poly in current_data.polygons:
+        for poly in mesh.polygons:
             # ===================
             # Vertex loop indices
             # ===================
@@ -1520,13 +1528,13 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
 
             # Reverse the loop_indices tuple. (Blender seems to keep opposite winding order.)
             for loop_index in reversed(loop_indices):
-                # Get the vertex index in the object from the loop.
-                vert_index = obj.data.loops[loop_index].vertex_index
+                # Get the vertex index in the mesh from the loop.
+                vert_index = mesh.loops[loop_index].vertex_index
 
                 # Get the vertex world position from the vertex index.
                 # Center the position to the current bounds object: coordinates are now in local object space.
                 # USER SCALE: Multiply by user defined scale.
-                coords = __multiply_sequence(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, vert_index))
+                coords = __multiply_sequence(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, mesh, vert_index))
                 # ROUND & CAST
                 positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center)))
 
@@ -1535,15 +1543,15 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
             # =======
             if poly.use_smooth:
                 # Smooth shading.
-                # For every vertex index in the loop_indices, calculate the vertex normal and add it to the list.
+                # For every loop index in the loop_indices, calculate the vertex normal and add it to the list.
                 # Do not round smooth shaded normals, that would cause visual errors.
-                normals = [__vert_index_to_normal_vector(obj, index) for index in reversed(loop_indices)]
+                normals = [__loop_index_to_normal_vector(obj, mesh, loop_index) for loop_index in reversed(loop_indices)]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
-                # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALs.
+                # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
                 # ROUND & CAST
                 normals = [__to_decimals(obj.matrix_world * poly.normal), ] * 4
 
@@ -1606,13 +1614,18 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
             quads.append([positions, normals, uvs, colors, texture, section])
 
+        # Delete the mesh datablock that was created earlier.
+        bpy.data.meshes.remove(mesh)
+
     if count_tris > 0:
         logger.warning("  {} triangles degenerated to quads.".format(count_tris))
 
     if count_ngon > 0:
         logger.warning("  {} n-gons skipped.".format(count_ngon))
 
-    if len(quads) == 0:
+    count_quads = len(quads)
+
+    if count_quads == 0:
         return 'No faces to export.'
     else:
         # Create an empty list for each quad section.
@@ -1641,6 +1654,8 @@ def __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_obj
             # Append the quad data to the list in the tuple at the index of the section.
             # Drop the section index from the data since it is no longer needed.
             sorted_quads[section_idx].append(quad[:-1])
+
+        logger.info("  Exported {} quads.".format(count_quads))
 
         return sorted_quads
 
@@ -1741,7 +1756,7 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
             blb_data.coverage = __process_coverage(properties, blb_data)
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            quads = __process_mesh_data(properties, bounds_data, quad_sort_definitions, mesh_objects)
+            quads = __process_mesh_data(context, properties, bounds_data, quad_sort_definitions, mesh_objects)
 
             if isinstance(quads, str):
                 # Something went wrong.
