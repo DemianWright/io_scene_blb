@@ -117,17 +117,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         soft_max=400.0,
     )
 
-    # ---------
-    # Precision
-    # ---------
-    # Smaller values will increase floating point errors in the exported brick.
-    # Larger values will decrease the quality of the visuals as vertex positions will become more deformed
-    float_precision = StringProperty(
-        name="Precision",
-        description="The precision to round all floating point values (e.g. vertex coordinates) to. Changing this value is discouraged unless you know what you're doing. 16 decimal places supported. Use 0 to disable.",
-        default="0.000001",
-    )
-
     # --------
     # Coverage
     # --------
@@ -391,6 +380,19 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         name="Only on Warnings",
         description="Only write a log file if warnings were generated",
         default=True,
+    )
+
+    # ---------
+    # Precision
+    # ---------
+    # Smaller values will increase floating point errors in the exported brick.
+    # Larger values will decrease the quality of the visuals as vertex positions will become more deformed
+    # Setting to 0 actually uses the minimum precision of 1e-16 since only 16 decimals are ever written to file.
+    # Some floats (like UV coordinates) are not rounded.
+    float_precision = StringProperty(
+        name="Precision",
+        description="The precision to round most floating point values (e.g. vertex coordinates) to. Changing this value is discouraged unless you know what you're doing. 16 decimal places supported. Use 0 to disable.",
+        default="0.000001",
     )
 
     # ===============
