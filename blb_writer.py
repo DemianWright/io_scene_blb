@@ -121,9 +121,9 @@ def write_file(properties, filepath, blb_data):
             # Write section length.
             file.write("{}\n".format(str(len(blb_data.quads[index]))))
 
-            for (positions, normals, uvs, colors, texture) in blb_data.quads[index]:
+            for (positions, normals, uvs, colors, texture_name) in blb_data.quads[index]:
                 # Face texture name.
-                file.write("\n{}{}\n".format("" if properties.terse_mode else "TEX:", texture))
+                file.write("\n{}{}\n".format("" if properties.terse_mode else "TEX:", texture_name))
 
                 # Vertex positions.
                 file.write("{}\n".format("" if properties.terse_mode else "POSITION:"))

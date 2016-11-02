@@ -1605,14 +1605,20 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # ================
             # BLB texture name
             # ================
+            texture_name = None
+
             if current_data.materials and current_data.materials[poly.material_index] is not None:
-                texture = current_data.materials[poly.material_index].name.upper()
-            else:
+                matname = current_data.materials[poly.material_index].name.upper()
+
+                if matname in const.VALID_BRICK_TEXTURES:
+                    texture_name = matname
+
+            if texture_name is None:
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                texture = "SIDE"
+                texture_name = 'SIDE'
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-            quads.append([positions, normals, uvs, colors, texture, section])
+            quads.append([positions, normals, uvs, colors, texture_name, section])
 
         # Delete the mesh datablock that was created earlier.
         bpy.data.meshes.remove(mesh)
