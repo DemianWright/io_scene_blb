@@ -251,43 +251,43 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     defprefix_quad_sort_top = StringProperty(
         name="Section, Top",
         description="Prefix for specifying that the object's vertices belong to the top section of the brick (used in brick coverage for hiding faces to improve performance)",
-        default="st",
+        default="qt",
     )
 
     defprefix_quad_sort_bottom = StringProperty(
         name="Section, Bottom",
         description="Prefix for specifying that the object's vertices belong to the bottom section of the brick (used in brick coverage for hiding faces to improve performance)",
-        default="sb",
+        default="qb",
     )
 
     defprefix_quad_sort_north = StringProperty(
         name="Section, North",
         description="Prefix for specifying that the object's vertices belong to the north section of the brick (used in brick coverage for hiding faces to improve performance)",
-        default="sn",
+        default="qn",
     )
 
     defprefix_quad_sort_east = StringProperty(
         name="Section, East",
         description="Prefix for specifying that the object's vertices belong to the east section of the brick (used in brick coverage for hiding faces to improve performance)",
-        default="se",
+        default="qe",
     )
 
     defprefix_quad_sort_south = StringProperty(
         name="Section, South",
         description="Prefix for specifying that the object's vertices belong to the south section of the brick (used in brick coverage for hiding faces to improve performance)",
-        default="ss",
+        default="qs",
     )
 
     defprefix_quad_sort_west = StringProperty(
         name="Section, West",
         description="Prefix for specifying that the object's vertices belong to the west section of the brick (used in brick coverage for hiding faces to improve performance)",
-        default="sw",
+        default="qw",
     )
 
     defprefix_quad_sort_omni = StringProperty(
         name="Section, Omni",
         description="Prefix for specifying that the object's vertices belong to the omni section of the brick, these vertices will never be hidden",
-        default="so",
+        default="qo",
     )
 
     # Brick Grid
