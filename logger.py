@@ -29,6 +29,8 @@ __WRITE_FILE = True
 __ON_WARNINGS_ONLY = True
 __HAS_WARNINGS = False
 
+# TODO: Message indent level.
+
 
 def configure(write_file, write_only_on_warnings):
     """Configures the logger with the specified options.

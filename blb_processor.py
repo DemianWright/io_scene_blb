@@ -224,6 +224,19 @@ def __are_ints(values):
     return True
 
 
+def __like_int(value):
+    """Checks if the specified string is like a pure integer.
+    Handles negative integers.
+
+    Args:
+        value (string): A string representing a number.
+
+    Returns:
+        True if the specified string is like an integer and has no fractional part.
+    """
+    return value.isdigit() or (value.startswith('-') and value[1:].isdigit())
+
+
 def __get_world_min(obj):
     """Gets the world space coordinates of the vertex in the specified object that is the closest to the world origin.
 
@@ -485,22 +498,25 @@ class ZeroSizeException(Exception):
     pass
 
 
-def __split_object_name_to_tokens(name):
+def __split_object_name_to_tokens(name, replace_commas=False):
     """Splits a Blender object name into its token parts.
     Correctly takes into account duplicate object names with .### at the end.
 
     Args:
         name (string): A Blender object name.
+        replace_commas (bool): Replace all commas with periods in the object name? (Default: False)
 
     Returns:
         The name split into a list of strings at whitespace characters.
     """
+    if replace_commas:
+        name = name.replace(',', '.')
+
     # If the object name has "." as the fourth last character, it could mean that Blender has added the index (e.g. ".002") to the end of the object name because an object with the same name already exists.
     # Removing the end of the name fixes an issue where for example two grid definition objects exist with identical names (which is very common) "gridx" and "gridx.001".
     # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
     if len(name) > 4 and name[-4] == '.':
         # Remove the last 4 characters of from the name before splitting at whitespace.
-        # I do not want to modify the obj_name variable as it is more useful to the user in full.
         tokens = name[:-4].lower().split()
     else:
         # Split the object name at whitespace.
@@ -895,6 +911,33 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
     return bounds_data
 
 
+def __get_color_values(tokens):
+    """Parses color values from the specified list of tokens, if they exist.
+    Colors can be defined with integers, floats, or both.
+    If integers are used, they are converted to floats by dividing with 255.
+
+    Args:
+        tokens (sequence of strings): A sequence to get colors values from.
+
+    Returns:
+        A list of 4 float representing red, green, blue, and alpha color values or None if all 4 values are not defined.
+    """
+    floats = []
+
+    for val in tokens:
+        if __like_int(val):
+            floats.append(int(val) / 255.0)
+        else:
+            # Value wasn't an integer, try a float.
+            fval = common.to_float_or_none(val)
+
+            # If value was a float.
+            if fval is not None:
+                floats.append(fval)
+
+    return floats
+
+
 def __process_bounds_object(export_scale, obj):
     """Processes a manually defined bounds Blender object.
 
@@ -1260,22 +1303,23 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
                 logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
                     obj.name, bounds_data.object_name))
 
+    defcount = len(definition_objects)
     # Log messages for collision definitions.
-    if len(definition_objects) == 0:
+    if defcount == 0:
         logger.warning("No collision definitions found. Default generated collision may be undesirable.")
-    elif len(definition_objects) == 1:
+    elif defcount == 1:
         if processed == 0:
             logger.warning(
-                "{} collision definition found but was not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
+                "{} collision definition found but was not processed. Default generated collision may be undesirable.".format(defcount))
         else:
-            logger.info("Processed {} of {} collision definition.".format(processed, len(definition_objects)))
+            logger.info("Processed {} of {} collision definition.".format(processed, defcount))
     else:
         # Found more than one.
         if processed == 0:
             logger.warning(
-                "{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(len(definition_objects)))
+                "{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(defcount))
         else:
-            logger.info("Processed {} of {} collision definitions.".format(processed, len(definition_objects)))
+            logger.info("Processed {} of {} collision definitions.".format(processed, defcount))
 
     return collisions
 
@@ -1324,6 +1368,9 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
     # The objects in the sequence are sorted so that the oldest created object is last.
     # Process the objects in reverse: from oldest to newest.
     for obj in reversed(objects):
+
+        # PROCESS TOKENS.
+
         obj_name = obj.name
         obj_name_tokens = __split_object_name_to_tokens(obj_name)
         object_grid_definitions = __get_tokens_from_object_name(obj_name_tokens, grid_def_obj_prefix_priority)
@@ -1448,29 +1495,21 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
         else:
             uv_data = None
 
+        # PROCESS TOKENS.
+
         # =============
         # Object Colors
         # =============
         colors = None
-        name = object_name.lower()
+        tokens = __split_object_name_to_tokens(object_name, True)
 
-        # If the fourth last character of the name is a period, remove the last four characters.
-        # Blender adds .### to the end of objects with duplicate names which can be confused for a floating point value.
-        if len(name) > 3 and name[-4] == '.':
-            name = name[:-4]
-
-        # Replace commas with dots because the decimals in object names must be defined using a comma.
-        # Split object name at whitespaces.
-        values = name.replace(',', '.').split()
-
-        # Does the object name begin with the color definition and a whitespace character signifying that it defines the object's color?
-        if values[0] == properties.defprefix_color:
-            # Convert all elements to floats and ignore elements that would be None.
-            # It does do the function twice but I doubt the object names will be so long that this will be an issue plus the function is simple.
-            floats = [common.to_float_or_none(val) for val in values if common.to_float_or_none(val) is not None]
+        # Does the object name contain the color definition token signifying that it defines the object's color?
+        if properties.defprefix_color in tokens:
+            # Parse floats from the expected color values.
+            floats = __get_color_values(tokens[tokens.index(properties.defprefix_color) + 1:])
             size = len(floats)
 
-            # Are all four values defined?
+            # Did user define at least 4 numerical values?
             if size >= 4:
                 if size > 4:
                     logger.info("  More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name))
@@ -1552,6 +1591,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
                 # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
+                # FIXME: Multiplying also breaks normals if the object's origin is not at the origin of the world.
                 # ROUND & CAST
                 normals = [__to_decimals(obj.matrix_world * poly.normal), ] * 4
 
@@ -1570,37 +1610,40 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # =============
             # Vertex Colors
             # =============
-            # Object colors override vertex colors since they are easier to use.
-            if colors is None:
-                # A vertex color layer exists.
-                if len(current_data.vertex_colors) != 0:
-                    colors = []
-                    # Vertex winding order is reversed compared to Blockland.
-                    for index in reversed(loop_indices):
-                        if len(current_data.vertex_colors) > 1:
-                            logger.warning("  Object '{}' has {} vertex color layers, only using the first.".format(
-                                object_name, len(current_data.vertex_colors)))
+            # Vertex colors override objects colors since they are more detailed.
+            # A vertex color layer exists.
+            if len(current_data.vertex_colors) != 0:
+                if colors is not None:
+                    logger.info('  Overriding object color with vertex colors.')
 
-                        # Only use the first color layer.
-                        loop_color = current_data.vertex_colors[0].data[index]
+                colors = []
 
-                        # TODO: Document this feature.
-                        # Use the color layer name as the value for alpha, if it is numerical.
-                        # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
-                        # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
+                # Vertex winding order is reversed compared to Blockland.
+                for index in reversed(loop_indices):
+                    if len(current_data.vertex_colors) > 1:
+                        logger.warning("  Object '{}' has {} vertex color layers, only using the first.".format(
+                            object_name, len(current_data.vertex_colors)))
 
-                        if vertex_color_alpha is None:
-                            if name is None:
-                                vertex_color_alpha = 1.0
-                                logger.warning('  No alpha value set in vertex color layer name, using 1.0.')
-                            else:
-                                vertex_color_alpha = name
-                                logger.info("  Vertex color layer alpha set to {}.".format(vertex_color_alpha))
+                    # Only use the first color layer.
+                    loop_color = current_data.vertex_colors[0].data[index]
 
-                        # color_layer.data[index] may contain more than 4 values.
-                        # Blockland only supports four colors per quad so only the first four values are stored.
-                        colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
+                    # TODO: Document this feature.
+                    # Use the color layer name as the value for alpha, if it is numerical.
+                    # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
+                    # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
+                    name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
+
+                    if vertex_color_alpha is None:
+                        if name is None:
+                            vertex_color_alpha = 1.0
+                            logger.warning('  No alpha value set in vertex color layer name, using 1.0.')
+                        else:
+                            vertex_color_alpha = name
+                            logger.info("  Vertex color layer alpha set to {}.".format(vertex_color_alpha))
+
+                    # color_layer.data[index] may contain more than 4 values.
+                    # Blockland only supports four colors per quad so only the first four values are stored.
+                    colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
             # ================
             # BLB texture name
@@ -1735,7 +1778,7 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
         return 'Invalid floating point precision value given.'
     else:
         if precision == '0':
-            logger.info("Setting floating point precision to minimum.")
+            logger.info('Setting floating point precision to minimum.')
             # We're only writing 16 decimals anyway.
             precision = "0.{}1".format('0' * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
 
