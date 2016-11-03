@@ -21,6 +21,8 @@ A module for printing messages to the console and optionally writing the message
 @author: Demian Wright
 '''
 
+from . import const
+
 # I've implemented this myself instead of using the standard logging because I needed a feature where the log file is only written if there were warnings logged.
 # I could not figure out a way to do that with the standard logging library so it was just faster to write it myself.
 
@@ -28,8 +30,6 @@ __LOG_LINES = []
 __WRITE_FILE = True
 __ON_WARNINGS_ONLY = True
 __HAS_WARNINGS = False
-
-# TODO: Message indent level.
 
 
 def configure(write_file, write_only_on_warnings):
@@ -45,15 +45,17 @@ def configure(write_file, write_only_on_warnings):
     __ON_WARNINGS_ONLY = write_only_on_warnings
 
 
-def __log(message, is_warning):
+def __log(message, is_warning, indents=0):
     """Prints the given message to the console and additionally to a log file if so specified at logger configuration.
 
     Args:
         message (string): Log message.
         is_warning (bool): Is the message a warning?
+        indents (int): The number of indents to add in front of the message. (Default: 0)
     """
     global __HAS_WARNINGS
 
+    message = "{}{}".format(const.LOG_INDENT * indents, message)
     print(message)
 
     # If log will be written to a file, append the message to the sequence for writing later.
@@ -64,31 +66,34 @@ def __log(message, is_warning):
             __HAS_WARNINGS = True
 
 
-def info(message):
+def info(message, indents=0):
     """Prints the given message to the console and additionally to a log file if so specified at logger configuration.
 
     Args:
         message (string): Log message.
+        indents (int): The number of indents to add in front of the message. (Default: 0)
     """
-    __log(message, False)
+    __log(message, False, indents)
 
 
-def warning(message):
+def warning(message, indents=0):
     """Prefixes the message with '[WARNING] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
 
     Args:
         message (string): Log message.
+        indents (int): The number of indents to add in front of the message. (Default: 0)
     """
-    __log("[WARNING] " + message, True)
+    __log("[WARNING] " + message, True, indents)
 
 
-def error(message):
+def error(message, indents=0):
     """Prefixes the message with '[ERROR] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
 
     Args:
         message (string): Log message.
+        indents (int): The number of indents to add in front of the message. (Default: 0)
     """
-    __log("[ERROR] " + message, True)
+    __log("[ERROR] " + message, True, indents)
 
 
 def build_countable_message(message_start, count, alternatives, message_end="", message_zero=None):
@@ -101,12 +106,12 @@ def build_countable_message(message_start, count, alternatives, message_end="", 
         count (int): The countable element in the message that will determine if the message is singular or plural.
         alternatives (sequence of strings): A sequence of strings where:
                                                 - the first element will be used if count is 1,
-                                                - the second element will be used if count is 2 or count is 0 and message_zero is not specified.
+                                                - the second element will be used if count is greater than 1 or count is 0 and message_zero is not specified.
         message_end (string): An optional final part of the message.
         message_zero (string): An optional message to show instead if count is 0.
 
     Returns:
-        A grammatically correct message.
+        A grammatically correct string.
     """
     # Determine which message to use from the end alternatives.
     if count == 0:

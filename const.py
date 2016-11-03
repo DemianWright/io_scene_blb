@@ -29,6 +29,9 @@ BLB_EXT = '.blb'
 # The log file extension.
 LOG_EXT = '.log'
 
+# One log indent level.
+LOG_INDENT = '  '
+
 # Generic.
 X = 0
 Y = 1

@@ -22,7 +22,7 @@ A module for processing Blender data into the BLB file format for writing.
 '''
 
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
-from math import ceil
+from math import ceil, modf
 import bpy
 
 from mathutils import Vector
@@ -805,7 +805,7 @@ def __get_object_sequence(context, properties):
     if properties.export_objects == "SELECTION":
         logger.info("Exporting selected objects to BLB.")
         objects = context.selected_objects
-        logger.info(logger.build_countable_message("  Found ", len(objects), (" object.", " objects."), "", "  No objects selected."))
+        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects selected."), 1)
 
     # Use objects in visible layers?
     if properties.export_objects == "LAYERS":
@@ -820,7 +820,7 @@ def __get_object_sequence(context, properties):
                     # Append to the list of objects.
                     objects.append(obj)
 
-        logger.info(logger.build_countable_message("  Found ", len(objects), (" object.", " objects."), "", "  No objects in visible layers."))
+        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects in visible layers."), 1)
 
     # If user wants to export the whole scene.
     # Or if user wanted to export only the selected objects or layers but they contained nothing.
@@ -828,7 +828,7 @@ def __get_object_sequence(context, properties):
     if properties.export_objects == "SCENE" or len(objects) == 0:
         logger.info("Exporting scene to BLB.")
         objects = context.scene.objects
-        logger.info(logger.build_countable_message("  Found ", len(objects), (" object.", " objects."), "", "  Scene has no objects."))
+        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "Scene has no objects."), 1)
 
     return objects
 
@@ -853,7 +853,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
         if bounds_data.object_name is None:
             logger.warning("Calculated bounds have a non-integer size {} {} {}, rounding up.".format(bounds_size[const.X],
                                                                                                      bounds_size[const.Y],
-                                                                                                     bounds_size[const.Z]))
+                                                                                                     bounds_size[const.Z]), 1)
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
             for index, value in enumerate(bounds_size):
@@ -862,7 +862,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
                                                                                                                     bounds_size[const.Y],
                                                                                                                     bounds_size[const.Z],
-                                                                                                                    const.HUMAN_ERROR))
+                                                                                                                    const.HUMAN_ERROR), 1)
 
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
@@ -874,18 +874,18 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     if properties.brick_name_source == 'BOUNDS':
         if bounds_data.object_name is None:
             logger.warning(
-                "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.")
+                "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
         else:
             # Split the bounds object name at whitespace.
             name_elements = bounds_data.object_name.split()
 
             if len(name_elements) == 1:
                 logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.")
+                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
                 # Brick name follows the bounds definition, spaces are not allowed.
                 blb_data.brick_name = name_elements[name_elements.index(properties.defprefix_bounds) + 1]
-                logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name))
+                logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
 
     return blb_data
 
@@ -1166,7 +1166,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
             except OutOfBoundsException:
                 if bounds_data.object_name is None:
                     logger.error(
-                        "Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name))
+                        "Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name), 1)
                 else:
                     logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
                         grid_obj.name, bounds_data.object_name))
@@ -1175,20 +1175,20 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
 
     # Log messages for brick grid definitions.
     if total_definitions == 0:
-        logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.")
+        logger.warning('No brick grid definitions found. Automatically generated brick grid may be undesirable.', 1)
     elif total_definitions == 1:
         if processed == 0:
             logger.warning(
-                "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(total_definitions))
+                "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
         else:
-            logger.info("Processed {} of {} brick grid definition.".format(processed, total_definitions))
+            logger.info("Processed {} of {} brick grid definition.".format(processed, total_definitions), 1)
     else:
         # Found more than one.
         if processed == 0:
             logger.warning(
-                "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(total_definitions))
+                "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
         else:
-            logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions))
+            logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions), 1)
 
     # Take the custom forward axis into account.
     if properties.axis_blb_forward == "POSITIVE_X" or properties.axis_blb_forward == "NEGATIVE_X":
@@ -1249,7 +1249,7 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
     processed = 0
 
     if len(definition_objects) > 10:
-        logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)))
+        logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)), 1)
 
     for obj in definition_objects:
         # Break the loop as soon as 10 definitions have been processed.
@@ -1260,12 +1260,12 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
 
         # At least two vertices are required for a valid bounding box.
         if vert_count < 2:
-            logger.error("Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name))
+            logger.error("Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name), 1)
             # Skip the rest of the loop and return to the beginning.
             continue
         elif vert_count > 8:
             logger.warning(
-                "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(obj.name))
+                "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(obj.name), 1)
             # The mesh is still valid.
 
         # Find the minimum and maximum coordinates for the collision object.
@@ -1291,7 +1291,7 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
                     break
 
             if zero_size:
-                logger.error("Collision definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name))
+                logger.error("Collision definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name), 1)
                 # Skip the rest of the loop.
                 continue
 
@@ -1311,28 +1311,28 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
             collisions.append((__sequence_z_to_plates(center), __sequence_z_to_plates(dimensions)))
         else:
             if bounds_data.object_name is None:
-                logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name))
+                logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name), 1)
             else:
                 logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                    obj.name, bounds_data.object_name))
+                    obj.name, bounds_data.object_name), 1)
 
     defcount = len(definition_objects)
     # Log messages for collision definitions.
     if defcount == 0:
-        logger.warning("No collision definitions found. Default generated collision may be undesirable.")
+        logger.warning('No collision definitions found. Default generated collision may be undesirable.', 1)
     elif defcount == 1:
         if processed == 0:
             logger.warning(
-                "{} collision definition found but was not processed. Default generated collision may be undesirable.".format(defcount))
+                "{} collision definition found but was not processed. Default generated collision may be undesirable.".format(defcount), 1)
         else:
-            logger.info("Processed {} of {} collision definition.".format(processed, defcount))
+            logger.info("Processed {} of {} collision definition.".format(processed, defcount), 1)
     else:
         # Found more than one.
         if processed == 0:
             logger.warning(
-                "{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(defcount))
+                "{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(defcount), 1)
         else:
-            logger.info("Processed {} of {} collision definitions.".format(processed, defcount))
+            logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
 
     return collisions
 
@@ -1391,11 +1391,11 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         # Ignore non-mesh objects
         if obj.type != "MESH":
             if obj_name.startswith(properties.defprefix_bounds):
-                logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name))
+                logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
             elif obj_name.startswith(grid_def_obj_prefix_priority):
-                logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name))
+                logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
             elif obj_name.startswith(properties.defprefix_collision):
-                logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name))
+                logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
             continue
@@ -1406,11 +1406,21 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
                 bounds_data = __process_bounds_object(properties.export_scale, obj)
                 blb_data = __record_bounds_data(properties, blb_data, bounds_data)
 
-                logger.info("Defined brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
-                                                                                           blb_data.brick_size[const.Y],
-                                                                                           blb_data.brick_size[const.Z]))
+                plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
+                bricks = int(bricks)
+
+                if plates == 0.0:
+                    logger.info("Defined brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
+                                                                                         blb_data.brick_size[const.Y],
+                                                                                         logger.build_countable_message('', bricks, (' brick', ' bricks'))), 1)
+                else:
+                    logger.info("Defined brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
+                                                                                            blb_data.brick_size[const.Y],
+                                                                                            logger.build_countable_message(
+                                                                                                '', bricks, (' brick', ' bricks')),
+                                                                                            logger.build_countable_message('', blb_data.brick_size[const.Z] - bricks * 3, (' plate', ' plates'))), 1)
             else:
-                logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name))
+                logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
                 continue
 
         # Is the current object a collision definition object?
@@ -1421,7 +1431,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
         # Is the current object a brick grid definition object?
         elif len(object_grid_definitions) > 0:
             if len(object_grid_definitions) > 1:
-                logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name))
+                logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
 
             # Get the priority index of this grid definition.
             index = grid_def_obj_prefix_priority.index(object_grid_definitions[0])
@@ -1442,13 +1452,21 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
-        logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.")
+        logger.warning('No brick bounds definition found. Automatically calculated brick size may be undesirable.', 1)
         bounds_data = __calculate_bounds(properties.export_scale, min_world_coordinates, max_world_coordinates)
         blb_data = __record_bounds_data(properties, blb_data, bounds_data)
+        plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
+        bricks = int(bricks)
 
-        logger.info("Calculated brick size in plates: {} wide {} deep {} tall".format(blb_data.brick_size[const.X],
-                                                                                      blb_data.brick_size[const.Y],
-                                                                                      blb_data.brick_size[const.Z]))
+        if plates == 0.0:
+            logger.info("Calculated brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
+                                                                                    blb_data.brick_size[const.Y],
+                                                                                    logger.build_countable_message('', bricks, (' brick', ' bricks'))), 1)
+        else:
+            logger.info("Calculated brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
+                                                                                       blb_data.brick_size[const.Y],
+                                                                                       logger.build_countable_message('', bricks, (' brick', ' bricks')),
+                                                                                       logger.build_countable_message('', plates, (' plate', ' plates'))), 1)
 
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
@@ -1496,13 +1514,13 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
         # Alpha is per-object.
         vertex_color_alpha = None
 
-        logger.info("Exporting object: {}".format(object_name))
+        logger.info("Exporting object: {}".format(object_name), 1)
 
         # Do UV layers exist?
         if current_data.uv_layers:
             # Is there more than one UV layer?
             if len(current_data.uv_layers) > 1:
-                logger.warning("  Object '{}' has {} UV layers, only using the first.".format(object_name, len(current_data.uv_layers)))
+                logger.warning("Object '{}' has {} UV layers, only using the first.".format(object_name, len(current_data.uv_layers)), 2)
 
             uv_data = current_data.uv_layers[0].data
         else:
@@ -1525,7 +1543,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # Did user define at least 4 numerical values?
             if size >= 4:
                 if size > 4:
-                    logger.info("  More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name))
+                    logger.info("More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name), 2)
 
                     # We're only interested in the first 4 values: R G B A
                     floats = floats[:4]
@@ -1534,7 +1552,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                 colors = ([tuple(floats)] * 4)
             elif size > 0:
                 logger.info(
-                    "  Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name))
+                    "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
 
         # ===================
         # Manual Quad Sorting
@@ -1545,7 +1563,8 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
 
         if section_count > 1:
             section = quad_sort_definitions.index(quad_sections[0])
-            logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(object_name, section_count, section))
+            logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
+                object_name, section_count, section), 2)
         elif section_count == 1:
             section = quad_sort_definitions.index(quad_sections[0])
         else:
@@ -1629,7 +1648,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
 
                 if material is not None:
                     if colors is not None:
-                        logger.info('  Overriding object color with material color.')
+                        logger.info('Overriding object color with material color.', 2)
 
                     # 4 vertices per quad.
                     colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
@@ -1641,15 +1660,15 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # A vertex color layer exists.
             if len(current_data.vertex_colors) != 0:
                 if colors is not None:
-                    logger.info('  Overriding material color with vertex color.')
+                    logger.info('Overriding material color with vertex color.', 2)
 
                 colors = []
 
                 # Vertex winding order is reversed compared to Blockland.
                 for index in reversed(loop_indices):
                     if len(current_data.vertex_colors) > 1:
-                        logger.warning("  Object '{}' has {} vertex color layers, only using the first.".format(
-                            object_name, len(current_data.vertex_colors)))
+                        logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
+                            object_name, len(current_data.vertex_colors)), 2)
 
                     # Only use the first color layer.
                     # color_layer.data[index] may contain more than 4 values.
@@ -1664,10 +1683,10 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                     if vertex_color_alpha is None:
                         if name is None:
                             vertex_color_alpha = 1.0
-                            logger.warning('  No alpha value set in vertex color layer name, using 1.0.')
+                            logger.warning('No alpha value set in vertex color layer name, using 1.0.', 2)
                         else:
                             vertex_color_alpha = name
-                            logger.info("  Vertex color layer alpha set to {}.".format(vertex_color_alpha))
+                            logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
 
                     colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
@@ -1693,10 +1712,10 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
         bpy.data.meshes.remove(mesh)
 
     if count_tris > 0:
-        logger.warning("  {} triangles degenerated to quads.".format(count_tris))
+        logger.warning("{} triangles degenerated to quads.".format(count_tris), 2)
 
     if count_ngon > 0:
-        logger.warning("  {} n-gons skipped.".format(count_ngon))
+        logger.warning("{} n-gons skipped.".format(count_ngon), 2)
 
     count_quads = len(quads)
 
@@ -1730,7 +1749,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # Drop the section index from the data since it is no longer needed.
             sorted_quads[section_idx].append(quad[:-1])
 
-        logger.info("  Exported {} quads.".format(count_quads))
+        logger.info("Brick quads: {}".format(count_quads), 1)
 
         return sorted_quads
 
@@ -1815,6 +1834,8 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
     object_sequence = __get_object_sequence(context, properties)
 
     if len(object_sequence) > 0:
+        logger.info('Processing definition objects.')
+
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible mesh_objects from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
         result = __process_definition_objects(properties, object_sequence, grid_def_obj_prefix_priority, grid_definitions_priority)
@@ -1829,6 +1850,8 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
 
             # Calculate the coverage data based on the brick size.
             blb_data.coverage = __process_coverage(properties, blb_data)
+
+            logger.info('Processing meshes.')
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
             quads = __process_mesh_data(context, properties, bounds_data, quad_sort_definitions, mesh_objects)

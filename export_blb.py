@@ -130,10 +130,11 @@ def export(context, properties, export_dir, export_file, file_name):
 
             export_path = "{}{}".format(export_dir, export_file)
 
+            logger.info('Writing to file.')
             # Write the data to a file.
             blb_writer.write_file(properties, export_path, data)
 
-            logger.info("Output file: {}".format(export_path))
+            logger.info("Output file: {}".format(export_path), 1)
 
             # Remove the .BLB extension and change it to the log extension.
             logname = bpy.path.ensure_ext(export_file[:-4], const.LOG_EXT)
