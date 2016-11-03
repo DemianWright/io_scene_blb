@@ -304,6 +304,19 @@ def __loop_index_to_normal_vector(obj, mesh, index):
     return (obj.matrix_world.to_3x3() * mesh.vertices[mesh.loops[index].vertex_index].normal).normalized()
 
 
+def __normalize_vector(obj, normal):
+    """ Gets rid of the object's rotation from the specified normal and calculates the normalized vector for it.
+
+    Args:
+        obj (Blender object): The Blender object the normal is in.
+        normal (Vector): A normal vector to be normalized.
+
+    Returns:
+        A normalized normal vector.
+    """
+    return (obj.matrix_world.to_3x3() * normal).normalized()
+
+
 def __all_within_bounds(local_coordinates, bounding_dimensions):
     """Checks if all the values in the specified local coordinates are within the specified bounding box dimensions.
     Assumes that both sequences have the same number of elements.
@@ -1591,9 +1604,8 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
                 # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
-                # FIXME: Multiplying also breaks normals if the object's origin is not at the origin of the world.
                 # ROUND & CAST
-                normals = [__to_decimals(obj.matrix_world * poly.normal), ] * 4
+                normals = [__normalize_vector(obj, poly.normal), ] * 4
 
             # ===
             # UVs
