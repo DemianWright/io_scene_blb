@@ -223,106 +223,106 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -----------
 
     custom_definitions = BoolProperty(
-        name="Custom Definition Object Prefixes",
-        description="Change the object name prefixes for definition objects (prefixes are case insensitive)",
+        name="Custom Definition Tokens",
+        description="Set custom definitions tokens (case insensitive) to use in definition object names.",
         default=False,
     )
 
-    defprefix_bounds = StringProperty(
+    deftoken_bounds = StringProperty(
         name="Brick Bounds",
-        description="Prefix for objects that define brick bounds",
+        description="Token for objects that define brick bounds",
         default="bounds",
     )
 
-    defprefix_collision = StringProperty(
+    deftoken_collision = StringProperty(
         name="Collision Cuboid",
-        description="Prefix for objects that define collision cuboids",
+        description="Token for objects that define collision cuboids",
         default="collision",
     )
 
-    defprefix_color = StringProperty(
+    deftoken_color = StringProperty(
         name="Object Color",
-        description="Prefix for specifying a color for an object. Prefix must be followed by 4 values (red green blue alpha) separated with spaces using a comma (,) as decimal separator. Vertex colors are overridden by colors defined in object names.",
+        description="Token for specifying a color for an object using its name. Token must be followed by 4 values (red green blue alpha) separated with spaces using a comma (,) as decimal separator. Integers 0-255 also supported.",
         default="c",
     )
 
     # Sections
 
-    defprefix_quad_sort_top = StringProperty(
-        name="Section, Top",
-        description="Prefix for specifying that the object's vertices belong to the top section of the brick (used in brick coverage for hiding faces to improve performance)",
+    deftoken_quad_sort_top = StringProperty(
+        name="Top Quads",
+        description="Token for specifying that the object's vertices belong to the top section of the brick (used in brick coverage for hiding faces to improve performance)",
         default="qt",
     )
 
-    defprefix_quad_sort_bottom = StringProperty(
-        name="Section, Bottom",
-        description="Prefix for specifying that the object's vertices belong to the bottom section of the brick (used in brick coverage for hiding faces to improve performance)",
+    deftoken_quad_sort_bottom = StringProperty(
+        name="Bottom Quads",
+        description="Token for specifying that the object's vertices belong to the bottom section of the brick (used in brick coverage for hiding faces to improve performance)",
         default="qb",
     )
 
-    defprefix_quad_sort_north = StringProperty(
-        name="Section, North",
-        description="Prefix for specifying that the object's vertices belong to the north section of the brick (used in brick coverage for hiding faces to improve performance)",
+    deftoken_quad_sort_north = StringProperty(
+        name="North Quads",
+        description="Token for specifying that the object's vertices belong to the north section of the brick (used in brick coverage for hiding faces to improve performance)",
         default="qn",
     )
 
-    defprefix_quad_sort_east = StringProperty(
-        name="Section, East",
-        description="Prefix for specifying that the object's vertices belong to the east section of the brick (used in brick coverage for hiding faces to improve performance)",
+    deftoken_quad_sort_east = StringProperty(
+        name="East Quads",
+        description="Token for specifying that the object's vertices belong to the east section of the brick (used in brick coverage for hiding faces to improve performance)",
         default="qe",
     )
 
-    defprefix_quad_sort_south = StringProperty(
-        name="Section, South",
-        description="Prefix for specifying that the object's vertices belong to the south section of the brick (used in brick coverage for hiding faces to improve performance)",
+    deftoken_quad_sort_south = StringProperty(
+        name="South Quads",
+        description="Token for specifying that the object's vertices belong to the south section of the brick (used in brick coverage for hiding faces to improve performance)",
         default="qs",
     )
 
-    defprefix_quad_sort_west = StringProperty(
-        name="Section, West",
-        description="Prefix for specifying that the object's vertices belong to the west section of the brick (used in brick coverage for hiding faces to improve performance)",
+    deftoken_quad_sort_west = StringProperty(
+        name="West Quads",
+        description="Token for specifying that the object's vertices belong to the west section of the brick (used in brick coverage for hiding faces to improve performance)",
         default="qw",
     )
 
-    defprefix_quad_sort_omni = StringProperty(
-        name="Section, Omni",
-        description="Prefix for specifying that the object's vertices belong to the omni section of the brick, these vertices will never be hidden",
+    deftoken_quad_sort_omni = StringProperty(
+        name="Omni Quads",
+        description="Token for specifying that the object's vertices belong to the omni section of the brick, these vertices will never be hidden",
         default="qo",
     )
 
     # Brick Grid
 
-    defprefix_gridx = StringProperty(
+    deftoken_gridx = StringProperty(
         name="Brick Grid x",
-        description="Prefix for objects that define a volume within the brick bounds that will be filled with the 'x' symbol in the brick grid signifying that other bricks cannot be placed there",
+        description="Token for objects that define a volume within the brick bounds that will be filled with the 'x' symbol in the brick grid signifying that other bricks cannot be placed there",
         default="gridx",
     )
 
-    defprefix_griddash = StringProperty(
+    deftoken_griddash = StringProperty(
         name="Brick Grid -",
-        description="Prefix for objects that define a volume within the brick bounds that will be filled with the '-' symbol in the brick grid signifying empty space",
+        description="Token for objects that define a volume within the brick bounds that will be filled with the '-' symbol in the brick grid signifying empty space",
         default="grid-",
     )
 
-    defprefix_gridu = StringProperty(
+    deftoken_gridu = StringProperty(
         name="Brick Grid u",
-        description="Prefix for objects that define a volume within the brick bounds that will be filled with the 'u' symbol in the brick grid signifying that other bricks may be planted above",
+        description="Token for objects that define a volume within the brick bounds that will be filled with the 'u' symbol in the brick grid signifying that other bricks may be planted above",
         default="gridu",
     )
 
-    defprefix_gridd = StringProperty(
+    deftoken_gridd = StringProperty(
         name="Brick Grid d",
-        description="Prefix for objects that define a volume within the brick bounds that will be filled with the 'd' symbol in the brick grid signifying that other bricks may be planted below",
+        description="Token for objects that define a volume within the brick bounds that will be filled with the 'd' symbol in the brick grid signifying that other bricks may be planted below",
         default="gridd",
     )
 
-    defprefix_gridb = StringProperty(
+    deftoken_gridb = StringProperty(
         name="Brick Grid b",
-        description="Prefix for objects that define a volume within the brick bounds that will be filled with the 'b' symbol in the brick grid signifying that other bricks may be planted above or below",
+        description="Token for objects that define a volume within the brick bounds that will be filled with the 'b' symbol in the brick grid signifying that other bricks may be planted above or below",
         default="gridb",
     )
 
-    defprefix_gridx_priority = IntProperty(
+    deftoken_gridx_priority = IntProperty(
         name="Grid X Symbol Priority",
         description="Priority of the 'x' symbol definition, higher priority definition override any overlapping definitions with lower priority (two or more symbols must not have the same priority)",
         default=0,
@@ -330,7 +330,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
-    defprefix_griddash_priority = IntProperty(
+    deftoken_griddash_priority = IntProperty(
         name="Grid - Symbol Priority",
         description="Priority of the '-' symbol definition, higher priority definition override any overlapping definitions with lower priority (two or more symbols must not have the same priority)",
         default=1,
@@ -338,7 +338,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
-    defprefix_gridu_priority = IntProperty(
+    deftoken_gridu_priority = IntProperty(
         name="Grid U Symbol Priority",
         description="Priority of the 'u' symbol definition, higher priority definition override any overlapping definitions with lower priority (two or more symbols must not have the same priority)",
         default=2,
@@ -346,7 +346,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
-    defprefix_gridd_priority = IntProperty(
+    deftoken_gridd_priority = IntProperty(
         name="Grid D Symbol Priority",
         description="Priority of the 'd' symbol definition, higher priority definition override any overlapping definitions with lower priority (two or more symbols must not have the same priority)",
         default=3,
@@ -354,7 +354,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
-    defprefix_gridb_priority = IntProperty(
+    deftoken_gridb_priority = IntProperty(
         name="Grid B Symbol Priority",
         description="Priority of the 'b' symbol definition, higher priority definition override any overlapping definitions with lower priority (two or more symbols must not have the same priority)",
         default=4,
@@ -542,12 +542,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Properties: Quad Sorting
         layout.prop(self, "auto_sort_quads")
 
-        # Properties: Custom Definition Prefixes
+        # Properties: Custom Definition Tokens
         layout.prop(self, "custom_definitions")
 
         if self.custom_definitions:
             box = layout.box()
-            box.label("Definition Object Prefixes", icon="EDIT_VEC")
+            box.label("Definition Tokens", icon="EDIT_VEC")
             box.active = self.custom_definitions
 
             def draw_definition_property(label_text, prop_name):
@@ -578,21 +578,21 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
                 col = split.column()
                 col.prop(self, "{}_priority".format(prop_name), "")
 
-            # This has duplicate data but I don't know how to access the property names defined earlier since self.defprefix_bounds.name doesn't seem to work.
-            # For some reason self.defprefix_bounds = "defprefix_bounds" instead of an instance of StringProperty.
-            draw_definition_property("Brick Bounds", "defprefix_bounds")
-            draw_definition_property("Collision Cuboids", "defprefix_collision")
-            draw_definition_property("Object Colors", "defprefix_color")
+            # This has duplicate data but I don't know how to access the property names defined earlier since self.deftoken_bounds.name doesn't seem to work.
+            # For some reason self.deftoken_bounds = "deftoken_bounds" instead of an instance of StringProperty.
+            draw_definition_property("Brick Bounds", "deftoken_bounds")
+            draw_definition_property("Collision Cuboids", "deftoken_collision")
+            draw_definition_property("Object Colors", "deftoken_color")
 
             # Sorting definitions.
 
-            draw_definition_property("Section, Top", "defprefix_quad_sort_top")
-            draw_definition_property("Section, Bottom", "defprefix_quad_sort_bottom")
-            draw_definition_property("Section, North", "defprefix_quad_sort_north")
-            draw_definition_property("Section, East", "defprefix_quad_sort_east")
-            draw_definition_property("Section, South", "defprefix_quad_sort_south")
-            draw_definition_property("Section, West", "defprefix_quad_sort_west")
-            draw_definition_property("Section, Omni", "defprefix_quad_sort_omni")
+            draw_definition_property("Top Quads", "deftoken_quad_sort_top")
+            draw_definition_property("Bottom Quads", "deftoken_quad_sort_bottom")
+            draw_definition_property("North Quads", "deftoken_quad_sort_north")
+            draw_definition_property("East Quads", "deftoken_quad_sort_east")
+            draw_definition_property("South Quads", "deftoken_quad_sort_south")
+            draw_definition_property("West Quads", "deftoken_quad_sort_west")
+            draw_definition_property("Omni Quads", "deftoken_quad_sort_omni")
 
             # Grid definitions.
 
@@ -605,18 +605,18 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             split = split.split(percentage=0.6)
             col = split.column()
             col.label()
-            col.label("Prefix")
+            col.label("Token")
 
             split = split.split()
             col = split.column()
             col.label()
             col.label("Priority")
 
-            draw_grid_definition_property("b", "defprefix_gridb")
-            draw_grid_definition_property("d", "defprefix_gridd")
-            draw_grid_definition_property("u", "defprefix_gridu")
-            draw_grid_definition_property("-", "defprefix_griddash")
-            draw_grid_definition_property("x", "defprefix_gridx")
+            draw_grid_definition_property("b", "deftoken_gridb")
+            draw_grid_definition_property("d", "deftoken_gridd")
+            draw_grid_definition_property("u", "deftoken_gridu")
+            draw_grid_definition_property("-", "deftoken_griddash")
+            draw_grid_definition_property("x", "deftoken_gridx")
 
         # =======
         # Writing

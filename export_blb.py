@@ -29,38 +29,38 @@ from . import const, logger, blb_processor, blb_writer
 
 
 def build_grid_priority_tuples(properties):
-    """Sorts the grid definition object name prefixes into reverse priority order according the user properties.
-    Definitions earlier in the sequence are overwritten by prefixes later in the sequence.
+    """Sorts the grid definition object name tokens into reverse priority order according the user properties.
+    Definitions earlier in the sequence are overwritten by tokens later in the sequence.
 
     Args:
         properties (Blender properties object): A Blender object containing user preferences.
 
     Returns:
-        A tuple containing the grid definition object prefixes in the first element and the grid symbols in the same order in the second element or None if one or more definition had the same priority which leads to undefined behavior and is disallowed.
+        A tuple containing the grid definition object tokens in the first element and the grid symbols in the same order in the second element or None if one or more definition had the same priority which leads to undefined behavior and is disallowed.
     """
-    # There are exactly 5 prefixes.
-    prefixes = [None] * 5
+    # There are exactly 5 tokens.
+    tokens = [None] * 5
 
     # Go through every priority individually.
-    prefixes[properties.defprefix_gridx_priority] = properties.defprefix_gridx
-    prefixes[properties.defprefix_griddash_priority] = properties.defprefix_griddash
-    prefixes[properties.defprefix_gridu_priority] = properties.defprefix_gridu
-    prefixes[properties.defprefix_gridd_priority] = properties.defprefix_gridd
-    prefixes[properties.defprefix_gridb_priority] = properties.defprefix_gridb
+    tokens[properties.deftoken_gridx_priority] = properties.deftoken_gridx
+    tokens[properties.deftoken_griddash_priority] = properties.deftoken_griddash
+    tokens[properties.deftoken_gridu_priority] = properties.deftoken_gridu
+    tokens[properties.deftoken_gridd_priority] = properties.deftoken_gridd
+    tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb
 
-    if None in prefixes:
+    if None in tokens:
         logger.error("Two or more brick grid definitions had the same priority. Unable to proceed.")
         return None
     else:
         symbols = [None] * 5
 
-        symbols[properties.defprefix_gridx_priority] = const.GRID_INSIDE
-        symbols[properties.defprefix_griddash_priority] = const.GRID_OUTSIDE
-        symbols[properties.defprefix_gridu_priority] = const.GRID_UP
-        symbols[properties.defprefix_gridd_priority] = const.GRID_DOWN
-        symbols[properties.defprefix_gridb_priority] = const.GRID_BOTH
+        symbols[properties.deftoken_gridx_priority] = const.GRID_INSIDE
+        symbols[properties.deftoken_griddash_priority] = const.GRID_OUTSIDE
+        symbols[properties.deftoken_gridu_priority] = const.GRID_UP
+        symbols[properties.deftoken_gridd_priority] = const.GRID_DOWN
+        symbols[properties.deftoken_gridb_priority] = const.GRID_BOTH
 
-        return (tuple(prefixes), tuple(symbols))
+        return (tuple(tokens), tuple(symbols))
 
 
 def build_quad_sort_definitions(properties):
@@ -73,13 +73,13 @@ def build_quad_sort_definitions(properties):
         A tuple containing the definitions for manual quad section sorting in the correct order.
     """
     # The definitions must be in the same order as const.QUAD_SECTION_ORDER
-    return (properties.defprefix_quad_sort_top,
-            properties.defprefix_quad_sort_bottom,
-            properties.defprefix_quad_sort_north,
-            properties.defprefix_quad_sort_east,
-            properties.defprefix_quad_sort_south,
-            properties.defprefix_quad_sort_west,
-            properties.defprefix_quad_sort_omni)
+    return (properties.deftoken_quad_sort_top,
+            properties.deftoken_quad_sort_bottom,
+            properties.deftoken_quad_sort_north,
+            properties.deftoken_quad_sort_east,
+            properties.deftoken_quad_sort_south,
+            properties.deftoken_quad_sort_west,
+            properties.deftoken_quad_sort_omni)
 
 
 def export(context, properties, export_dir, export_file, file_name):
@@ -100,21 +100,21 @@ def export(context, properties, export_dir, export_file, file_name):
     logger.configure(properties.write_log, properties.write_log_warnings)
 
     # Process the user properties into a usable format.
-    # Build the brick grid definition prefix and symbol priority tuple.
-    # Contains the brick grid definition object name prefixes in reverse priority order.
+    # Build the brick grid definition tokens and symbol priority tuple.
+    # Contains the brick grid definition object name tokens in reverse priority order.
     result = build_grid_priority_tuples(properties)
 
     if result is None:
         return 'Two or more brick grid definitions had the same priority.'
     else:
-        grid_def_obj_prefix_priority = result[0]
+        grid_def_obj_token_priority = result[0]
         grid_definitions_priority = result[1]
         quad_sort_definitions = build_quad_sort_definitions(properties)
 
         # Process Blender data into a writable format.
         # The context variable contains all the Blender data.
         # The properties variable contains all user-defined settings to take into account when processing the data.
-        data = blb_processor.process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority, quad_sort_definitions)
+        data = blb_processor.process_blender_data(context, properties, grid_def_obj_token_priority, grid_definitions_priority, quad_sort_definitions)
 
         # Got the BLBData we need.
         if isinstance(data, blb_processor.BLBData):

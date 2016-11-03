@@ -884,7 +884,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                     "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
                 # Brick name follows the bounds definition, spaces are not allowed.
-                blb_data.brick_name = name_elements[name_elements.index(properties.defprefix_bounds) + 1]
+                blb_data.brick_name = name_elements[name_elements.index(properties.deftoken_bounds) + 1]
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
 
     return blb_data
@@ -1337,7 +1337,7 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
     return collisions
 
 
-def __process_definition_objects(properties, objects, grid_def_obj_prefix_priority, grid_definitions_priority):
+def __process_definition_objects(properties, objects, grid_def_obj_token_priority, grid_definitions_priority):
     """"Processes all definition objects that are not exported as a 3D model but will affect the brick properties.
 
     Processed definition objects:
@@ -1350,8 +1350,8 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
     Args:
         properties (Blender properties object): A Blender object containing user preferences.
         objects (sequence of Blender objects): The sequence of objects to be processed.
-        grid_def_obj_prefix_priority (sequence): A sequence containing the brick grid definition object prefixes in reverse priority order.
-        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_prefix_priority.
+        grid_def_obj_token_priority (sequence): A sequence containing the brick grid definition object tokens in reverse priority order.
+        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_token_priority.
 
     Returns:
         A tuple containing:
@@ -1386,22 +1386,22 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
 
         obj_name = obj.name
         obj_name_tokens = __split_object_name_to_tokens(obj_name)
-        object_grid_definitions = __get_tokens_from_object_name(obj_name_tokens, grid_def_obj_prefix_priority)
+        object_grid_definitions = __get_tokens_from_object_name(obj_name_tokens, grid_def_obj_token_priority)
 
         # Ignore non-mesh objects
         if obj.type != "MESH":
-            if obj_name.startswith(properties.defprefix_bounds):
+            if obj_name.startswith(properties.deftoken_bounds):
                 logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
-            elif obj_name.startswith(grid_def_obj_prefix_priority):
+            elif obj_name.startswith(grid_def_obj_token_priority):
                 logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
-            elif obj_name.startswith(properties.defprefix_collision):
+            elif obj_name.startswith(properties.deftoken_collision):
                 logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
             continue
 
         # Is the current object a bounds definition object?
-        elif properties.defprefix_bounds in obj_name_tokens:
+        elif properties.deftoken_bounds in obj_name_tokens:
             if bounds_data is None:
                 bounds_data = __process_bounds_object(properties.export_scale, obj)
                 blb_data = __record_bounds_data(properties, blb_data, bounds_data)
@@ -1424,7 +1424,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
                 continue
 
         # Is the current object a collision definition object?
-        elif properties.defprefix_collision in obj_name_tokens:
+        elif properties.deftoken_collision in obj_name_tokens:
             # Collision definition objects cannot be processed until after the bounds have been defined.
             collision_objects.append(obj)
 
@@ -1434,7 +1434,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_prefix_priori
                 logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
 
             # Get the priority index of this grid definition.
-            index = grid_def_obj_prefix_priority.index(object_grid_definitions[0])
+            index = grid_def_obj_token_priority.index(object_grid_definitions[0])
 
             # Brick grid definition objects cannot be processed until after the bounds have been defined.
             # Append the current definition object into the appropriate list.
@@ -1535,9 +1535,9 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
         tokens = __split_object_name_to_tokens(object_name, True)
 
         # Does the object name contain the color definition token signifying that it defines the object's color?
-        if properties.defprefix_color in tokens:
+        if properties.deftoken_color in tokens:
             # Parse floats from the expected color values.
-            floats = __get_color_values(tokens[tokens.index(properties.defprefix_color) + 1:])
+            floats = __get_color_values(tokens[tokens.index(properties.deftoken_color) + 1:])
             size = len(floats)
 
             # Did user define at least 4 numerical values?
@@ -1808,14 +1808,14 @@ def __format_blb_data(forward_axis, blb_data):
     return blb_data
 
 
-def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid_definitions_priority, quad_sort_definitions):
+def process_blender_data(context, properties, grid_def_obj_token_priority, grid_definitions_priority, quad_sort_definitions):
     """Processes the specified Blender data into a format that can be written in a BLB file.
 
     Args:
         context (Blender context object): A Blender object containing scene data.
         properties (Blender properties object): A Blender object containing user preferences.
-        grid_def_obj_prefix_priority (sequence): A sequence containing the user-defined brick grid definitions in reverse priority order.
-        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_prefix_priority.
+        grid_def_obj_token_priority (sequence): A sequence containing the user-defined brick grid definitions in reverse priority order.
+        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_token_priority.
         quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
 
     Returns:
@@ -1844,7 +1844,7 @@ def process_blender_data(context, properties, grid_def_obj_prefix_priority, grid
 
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible mesh_objects from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
-        result = __process_definition_objects(properties, object_sequence, grid_def_obj_prefix_priority, grid_definitions_priority)
+        result = __process_definition_objects(properties, object_sequence, grid_def_obj_token_priority, grid_definitions_priority)
 
         if isinstance(result, str):
             # Something went wrong, return error message.
