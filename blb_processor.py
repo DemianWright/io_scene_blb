@@ -1650,8 +1650,14 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                     if colors is not None:
                         logger.info('Overriding object color with material color.', 2)
 
-                    # 4 vertices per quad.
-                    colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
+                    # TODO: Document this feature.
+                    # If the material name is "blank", use the spray can color by not defining any color for this quad.
+                    # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
+                    if material.name.lower().startswith('blank'):
+                        colors = None
+                    else:
+                        # 4 vertices per quad.
+                        colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
 
             # =============
             # Vertex Colors
