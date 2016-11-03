@@ -1466,7 +1466,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
             logger.info("Calculated brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
                                                                                        blb_data.brick_size[const.Y],
                                                                                        logger.build_countable_message('', bricks, (' brick', ' bricks')),
-                                                                                       logger.build_countable_message('', plates, (' plate', ' plates'))), 1)
+                                                                                       logger.build_countable_message('', blb_data.brick_size[const.Z] - bricks * 3, (' plate', ' plates'))), 1)
 
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
@@ -1651,9 +1651,6 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                     material = obj.material_slots[poly.material_index].material
 
                     if material is not None:
-                        if colors is not None:
-                            logger.info('Overriding object color with material color.', 2)
-
                         # TODO: Document this feature.
                         # If the material name is "blank", use the spray can color by not defining any color for this quad.
                         # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
@@ -1671,9 +1668,6 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             if properties.use_vertex_colors:
                 # A vertex color layer exists.
                 if len(current_data.vertex_colors) != 0:
-                    if colors is not None:
-                        logger.info('Overriding material color with vertex color.', 2)
-
                     colors = []
 
                     # Vertex winding order is reversed compared to Blockland.
