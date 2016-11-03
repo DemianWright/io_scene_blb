@@ -1607,14 +1607,29 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                 # TODO: Correct UV calculation according to the texture name.
                 uvs = (Vector((0.5, 0.5)),) * 4
 
+            # ===============
+            # Material Colors
+            # ===============
+            # Material colors override objects colors since they are better and easier to use.
+            # Object has material slots?
+            if len(obj.material_slots) > 0:
+                material = obj.material_slots[poly.material_index].material
+
+                if material is not None:
+                    if colors is not None:
+                        logger.info('  Overriding object color with material color.')
+
+                    # 4 vertices per quad.
+                    colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
+
             # =============
             # Vertex Colors
             # =============
-            # Vertex colors override objects colors since they are more detailed.
+            # Vertex colors override material colors since they are more detailed.
             # A vertex color layer exists.
             if len(current_data.vertex_colors) != 0:
                 if colors is not None:
-                    logger.info('  Overriding object color with vertex colors.')
+                    logger.info('  Overriding material color with vertex color.')
 
                 colors = []
 
@@ -1625,6 +1640,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                             object_name, len(current_data.vertex_colors)))
 
                     # Only use the first color layer.
+                    # color_layer.data[index] may contain more than 4 values.
                     loop_color = current_data.vertex_colors[0].data[index]
 
                     # TODO: Document this feature.
@@ -1641,8 +1657,6 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                             vertex_color_alpha = name
                             logger.info("  Vertex color layer alpha set to {}.".format(vertex_color_alpha))
 
-                    # color_layer.data[index] may contain more than 4 values.
-                    # Blockland only supports four colors per quad so only the first four values are stored.
                     colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
             # ================
