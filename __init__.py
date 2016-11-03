@@ -422,6 +422,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # The absolute path to the directory user has specified in the export dialog.
         export_dir = os.path.split(self.filepath)[0] + os.sep
 
+        if export_dir == '\\':
+            # Export was probably initiated from a script, use the absolute path of the location where the script was executed.
+            export_dir = bpy.path.abspath("//")
+
         # The name of the BLB file to export.
         if props.brick_name_source == 'FILE':
             export_file = file_name
