@@ -126,6 +126,33 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    # -----------------
+    # Use Object Colors
+    # -----------------
+    use_object_colors = BoolProperty(
+        name="Parse Object Colors",
+        description="Parse quad colors from object names using the definition token (intended as legacy support)",
+        default=True,
+    )
+
+    # -------------
+    # Use Materials
+    # -------------
+    use_materials = BoolProperty(
+        name="Use Material Colors",
+        description="Read quad colors from materials (preferred method, overrides object colors)",
+        default=True,
+    )
+
+    # -----------------
+    # Use Vertex Colors
+    # -----------------
+    use_vertex_colors = BoolProperty(
+        name="Use Vertex Colors",
+        description="Read quad colors from the first vertex color layer (overrides material colors)",
+        default=True,
+    )
+
     # --------
     # Coverage
     # --------
@@ -224,7 +251,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     custom_definitions = BoolProperty(
         name="Custom Definition Tokens",
-        description="Set custom definitions tokens (case insensitive) to use in definition object names.",
+        description="Set custom definitions tokens (case insensitive) to use in definition object names",
         default=False,
     )
 
@@ -456,39 +483,39 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Brick Name
         row = layout.row()
-        split = row.split(percentage=0.49)
-        row = split.row()
         row.label("Brick Name From:")
 
-        split = split.split()
-        row = split.row()
+        row = layout.row()
         row.prop(self, "brick_name_source", expand=True)
 
         # Property: Export Objects
         row = layout.row()
-        split = row.split(percentage=0.21)
-        row = split.row()
-        row.label("Export:")
+        row.label("Export Only:")
 
-        split = split.split()
-        row = split.row()
+        row = layout.row()
         row.prop(self, "export_objects", expand=True)
 
         # Property: BLB Forward Axis
         row = layout.row()
-        split = row.split(percentage=0.4)
-        row = split.row()
         row.label("Forward Axis:")
 
-        split = split.split()
-        row = split.row()
+        row = layout.row()
         row.prop(self, "axis_blb_forward", expand=True)
 
         # Property: Export Scale
         layout.prop(self, "export_scale")
 
-        # Property: Export Scale
+        # Property: Use Modifiers.
         layout.prop(self, "use_modifiers")
+
+        # Property: Use Material Colors
+        layout.prop(self, "use_materials")
+
+        # Property: Use Vertex Colors
+        layout.prop(self, "use_vertex_colors")
+
+        # Property: Use Object Colors
+        layout.prop(self, "use_object_colors")
 
         # Properties: Coverage
         layout.prop(self, "calculate_coverage")

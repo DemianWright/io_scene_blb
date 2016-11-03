@@ -1532,27 +1532,29 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
         # Object Colors
         # =============
         colors = None
-        tokens = __split_object_name_to_tokens(object_name, True)
 
-        # Does the object name contain the color definition token signifying that it defines the object's color?
-        if properties.deftoken_color in tokens:
-            # Parse floats from the expected color values.
-            floats = __get_color_values(tokens[tokens.index(properties.deftoken_color) + 1:])
-            size = len(floats)
+        if properties.use_object_colors:
+            tokens = __split_object_name_to_tokens(object_name, True)
 
-            # Did user define at least 4 numerical values?
-            if size >= 4:
-                if size > 4:
-                    logger.info("More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name), 2)
+            # Does the object name contain the color definition token signifying that it defines the object's color?
+            if properties.deftoken_color in tokens:
+                # Parse floats from the expected color values.
+                floats = __get_color_values(tokens[tokens.index(properties.deftoken_color) + 1:])
+                size = len(floats)
 
-                    # We're only interested in the first 4 values: R G B A
-                    floats = floats[:4]
+                # Did user define at least 4 numerical values?
+                if size >= 4:
+                    if size > 4:
+                        logger.info("More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name), 2)
 
-                # Add the RGBA values to the colors, 4 vertices per quad.
-                colors = ([tuple(floats)] * 4)
-            elif size > 0:
-                logger.info(
-                    "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
+                        # We're only interested in the first 4 values: R G B A
+                        floats = floats[:4]
+
+                    # Add the RGBA values to the colors, 4 vertices per quad.
+                    colors = ([tuple(floats)] * 4)
+                elif size > 0:
+                    logger.info(
+                        "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
 
         # ===================
         # Manual Quad Sorting
@@ -1642,59 +1644,63 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # Material Colors
             # ===============
             # Material colors override objects colors since they are better and easier to use.
-            # Object has material slots?
-            if len(obj.material_slots) > 0:
-                material = obj.material_slots[poly.material_index].material
 
-                if material is not None:
-                    if colors is not None:
-                        logger.info('Overriding object color with material color.', 2)
+            if properties.use_materials:
+                # Object has material slots?
+                if len(obj.material_slots) > 0:
+                    material = obj.material_slots[poly.material_index].material
 
-                    # TODO: Document this feature.
-                    # If the material name is "blank", use the spray can color by not defining any color for this quad.
-                    # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
-                    if material.name.lower().startswith('blank'):
-                        colors = None
-                    else:
-                        # 4 vertices per quad.
-                        colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
+                    if material is not None:
+                        if colors is not None:
+                            logger.info('Overriding object color with material color.', 2)
+
+                        # TODO: Document this feature.
+                        # If the material name is "blank", use the spray can color by not defining any color for this quad.
+                        # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
+                        if material.name.lower().startswith('blank'):
+                            colors = None
+                        else:
+                            # 4 vertices per quad.
+                            colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
 
             # =============
             # Vertex Colors
             # =============
             # Vertex colors override material colors since they are more detailed.
-            # A vertex color layer exists.
-            if len(current_data.vertex_colors) != 0:
-                if colors is not None:
-                    logger.info('Overriding material color with vertex color.', 2)
 
-                colors = []
+            if properties.use_vertex_colors:
+                # A vertex color layer exists.
+                if len(current_data.vertex_colors) != 0:
+                    if colors is not None:
+                        logger.info('Overriding material color with vertex color.', 2)
 
-                # Vertex winding order is reversed compared to Blockland.
-                for index in reversed(loop_indices):
-                    if len(current_data.vertex_colors) > 1:
-                        logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
-                            object_name, len(current_data.vertex_colors)), 2)
+                    colors = []
 
-                    # Only use the first color layer.
-                    # color_layer.data[index] may contain more than 4 values.
-                    loop_color = current_data.vertex_colors[0].data[index]
+                    # Vertex winding order is reversed compared to Blockland.
+                    for index in reversed(loop_indices):
+                        if len(current_data.vertex_colors) > 1:
+                            logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
+                                object_name, len(current_data.vertex_colors)), 2)
 
-                    # TODO: Document this feature.
-                    # Use the color layer name as the value for alpha, if it is numerical.
-                    # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
-                    # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                    name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
+                        # Only use the first color layer.
+                        # color_layer.data[index] may contain more than 4 values.
+                        loop_color = current_data.vertex_colors[0].data[index]
 
-                    if vertex_color_alpha is None:
-                        if name is None:
-                            vertex_color_alpha = 1.0
-                            logger.warning('No alpha value set in vertex color layer name, using 1.0.', 2)
-                        else:
-                            vertex_color_alpha = name
-                            logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
+                        # TODO: Document this feature.
+                        # Use the color layer name as the value for alpha, if it is numerical.
+                        # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
+                        # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
+                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
 
-                    colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
+                        if vertex_color_alpha is None:
+                            if name is None:
+                                vertex_color_alpha = 1.0
+                                logger.warning('No alpha value set in vertex color layer name, using 1.0.', 2)
+                            else:
+                                vertex_color_alpha = name
+                                logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
+
+                        colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
             # ================
             # BLB texture name
