@@ -108,9 +108,11 @@ def write_file(properties, filepath, blb_data):
         # --------
         # Coverage
         # --------
-        file.write("COVERAGE:\n")  # TODO: The entire coverage section is optional if using default/no coverage.
-        for (hide_adjacent, plate_count) in blb_data.coverage:
-            file.write("{} : {}\n".format(str(int(hide_adjacent)), str(plate_count)))
+        # Only skip writing coverage if terse mode is True and coverage is False.
+        if not (properties.blendprop.terse_mode and not properties.blendprop.calculate_coverage):
+            file.write("COVERAGE:\n")
+            for (hide_adjacent, plate_count) in blb_data.coverage:
+                file.write("{} : {}\n".format(str(int(hide_adjacent)), str(plate_count)))
 
         # -----
         # Quads
@@ -124,7 +126,7 @@ def write_file(properties, filepath, blb_data):
 
             for (positions, normals, uvs, colors, texture_name) in blb_data.quads[index]:
                 # Face texture name.
-                file.write("\n{}{}\n".format("" if properties.blendprop.terse_mode else "TEX:", texture_name))
+                file.write("\nTEX:{}\n".format(texture_name))
 
                 # Vertex positions.
                 file.write("{}\n".format("" if properties.blendprop.terse_mode else "POSITION:"))

@@ -1741,7 +1741,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         # This is my workaround to making a sort of dictionary where the keys are in insertion order.
         # The quads must be written in a specific order.
         # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-        # TODO: Consider using a standard dictionary and worrying about the order when writing.
         sorted_quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
 
         # Sort quads into sections.

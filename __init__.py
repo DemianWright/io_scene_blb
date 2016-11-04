@@ -41,6 +41,9 @@ from bpy_extras.io_utils import ExportHelper
 # Blender requires imports from "." for self-defined modules.
 from . import export_blb, const, logger
 
+# TODO: Importing BLB files.
+# TODO: Render brick preview.
+
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
@@ -122,15 +125,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
-    # -----------------
-    # Use Object Colors
-    # -----------------
-    use_object_colors = BoolProperty(
-        name="Parse Object Colors",
-        description="Parse quad colors from object names using the definition token (intended as legacy support)",
-        default=True,
-    )
-
     # -------------
     # Use Materials
     # -------------
@@ -147,6 +141,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         name="Use Vertex Colors",
         description="Read quad colors from the first vertex color layer (overrides material colors)",
         default=True,
+    )
+
+    # -----------------
+    # Use Object Colors
+    # -----------------
+    use_object_colors = BoolProperty(
+        name="Parse Object Colors",
+        description="Parse quad colors from object names using the definition token (intended as legacy support)",
+        default=False,
     )
 
     # -------
