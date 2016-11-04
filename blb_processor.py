@@ -1281,6 +1281,7 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
         col_min = __world_to_local(col_min, bounds_data.world_center)
         col_max = __world_to_local(col_max, bounds_data.world_center)
 
+        # Technically collision outside brick bounds is not invalid but the collision is also horribly broken and as such is not allowed.
         if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
             zero_size = False
 
@@ -1625,7 +1626,6 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
                 # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
-                # ROUND & CAST
                 normals = [__normalize_vector(obj, poly.normal), ] * 4
 
             # ===
@@ -1651,7 +1651,6 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                     material = obj.material_slots[poly.material_index].material
 
                     if material is not None:
-                        # TODO: Document this feature.
                         # If the material name is "blank", use the spray can color by not defining any color for this quad.
                         # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
                         if material.name.lower().startswith('blank'):
@@ -1680,7 +1679,6 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
                         # color_layer.data[index] may contain more than 4 values.
                         loop_color = current_data.vertex_colors[0].data[index]
 
-                        # TODO: Document this feature.
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
@@ -1702,10 +1700,15 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             texture_name = None
 
             if current_data.materials and current_data.materials[poly.material_index] is not None:
-                matname = current_data.materials[poly.material_index].name.upper()
+                matname = current_data.materials[poly.material_index].name
+                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
+                texcount = len(texnames)
 
-                if matname in const.VALID_BRICK_TEXTURES:
-                    texture_name = matname
+                if texcount > 0:
+                    texture_name = texnames[0]
+
+                    if texcount > 1:
+                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
 
             if texture_name is None:
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.

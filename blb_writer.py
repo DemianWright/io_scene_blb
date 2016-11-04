@@ -107,7 +107,7 @@ def write_file(properties, filepath, blb_data):
         # --------
         # Coverage
         # --------
-        file.write("COVERAGE:\n")  # Not optional.
+        file.write("COVERAGE:\n")  # TODO: The entire coverage section is optional if using default/no coverage.
         for (hide_adjacent, plate_count) in blb_data.coverage:
             file.write("{} : {}\n".format(str(int(hide_adjacent)), str(plate_count)))
 
