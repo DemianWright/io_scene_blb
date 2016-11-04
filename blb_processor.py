@@ -346,12 +346,13 @@ def __all_within_bounds(local_coordinates, bounding_dimensions):
     return True
 
 
-def __sequence_z_to_plates(xyz):
+def __sequence_z_to_plates(xyz, plate_height):
     """Performs __to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
     If the given sequence does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
 
     Args:
         xyz (sequence of numbers): A sequence of three numerical values.
+        plate_height (Decimal): The height of a Blockland plate in Blender units.
 
     Returns:
         A list of three Decimal type numbers.
@@ -359,18 +360,19 @@ def __sequence_z_to_plates(xyz):
     if len(xyz) == 3:
         # ROUND & CAST
         sequence = __to_decimals(xyz)
-        sequence[const.Z] /= const.PLATE_HEIGHT
+        sequence[const.Z] /= plate_height
         return sequence
     else:
         return xyz
 
 
-def __round_to_plate_coordinates(local_coordinates, brick_dimensions):
+def __round_to_plate_coordinates(local_coordinates, brick_dimensions, plate_height):
     """Rounds the specified sequence of local space XYZ coordinates to the nearest valid plate coordinates in a brick with the specified dimensions.
 
     Args:
         local_coordinates (sequence of numbers): A sequence of local space coordinates.
         brick_dimensions (sequence of numbers): A sequence of dimensions of the brick.
+        plate_height (Decimal): The height of a Blockland plate in Blender units.
 
     Returns:
         A list of rounded local space coordinates as Decimal values.
@@ -395,12 +397,12 @@ def __round_to_plate_coordinates(local_coordinates, brick_dimensions):
         result.append(__to_decimal(local_coordinates[const.Y], "0.5"))
 
     # Round to the nearest full plate height. (Half is rounded up)
-    if __is_even(brick_dimensions[const.Z] / const.PLATE_HEIGHT):
+    if __is_even(brick_dimensions[const.Z] / plate_height):
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Z], const.PLATE_HEIGHT))
+        result.append(__to_decimal(local_coordinates[const.Z], plate_height))
     else:
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Z], (const.PLATE_HEIGHT / Decimal("2.0"))))
+        result.append(__to_decimal(local_coordinates[const.Z], (plate_height / Decimal("2.0"))))
 
     return result
 
@@ -676,7 +678,7 @@ def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=Non
     return coverage
 
 
-def __sort_quad(quad, bounds_dimensions, forward_axis):
+def __sort_quad(quad, bounds_dimensions, forward_axis, plate_height):
     """Calculates the section (brick side) for the specified quad within the specified bounds dimensions.
 
     The section is determined by whether all vertices of the quad are in the same plane as one of the planes (brick sides) defined by the (cuboid) brick bounds.
@@ -686,6 +688,7 @@ def __sort_quad(quad, bounds_dimensions, forward_axis):
         quad (sequence): A sequence of various data that defines the quad.
         bounds_dimensions (sequence of Decimals): The dimensions of the brick bounds.
         forward_axis (string): The name of the user-defined BLB forward axis.
+        plate_height (Decimal): The height of a Blockland plate in Blender units.
 
     Returns:
         The index of the section name in const.QUAD_SECTION_ORDER sequence.
@@ -696,7 +699,7 @@ def __sort_quad(quad, bounds_dimensions, forward_axis):
     # ROUND & CAST
     # Divide all dimension values by 2 to get the local bounding plane values.
     # The dimensions are in Blender units so Z height needs to be converted to plates.
-    local_bounds = __sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions])
+    local_bounds = __sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions], plate_height)
 
     # Assume omni direction until otherwise proven.
     direction = 6
@@ -796,7 +799,7 @@ def __get_object_sequence(context, properties):
 
     Args:
         context (Blender context object): A Blender object containing scene data.
-        properties (Blender properties object): A Blender object containing user preferences.
+        properties (DerivateProperties): An object containing user properties.
 
     Returns:
         The sequence of Blender objects from the specified Blender context to be exported according to the specified user preferences.
@@ -804,13 +807,13 @@ def __get_object_sequence(context, properties):
     objects = []
 
     # Use selected objects?
-    if properties.export_objects == "SELECTION":
+    if properties.blendprop.export_objects == "SELECTION":
         logger.info("Exporting selected objects to BLB.")
         objects = context.selected_objects
         logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects selected."), 1)
 
     # Use objects in visible layers?
-    if properties.export_objects == "LAYERS":
+    if properties.blendprop.export_objects == "LAYERS":
         logger.info("Exporting objects in visible layers to BLB.")
         # For every object in the scene.
         for obj in context.scene.objects:
@@ -827,7 +830,7 @@ def __get_object_sequence(context, properties):
     # If user wants to export the whole scene.
     # Or if user wanted to export only the selected objects or layers but they contained nothing.
     # Get all scene objects.
-    if properties.export_objects == "SCENE" or len(objects) == 0:
+    if properties.blendprop.export_objects == "SCENE" or len(objects) == 0:
         logger.info("Exporting scene to BLB.")
         objects = context.scene.objects
         logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "Scene has no objects."), 1)
@@ -848,7 +851,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     """
     # ROUND & CAST
     # Get the dimensions of the Blender object and convert the height to plates.
-    bounds_size = __sequence_z_to_plates(bounds_data.dimensions)
+    bounds_size = __sequence_z_to_plates(bounds_data.dimensions, properties.plate_height)
 
     # Are the dimensions of the bounds object not integers?
     if not __are_ints(bounds_size):
@@ -864,16 +867,16 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
                                                                                                                     bounds_size[const.Y],
                                                                                                                     bounds_size[const.Z],
-                                                                                                                    const.HUMAN_ERROR), 1)
+                                                                                                                    properties.human_error), 1)
 
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
-                bounds_size[index] = round(const.HUMAN_ERROR * round(value / const.HUMAN_ERROR))
+                bounds_size[index] = round(properties.human_error * round(value / properties.human_error))
 
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
 
-    if properties.brick_name_source == 'BOUNDS':
+    if properties.blendprop.brick_name_source == 'BOUNDS':
         if bounds_data.object_name is None:
             logger.warning(
                 "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
@@ -886,7 +889,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                     "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
                 # Brick name follows the bounds definition, spaces are not allowed.
-                blb_data.brick_name = name_elements[name_elements.index(properties.deftoken_bounds) + 1]
+                blb_data.brick_name = name_elements[name_elements.index(properties.blendprop.deftoken_bounds) + 1]
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
 
     return blb_data
@@ -896,7 +899,7 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
     """Calculates the brick bounds data from the recorded minimum and maximum vertex world coordinates.
 
     Args:
-        export_scale (float): A user defined percentage value to scale all values by.
+        export_scale (float): A user defined value to scale all values by. Value must be in the range [0.0,1.0].
         min_world_coordinates (sequence of numbers): A sequence containing the minimum world coordinates of the brick to be exported.
         max_world_coordinates (sequence of numbers): A sequence containing the maximum world coordinates of the brick to be exported.
 
@@ -906,8 +909,8 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
     bounds_data = BrickBounds()
 
     # USER SCALE: Multiply by user defined scale.
-    min_coord = __multiply_sequence(export_scale / 100.0, min_world_coordinates)
-    max_coord = __multiply_sequence(export_scale / 100.0, max_world_coordinates)
+    min_coord = __multiply_sequence(export_scale, min_world_coordinates)
+    max_coord = __multiply_sequence(export_scale, max_world_coordinates)
 
     # Get the dimensions defined by the vectors.
     # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
@@ -968,7 +971,8 @@ def __process_bounds_object(export_scale, obj):
     bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
     __record_world_min_max(bounds_min, bounds_max, obj)
 
-    bounds_data = __calculate_bounds(export_scale, bounds_min, bounds_max)
+    # ROUND & CAST
+    bounds_data = __calculate_bounds(export_scale, __to_decimals(bounds_min), __to_decimals(bounds_max))
 
     # Store the name for logging and determining whether the bounds were defined or automatically calculated.
     bounds_data.object_name = obj.name
@@ -987,25 +991,25 @@ def __process_coverage(properties, blb_data):
     Returns:
         A sequence of BLB coverage data.
     """
-    if properties.calculate_coverage:
-        calculate_side = ((properties.coverage_top_calculate,
-                           properties.coverage_bottom_calculate,
-                           properties.coverage_north_calculate,
-                           properties.coverage_east_calculate,
-                           properties.coverage_south_calculate,
-                           properties.coverage_west_calculate))
+    if properties.blendprop.calculate_coverage:
+        calculate_side = ((properties.blendprop.coverage_top_calculate,
+                           properties.blendprop.coverage_bottom_calculate,
+                           properties.blendprop.coverage_north_calculate,
+                           properties.blendprop.coverage_east_calculate,
+                           properties.blendprop.coverage_south_calculate,
+                           properties.blendprop.coverage_west_calculate))
 
-        hide_adjacent = ((properties.coverage_top_hide,
-                          properties.coverage_bottom_hide,
-                          properties.coverage_north_hide,
-                          properties.coverage_east_hide,
-                          properties.coverage_south_hide,
-                          properties.coverage_west_hide))
+        hide_adjacent = ((properties.blendprop.coverage_top_hide,
+                          properties.blendprop.coverage_bottom_hide,
+                          properties.blendprop.coverage_north_hide,
+                          properties.blendprop.coverage_east_hide,
+                          properties.blendprop.coverage_south_hide,
+                          properties.blendprop.coverage_west_hide))
 
         return __calculate_coverage(blb_data.brick_size,
                                     calculate_side,
                                     hide_adjacent,
-                                    properties.axis_blb_forward)
+                                    properties.blendprop.axis_blb_forward)
     else:
         return __calculate_coverage()
 
@@ -1030,23 +1034,24 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
     grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
     __record_world_min_max(grid_min, grid_max, grid_obj)
 
+    # ROUND & CAST
     # USER SCALE: Multiply by user defined scale.
-    grid_min = __multiply_sequence(properties.export_scale / 100.0, grid_min)
-    grid_max = __multiply_sequence(properties.export_scale / 100.0, grid_max)
+    grid_min = __multiply_sequence(properties.scale, __to_decimals(grid_min))
+    grid_max = __multiply_sequence(properties.scale, __to_decimals(grid_max))
 
     # Recenter the coordinates to the bounds. (Also rounds the values.)
     grid_min = __world_to_local(grid_min, bounds_data.world_center)
     grid_max = __world_to_local(grid_max, bounds_data.world_center)
 
     # Round coordinates to the nearest plate.
-    grid_min = __round_to_plate_coordinates(grid_min, bounds_data.dimensions)
-    grid_max = __round_to_plate_coordinates(grid_max, bounds_data.dimensions)
+    grid_min = __round_to_plate_coordinates(grid_min, bounds_data.dimensions, properties.plate_height)
+    grid_max = __round_to_plate_coordinates(grid_max, bounds_data.dimensions, properties.plate_height)
 
     if __all_within_bounds(grid_min, bounds_data.dimensions) and __all_within_bounds(grid_max, bounds_data.dimensions):
         # Convert the coordinates into brick grid sequence indices.
 
         # Minimum indices.
-        if properties.axis_blb_forward == "NEGATIVE_X" or properties.axis_blb_forward == "NEGATIVE_Y":
+        if properties.blendprop.axis_blb_forward == "NEGATIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
             # Translate coordinates to negative X axis.
             # -X: Index 0 = front of the brick.
             # -Y: Index 0 = left of the brick.
@@ -1057,7 +1062,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             # +Y: Index 0 = left of the brick.
             grid_min[const.X] = grid_min[const.X] + halved_dimensions[const.X]
 
-        if properties.axis_blb_forward == "POSITIVE_X" or properties.axis_blb_forward == "NEGATIVE_Y":
+        if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
             # Translate coordinates to negative Y axis.
             # +X: Index 0 = left of the brick.
             # -Y: Index 0 = front of the brick.
@@ -1069,27 +1074,27 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             grid_min[const.Y] = grid_min[const.Y] + halved_dimensions[const.Y]
 
         # Translate coordinates to negative Z axis, height to plates.
-        grid_min[const.Z] = (grid_min[const.Z] - halved_dimensions[const.Z]) / const.PLATE_HEIGHT
+        grid_min[const.Z] = (grid_min[const.Z] - halved_dimensions[const.Z]) / properties.plate_height
 
         # Maximum indices.
-        if properties.axis_blb_forward == "NEGATIVE_X" or properties.axis_blb_forward == "NEGATIVE_Y":
+        if properties.blendprop.axis_blb_forward == "NEGATIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
             grid_max[const.X] = grid_max[const.X] - halved_dimensions[const.X]
         else:
             grid_max[const.X] = grid_max[const.X] + halved_dimensions[const.X]
 
-        if properties.axis_blb_forward == "POSITIVE_X" or properties.axis_blb_forward == "NEGATIVE_Y":
+        if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
             grid_max[const.Y] = grid_max[const.Y] - halved_dimensions[const.Y]
         else:
             grid_max[const.Y] = grid_max[const.Y] + halved_dimensions[const.Y]
 
-        grid_max[const.Z] = (grid_max[const.Z] - halved_dimensions[const.Z]) / const.PLATE_HEIGHT
+        grid_max[const.Z] = (grid_max[const.Z] - halved_dimensions[const.Z]) / properties.plate_height
 
         # Swap min/max Z index and make it positive. Index 0 = top of the brick.
         temp = grid_min[const.Z]
         grid_min[const.Z] = abs(grid_max[const.Z])
         grid_max[const.Z] = abs(temp)
 
-        if properties.axis_blb_forward == "POSITIVE_X":
+        if properties.blendprop.axis_blb_forward == "POSITIVE_X":
             # Swap min/max depth and make it positive.
             temp = grid_min[const.Y]
             grid_min[const.Y] = abs(grid_max[const.Y])
@@ -1097,7 +1102,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
 
             grid_min = common.swizzle(grid_min, "bac")
             grid_max = common.swizzle(grid_max, "bac")
-        elif properties.axis_blb_forward == "NEGATIVE_X":
+        elif properties.blendprop.axis_blb_forward == "NEGATIVE_X":
             # Swap min/max width and make it positive.
             temp = grid_min[const.X]
             grid_min[const.X] = abs(grid_max[const.X])
@@ -1105,7 +1110,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
 
             grid_min = common.swizzle(grid_min, "bac")
             grid_max = common.swizzle(grid_max, "bac")
-        elif properties.axis_blb_forward == "NEGATIVE_Y":
+        elif properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
             # Swap min/max depth and make it positive.
             temp = grid_min[const.Y]
             grid_min[const.Y] = abs(grid_max[const.Y])
@@ -1115,7 +1120,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             temp = grid_min[const.X]
             grid_min[const.X] = abs(grid_max[const.X])
             grid_max[const.X] = abs(temp)
-        # Else properties.axis_blb_forward == "POSITIVE_Y": do nothing
+        # Else properties.blendprop.axis_blb_forward == "POSITIVE_Y": do nothing
 
         grid_min = __force_to_ints(grid_min)
         grid_max = __force_to_ints(grid_max)
@@ -1139,16 +1144,15 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         raise OutOfBoundsException()
 
 
-def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects, grid_definitions_priority):
+def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
     """Processes the specified brick grid definitions.
 
     Args:
-        properties (Blender properties object): A Blender object containing user preferences.
+        properties (DerivateProperties): An object containing user properties.
         blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         definition_objects (a sequence of sequences of Blender objects): A sequence containing five sequences of Blender objects representing brick grid definitions.
                                                                         The second sequences must ordered in the reverse priority order.
-        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in reverse priority order.
 
     Returns:
         A three dimensional array of brick grid symbols, ready for writing to a file.
@@ -1193,7 +1197,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
             logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions), 1)
 
     # Take the custom forward axis into account.
-    if properties.axis_blb_forward == "POSITIVE_X" or properties.axis_blb_forward == "NEGATIVE_X":
+    if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_X":
         grid_width = blb_data.brick_size[const.X]
         grid_depth = blb_data.brick_size[const.Y]
     else:
@@ -1228,7 +1232,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
         # Write the calculated definition_volumes into the brick grid.
         for index, volumes in enumerate(definition_volumes):
             # Get the symbol for these volumes.
-            symbol = grid_definitions_priority[index]
+            symbol = properties.grid_definitions_priority[index]
             for volume in volumes:
                 # Modify the grid by adding the symbol to the correct locations.
                 __modify_brick_grid(brick_grid, volume, symbol)
@@ -1236,11 +1240,11 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
     return brick_grid
 
 
-def __process_collision_definitions(export_scale, bounds_data, definition_objects):
+def __process_collision_definitions(properties, bounds_data, definition_objects,):
     """Processes the specified collision definitions.
 
     Args:
-        export_scale (float): A user defined percentage value to scale all values by.
+        properties (DerivateProperties): An object containing user properties.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         definition_objects (a sequence of Blender object): A sequence of Blender objects representing collision definitions.
 
@@ -1275,9 +1279,10 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
         col_max = Vector((float("-inf"), float("-inf"), float("-inf")))
         __record_world_min_max(col_min, col_max, obj)
 
+        # ROUND & CAST
         # USER SCALE: Multiply by user defined scale.
-        col_min = __multiply_sequence(export_scale / 100.0, col_min)
-        col_max = __multiply_sequence(export_scale / 100.0, col_max)
+        col_min = __multiply_sequence(properties.scale, __to_decimals(col_min))
+        col_max = __multiply_sequence(properties.scale, __to_decimals(col_max))
 
         # Recenter the coordinates to the bounds. (Also rounds the values.)
         col_min = __world_to_local(col_min, bounds_data.world_center)
@@ -1311,7 +1316,7 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
             # ROUND & CAST
             # Add the center and dimensions to the definition data as a tuple.
             # The coordinates and dimensions are in plates.
-            collisions.append((__sequence_z_to_plates(center), __sequence_z_to_plates(dimensions)))
+            collisions.append((__sequence_z_to_plates(center, properties.plate_height), __sequence_z_to_plates(dimensions, properties.plate_height)))
         else:
             if bounds_data.object_name is None:
                 logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name), 1)
@@ -1340,8 +1345,8 @@ def __process_collision_definitions(export_scale, bounds_data, definition_object
     return collisions
 
 
-def __process_definition_objects(properties, objects, grid_def_obj_token_priority, grid_definitions_priority):
-    """"Processes all definition objects that are not exported as a 3D model but will affect the brick properties.
+def __process_definition_objects(properties, objects):
+    """"Processes all definition objects that are not exported as a 3D model but will affect the brick properties.blendprop.
 
     Processed definition objects:
         - bounds
@@ -1351,10 +1356,8 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
     If no bounds object is found, the brick bounds will be automatically calculated using the minimum and maximum coordinates of the vertices in the visible mesh objects.
 
     Args:
-        properties (Blender properties object): A Blender object containing user preferences.
+        properties (DerivateProperties): An object containing user properties.
         objects (sequence of Blender objects): The sequence of objects to be processed.
-        grid_def_obj_token_priority (sequence): A sequence containing the brick grid definition object tokens in reverse priority order.
-        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_token_priority.
 
     Returns:
         A tuple containing:
@@ -1389,24 +1392,24 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
 
         obj_name = obj.name
         obj_name_tokens = __split_object_name_to_tokens(obj_name)
-        object_grid_definitions = __get_tokens_from_object_name(obj_name_tokens, grid_def_obj_token_priority)
+        object_grid_definitions = __get_tokens_from_object_name(obj_name_tokens, properties.grid_def_obj_token_priority)
 
         # Ignore non-mesh objects
         if obj.type != "MESH":
-            if obj_name.startswith(properties.deftoken_bounds):
+            if obj_name.startswith(properties.blendprop.deftoken_bounds):
                 logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
-            elif obj_name.startswith(grid_def_obj_token_priority):
+            elif obj_name.startswith(properties.grid_def_obj_token_priority):
                 logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
-            elif obj_name.startswith(properties.deftoken_collision):
+            elif obj_name.startswith(properties.blendprop.deftoken_collision):
                 logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
             continue
 
         # Is the current object a bounds definition object?
-        elif properties.deftoken_bounds in obj_name_tokens:
+        elif properties.blendprop.deftoken_bounds in obj_name_tokens:
             if bounds_data is None:
-                bounds_data = __process_bounds_object(properties.export_scale, obj)
+                bounds_data = __process_bounds_object(properties.scale, obj)
                 blb_data = __record_bounds_data(properties, blb_data, bounds_data)
 
                 plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
@@ -1427,7 +1430,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
                 continue
 
         # Is the current object a collision definition object?
-        elif properties.deftoken_collision in obj_name_tokens:
+        elif properties.blendprop.deftoken_collision in obj_name_tokens:
             # Collision definition objects cannot be processed until after the bounds have been defined.
             collision_objects.append(obj)
 
@@ -1437,7 +1440,7 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
                 logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
 
             # Get the priority index of this grid definition.
-            index = grid_def_obj_token_priority.index(object_grid_definitions[0])
+            index = properties.grid_def_obj_token_priority.index(object_grid_definitions[0])
 
             # Brick grid definition objects cannot be processed until after the bounds have been defined.
             # Append the current definition object into the appropriate list.
@@ -1456,7 +1459,10 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
         logger.warning('No brick bounds definition found. Automatically calculated brick size may be undesirable.', 1)
-        bounds_data = __calculate_bounds(properties.export_scale, min_world_coordinates, max_world_coordinates)
+
+        # ROUND & CAST
+        bounds_data = __calculate_bounds(properties.scale, __to_decimals(min_world_coordinates), __to_decimals(max_world_coordinates))
+
         blb_data = __record_bounds_data(properties, blb_data, bounds_data)
         plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
         bricks = int(bricks)
@@ -1478,8 +1484,8 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
             return 'Brick has no volume, brick could not be rendered in-game.'
         else:
             # Process brick grid and collision definitions now that a bounds definition exists.
-            blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects, grid_definitions_priority)
-            blb_data.collision = __process_collision_definitions(properties.export_scale, bounds_data, collision_objects)
+            blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects)
+            blb_data.collision = __process_collision_definitions(properties, bounds_data, collision_objects)
 
             # Return the data.
             return (blb_data, bounds_data, mesh_objects)
@@ -1493,14 +1499,13 @@ def __process_definition_objects(properties, objects, grid_def_obj_token_priorit
         return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
-def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions, mesh_objects):
+def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     """Gets all the necessary data from the specified Blender objects and sorts all the quads of the mesh_objects into sections for brick coverage to work.
 
     Args:
         context (Blender context object): A Blender object containing scene data.
-        properties (Blender properties object): A Blender object containing user preferences.
+        properties (DerivateProperties): An object containing user properties.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
-        quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
         mesh_objects (sequence of Blender objects): Meshes to be processed.
 
     Returns:
@@ -1536,13 +1541,13 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
         # =============
         colors = None
 
-        if properties.use_object_colors:
+        if properties.blendprop.use_object_colors:
             tokens = __split_object_name_to_tokens(object_name, True)
 
             # Does the object name contain the color definition token signifying that it defines the object's color?
-            if properties.deftoken_color in tokens:
+            if properties.blendprop.deftoken_color in tokens:
                 # Parse floats from the expected color values.
-                floats = __get_color_values(tokens[tokens.index(properties.deftoken_color) + 1:])
+                floats = __get_color_values(tokens[tokens.index(properties.blendprop.deftoken_color) + 1:])
                 size = len(floats)
 
                 # Did user define at least 4 numerical values?
@@ -1563,21 +1568,21 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
         # Manual Quad Sorting
         # ===================
         # Manual sorting is per-object.
-        quad_sections = __get_tokens_from_object_name(object_name, quad_sort_definitions)
+        quad_sections = __get_tokens_from_object_name(object_name, properties.quad_sort_definitions)
         section_count = len(quad_sections)
 
         if section_count > 1:
-            section = quad_sort_definitions.index(quad_sections[0])
+            section = properties.quad_sort_definitions.index(quad_sections[0])
             logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
                 object_name, section_count, section), 2)
         elif section_count == 1:
-            section = quad_sort_definitions.index(quad_sections[0])
+            section = properties.quad_sort_definitions.index(quad_sections[0])
         else:
             section = None
 
         # This function creates a new mesh datablock.
         # It needs to be manually deleted later to release the memory, otherwise it will stick around until Blender is closed.
-        mesh = obj.to_mesh(context.scene, properties.use_modifiers, 'PREVIEW', False, False)
+        mesh = obj.to_mesh(context.scene, properties.blendprop.use_modifiers, 'PREVIEW', False, False)
 
         # Process quad data.
         for poly in mesh.polygons:
@@ -1609,10 +1614,9 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
 
                 # Get the vertex world position from the vertex index.
                 # Center the position to the current bounds object: coordinates are now in local object space.
-                # USER SCALE: Multiply by user defined scale.
-                coords = __multiply_sequence(properties.export_scale / 100.0, __vert_index_to_world_coord(obj, mesh, vert_index))
                 # ROUND & CAST
-                positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center)))
+                coords = __multiply_sequence(properties.scale, __to_decimals(__vert_index_to_world_coord(obj, mesh, vert_index)))
+                positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center), properties.plate_height))
 
             # =======
             # Normals
@@ -1647,7 +1651,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # ===============
             # Material colors override objects colors since they are better and easier to use.
 
-            if properties.use_materials:
+            if properties.blendprop.use_materials:
                 # Object has material slots?
                 if len(obj.material_slots) > 0:
                     material = obj.material_slots[poly.material_index].material
@@ -1666,7 +1670,7 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
             # =============
             # Vertex colors override material colors since they are more detailed.
 
-            if properties.use_vertex_colors:
+            if properties.blendprop.use_vertex_colors:
                 # A vertex color layer exists.
                 if len(current_data.vertex_colors) != 0:
                     colors = []
@@ -1746,10 +1750,10 @@ def __process_mesh_data(context, properties, bounds_data, quad_sort_definitions,
 
             # Does user want to automatically sort quads?
             # And the current quad does not have a manual definition?
-            if properties.auto_sort_quads and quad[5] is None:
+            if properties.blendprop.auto_sort_quads and quad[5] is None:
                 # Calculate the section name the quad belongs to.
                 # Get the index of that section name in the QUAD_SECTION_ORDER list.
-                section_idx = __sort_quad(quad, bounds_data.dimensions, properties.axis_blb_forward)
+                section_idx = __sort_quad(quad, bounds_data.dimensions, properties.blendprop.axis_blb_forward, properties.plate_height)
             # Else: No automatic sorting or the quad had a manual sort, in which case there is no point in calculating the section.
 
             # Regardless of automatic sorting, manual sort is always available.
@@ -1813,33 +1817,20 @@ def __format_blb_data(forward_axis, blb_data):
     return blb_data
 
 
-def process_blender_data(context, properties, grid_def_obj_token_priority, grid_definitions_priority, quad_sort_definitions):
+def process_blender_data(context, properties):
     """Processes the specified Blender data into a format that can be written in a BLB file.
 
     Args:
         context (Blender context object): A Blender object containing scene data.
-        properties (Blender properties object): A Blender object containing user preferences.
-        grid_def_obj_token_priority (sequence): A sequence containing the user-defined brick grid definitions in reverse priority order.
-        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_token_priority.
-        quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
+        properties (DerivateProperties): An object containing user properties.
 
     Returns:
         A BLBData object containing all the necessary information in the correct format for writing directly into a BLB file or an error message string to display to the user.
     """
     global __CALCULATION_FP_PRECISION_STR
 
-    precision = properties.float_precision
-
-    if common.to_float_or_none(precision) is None:
-        return 'Invalid floating point precision value given.'
-    else:
-        if precision == '0':
-            logger.info('Setting floating point precision to minimum.')
-            # We're only writing 16 decimals anyway.
-            precision = "0.{}1".format('0' * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
-
-        logger.info("Using floating point precision: {}".format(precision))
-        __CALCULATION_FP_PRECISION_STR = precision
+    # Using a global variable for the sake of convenience and code readability.
+    __CALCULATION_FP_PRECISION_STR = properties.precision
 
     # Determine which objects to process.
     object_sequence = __get_object_sequence(context, properties)
@@ -1849,7 +1840,7 @@ def process_blender_data(context, properties, grid_def_obj_token_priority, grid_
 
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible mesh_objects from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
-        result = __process_definition_objects(properties, object_sequence, grid_def_obj_token_priority, grid_definitions_priority)
+        result = __process_definition_objects(properties, object_sequence)
 
         if isinstance(result, str):
             # Something went wrong, return error message.
@@ -1865,7 +1856,7 @@ def process_blender_data(context, properties, grid_def_obj_token_priority, grid_
             logger.info('Processing meshes.')
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            quads = __process_mesh_data(context, properties, bounds_data, quad_sort_definitions, mesh_objects)
+            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects)
 
             if isinstance(quads, str):
                 # Something went wrong.
@@ -1874,6 +1865,6 @@ def process_blender_data(context, properties, grid_def_obj_token_priority, grid_
                 blb_data.quads = quads
 
             # Format and return the data for writing.
-            return __format_blb_data(properties.axis_blb_forward, blb_data)
+            return __format_blb_data(properties.blendprop.axis_blb_forward, blb_data)
     else:
         return 'No objects to export.'

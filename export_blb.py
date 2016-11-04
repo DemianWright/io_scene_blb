@@ -20,66 +20,151 @@ A module for exporting Blender data into the BLB format.
 
 @author: Demian Wright
 '''
-
+from decimal import Decimal
 import bpy
 
-from . import const, logger, blb_processor, blb_writer
-
-# The export mediator.
+from . import const, logger, blb_processor, blb_writer, common
 
 
-def build_grid_priority_tuples(properties):
-    """Sorts the grid definition object name tokens into reverse priority order according the user properties.
-    Definitions earlier in the sequence are overwritten by tokens later in the sequence.
+# The export mediator module.
 
-    Args:
-        properties (Blender properties object): A Blender object containing user preferences.
+# ==========================
+# DerivativeProperties Class
+# ==========================
 
-    Returns:
-        A tuple containing the grid definition object tokens in the first element and the grid symbols in the same order in the second element or None if one or more definition had the same priority which leads to undefined behavior and is disallowed.
+class DerivativeProperties(object):
+    """A class for storing various properties derived from the user-defined Blender properties to guide the export process.
+
+    Stores the following data:
+        blendprop (Blender properties object): The original Blender properties object containing more properties that have not been processed further.
+        plate_height (Decimal): The height of one Blockland plate in Blender units.
+        human_error (Decimal): Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
+        scale (Decimal): The scale to export the brick at. Value is in range [0.0,1.0].
+        grid_def_obj_token_priority (sequence): A sequence containing the user-defined brick grid definitions in reverse priority order.
+        grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_token_priority.
+        quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
     """
-    # There are exactly 5 tokens.
-    tokens = [None] * 5
 
-    # Go through every priority individually.
-    tokens[properties.deftoken_gridx_priority] = properties.deftoken_gridx
-    tokens[properties.deftoken_griddash_priority] = properties.deftoken_griddash
-    tokens[properties.deftoken_gridu_priority] = properties.deftoken_gridu
-    tokens[properties.deftoken_gridd_priority] = properties.deftoken_gridd
-    tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb
+    def __init__(self, properties):
+        """Creates the DerivativeProperties object from the specified Blender properties.
 
-    if None in tokens:
-        logger.error("Two or more brick grid definitions had the same priority. Unable to proceed.")
-        return None
-    else:
-        symbols = [None] * 5
+        Args:
+            properties (Blender properties object): A Blender object containing user preferences.
+        """
+        #===========
+        # Properties
+        # ==========
+        self.blendprop = properties
+        self.error_message = None
 
-        symbols[properties.deftoken_gridx_priority] = const.GRID_INSIDE
-        symbols[properties.deftoken_griddash_priority] = const.GRID_OUTSIDE
-        symbols[properties.deftoken_gridu_priority] = const.GRID_UP
-        symbols[properties.deftoken_gridd_priority] = const.GRID_DOWN
-        symbols[properties.deftoken_gridb_priority] = const.GRID_BOTH
+        # Build the brick grid definition tokens and symbol priority tuple.
+        # Contains the brick grid definition object name tokens in reverse priority order.
+        result = self.__build_grid_priority_tuples(properties)
 
-        return (tuple(tokens), tuple(symbols))
+        if result is None:
+            self.error_message = 'Two or more brick grid definitions had the same priority.'
+        else:
+            #===========
+            # Brick Grid
+            # ==========
+            self.grid_def_obj_token_priority = result[0]
+            self.grid_definitions_priority = result[1]
 
+            #=============
+            # Quad Sorting
+            # ============
+            self.quad_sort_definitions = self.__build_quad_sort_definitions(properties)
 
-def build_quad_sort_definitions(properties):
-    """Creates tuple of quad section definitions used to sort quads.
+            #======
+            # Scale
+            # =====
+            # export_scale is a percentage value.
+            self.scale = Decimal("{0:.{1}f}".format(properties.export_scale, const.MAX_FP_DECIMALS_TO_WRITE)) * Decimal("0.01")
+            logger.info("Export at {} scale.".format(self.scale))
 
-    Args:
-        properties (Blender properties object): A Blender object containing user preferences.
+            #===========================
+            # Plate Height & Human Error
+            # ==========================
+            if properties.export_scale == 100.0:
+                # A 1x1 Blockland plate is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
+                self.plate_height = Decimal("0.4")
 
-    Returns:
-        A tuple containing the definitions for manual quad section sorting in the correct order.
-    """
-    # The definitions must be in the same order as const.QUAD_SECTION_ORDER
-    return (properties.deftoken_quad_sort_top,
-            properties.deftoken_quad_sort_bottom,
-            properties.deftoken_quad_sort_north,
-            properties.deftoken_quad_sort_east,
-            properties.deftoken_quad_sort_south,
-            properties.deftoken_quad_sort_west,
-            properties.deftoken_quad_sort_omni)
+                # Used for rounding vertex positions to the brick grid.
+                self.human_error = Decimal("0.1")
+            else:
+                properties.human_error = properties.human_error * self.scale
+                properties.plate_height = properties.plate_heigh * self.scale
+
+            #==========
+            # Precision
+            # =========
+            prec = properties.float_precision
+
+            if common.to_float_or_none(prec) is None:
+                self.error_message = 'Invalid floating point precision value given.'
+            else:
+                if prec == '0':
+                    logger.info('Setting floating point precision to minimum.')
+                    # We're only writing 16 decimals anyway.
+                    prec = "0.{}1".format('0' * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
+
+                logger.info("Using floating point precision: {}".format(prec))
+
+                self.precision = prec
+
+    @classmethod
+    def __build_grid_priority_tuples(cls, properties):
+        """Sorts the grid definition object name tokens into reverse priority order according the user properties.
+        Definitions earlier in the sequence are overwritten by tokens later in the sequence.
+
+        Args:
+            properties (Blender properties object): A Blender object containing user preferences.
+
+        Returns:
+            A tuple containing the grid definition object tokens in the first element and the grid symbols in the same order in the second element or None if one or more definition had the same priority which leads to undefined behavior and is disallowed.
+        """
+        # There are exactly 5 tokens.
+        tokens = [None] * 5
+
+        # Go through every priority individually.
+        tokens[properties.deftoken_gridx_priority] = properties.deftoken_gridx
+        tokens[properties.deftoken_griddash_priority] = properties.deftoken_griddash
+        tokens[properties.deftoken_gridu_priority] = properties.deftoken_gridu
+        tokens[properties.deftoken_gridd_priority] = properties.deftoken_gridd
+        tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb
+
+        if None in tokens:
+            logger.error("Two or more brick grid definitions had the same priority. Unable to proceed.")
+            return None
+        else:
+            symbols = [None] * 5
+
+            symbols[properties.deftoken_gridx_priority] = const.GRID_INSIDE
+            symbols[properties.deftoken_griddash_priority] = const.GRID_OUTSIDE
+            symbols[properties.deftoken_gridu_priority] = const.GRID_UP
+            symbols[properties.deftoken_gridd_priority] = const.GRID_DOWN
+            symbols[properties.deftoken_gridb_priority] = const.GRID_BOTH
+
+            return (tuple(tokens), tuple(symbols))
+
+    @classmethod
+    def __build_quad_sort_definitions(cls, properties):
+        """Creates tuple of quad section definitions used to sort quads.
+
+        Args:
+            properties (Blender properties object): A Blender object containing user preferences.
+
+        Returns:
+            A tuple containing the definitions for manual quad section sorting in the correct order.
+        """
+        # The definitions must be in the same order as const.QUAD_SECTION_ORDER
+        return (properties.deftoken_quad_sort_top,
+                properties.deftoken_quad_sort_bottom,
+                properties.deftoken_quad_sort_north,
+                properties.deftoken_quad_sort_east,
+                properties.deftoken_quad_sort_south,
+                properties.deftoken_quad_sort_west,
+                properties.deftoken_quad_sort_omni)
 
 
 def export(context, properties, export_dir, export_file, file_name):
@@ -99,22 +184,16 @@ def export(context, properties, export_dir, export_file, file_name):
 
     logger.configure(properties.write_log, properties.write_log_warnings)
 
-    # Process the user properties into a usable format.
-    # Build the brick grid definition tokens and symbol priority tuple.
-    # Contains the brick grid definition object name tokens in reverse priority order.
-    result = build_grid_priority_tuples(properties)
+    # Process the user properties further.
+    deriv_properties = DerivativeProperties(properties)
 
-    if result is None:
-        return 'Two or more brick grid definitions had the same priority.'
+    if deriv_properties.error_message is not None:
+        return deriv_properties.error_message
     else:
-        grid_def_obj_token_priority = result[0]
-        grid_definitions_priority = result[1]
-        quad_sort_definitions = build_quad_sort_definitions(properties)
-
         # Process Blender data into a writable format.
         # The context variable contains all the Blender data.
         # The properties variable contains all user-defined settings to take into account when processing the data.
-        data = blb_processor.process_blender_data(context, properties, grid_def_obj_token_priority, grid_definitions_priority, quad_sort_definitions)
+        data = blb_processor.process_blender_data(context, deriv_properties)
 
         # Got the BLBData we need.
         if isinstance(data, blb_processor.BLBData):
@@ -132,7 +211,7 @@ def export(context, properties, export_dir, export_file, file_name):
 
             logger.info('Writing to file.')
             # Write the data to a file.
-            blb_writer.write_file(properties, export_path, data)
+            blb_writer.write_file(deriv_properties, export_path, data)
 
             logger.info("Output file: {}".format(export_path), 1)
 

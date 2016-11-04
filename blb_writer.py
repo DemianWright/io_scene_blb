@@ -58,6 +58,7 @@ def write_file(properties, filepath, blb_data):
     """Writes the BLB file.
 
     Args:
+        properties (DerivateProperties): An object containing user properties.
         filepath (string): Path to the BLB file to be written.
         blb_data (BLBData): A BLBData object containing the data to be written.
     """
@@ -116,33 +117,33 @@ def write_file(properties, filepath, blb_data):
         # -----
         for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
             # Write section name.
-            file.write("{}\n".format("" if properties.terse_mode else "---------------- {} QUADS ----------------".format(section_name)))
+            file.write("{}\n".format("" if properties.blendprop.terse_mode else "---------------- {} QUADS ----------------".format(section_name)))
 
             # Write section length.
             file.write("{}\n".format(str(len(blb_data.quads[index]))))
 
             for (positions, normals, uvs, colors, texture_name) in blb_data.quads[index]:
                 # Face texture name.
-                file.write("\n{}{}\n".format("" if properties.terse_mode else "TEX:", texture_name))
+                file.write("\n{}{}\n".format("" if properties.blendprop.terse_mode else "TEX:", texture_name))
 
                 # Vertex positions.
-                file.write("{}\n".format("" if properties.terse_mode else "POSITION:"))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else "POSITION:"))
 
                 for position in positions:
                     __write_sequence(file, position)
 
                 # Face UV coordinates.
-                file.write("{}\n".format("" if properties.terse_mode else "UV COORDS:"))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else "UV COORDS:"))
                 for uv_vector in uvs:
                     __write_sequence(file, uv_vector)
 
                 # Vertex colors, if any.
                 if colors is not None:
-                    file.write("{}\n".format("" if properties.terse_mode else "COLORS:"))
+                    file.write("{}\n".format("" if properties.blendprop.terse_mode else "COLORS:"))
                     for color in colors:
                         __write_sequence(file, color)
 
                 # Vertex normals.
-                file.write("{}\n".format("" if properties.terse_mode else "NORMALS:"))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else "NORMALS:"))
                 for normal in normals:
                     __write_sequence(file, normal)

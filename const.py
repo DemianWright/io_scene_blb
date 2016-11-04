@@ -21,8 +21,6 @@ Various constants used in multiple modules.
 @author: Demian Wright
 '''
 
-from decimal import Decimal
-
 # The BLB file extension.
 BLB_EXT = '.blb'
 
@@ -40,10 +38,6 @@ Z = 2
 # Blockland does not accept bricks that are wide/deeper than 64 bricks or taller than 256 plates.
 MAX_BRICK_HORIZONTAL_PLATES = 64
 MAX_BRICK_VERTICAL_PLATES = 256
-
-# Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
-# Used for rounding vertex positions to the brick grid.
-HUMAN_ERROR = Decimal("0.1")
 
 # Quad and coverage section IDs and directions for sorting.
 QUAD_SECTION_IDX_TOP = 0
@@ -63,9 +57,6 @@ VALID_BRICK_TEXTURES = ('BOTTOMEDGE', 'BOTTOMLOOP', 'RAMP', 'SIDE', 'TOP')
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
 DEFAULT_COVERAGE = 99999
-
-# A Blockland brick (plate) with dimensions 1 x 1 x 1 is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
-PLATE_HEIGHT = Decimal("0.4")
 
 # Brick grid symbols.
 GRID_INSIDE = "x"  # Disallow building inside brick.

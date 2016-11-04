@@ -63,19 +63,17 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ----------
     # Brick Name
     # ----------
-
     brick_name_source = EnumProperty(
-        items=[("FILE", "File", "Brick name is the same as this .blend file name"),
-               ("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space")],
+        items=[("FILE", "File", "Brick name is the same as this .blend file name (can be changed manually in the file dialog)"),
+               ("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (name in file dialog is ignored)")],
         name="Brick Name From:",
-        description="Where to get the name of the exported brick by default (can be changed manually in the file dialog)",
+        description="Where to get the name of the exported brick",
         default="FILE"
     )
 
     # -------
     # Objects
     # -------
-
     export_objects = EnumProperty(
         items=[("SELECTION", "Selection", "Export only selected objects"),
                ("LAYERS", "Layers", "Export all objects in the visible layers"),
@@ -88,7 +86,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # --------
     # Rotation
     # --------
-
     # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
     # I.e. -X is facing you when the brick is planted and +X is the brick north instead of +Y which makes more sense to me.
     # TODO: Support Z axis remapping.
@@ -105,10 +102,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -----
     # Scale
     # -----
-
     export_scale = FloatProperty(
         name="Scale",
-        description="The scale to export the brick at",
+        description="The scale to export the brick at. A 1x1x1 brick at 100% scale is defined as being 1.0x1.0x1.2 Blender units in size on the XYZ axes.",
         subtype='PERCENTAGE',
         precision=3,
         step=1,
@@ -156,7 +152,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -------
     # Sorting
     # -------
-
     auto_sort_quads = BoolProperty(
         name="Automatic Quad Sorting",
         description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
@@ -166,7 +161,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # --------
     # Coverage
     # --------
-
     calculate_coverage = BoolProperty(
         name="Coverage",
         description="Calculate brick coverage. Coverage relies on the quad section data to be of any use. The coverage system intelligently hides (non-omni) quads on the side of the brick when it is covered by other bricks.",
@@ -248,7 +242,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -----------
     # Definitions
     # -----------
-
     custom_definitions = BoolProperty(
         name="Custom Definition Tokens",
         description="Set custom definitions tokens (case insensitive) to use in definition object names",
