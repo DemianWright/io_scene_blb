@@ -153,6 +153,16 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    # -------
+    # Sorting
+    # -------
+
+    auto_sort_quads = BoolProperty(
+        name="Automatic Quad Sorting",
+        description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
+        default=False,
+    )
+
     # --------
     # Coverage
     # --------
@@ -232,16 +242,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     coverage_west_hide = BoolProperty(
         name="Hide Adjacent West Faces",
         description="Hide the adjacent side faces of the adjacent brick(s) covering the west side of this brick",
-        default=False,
-    )
-
-    # -------
-    # Sorting
-    # -------
-
-    auto_sort_quads = BoolProperty(
-        name="Automatic Quad Sorting",
-        description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
         default=False,
     )
 
@@ -517,6 +517,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Property: Use Object Colors
         layout.prop(self, "use_object_colors")
 
+        # Properties: Quad Sorting
+        layout.prop(self, "auto_sort_quads")
+
         # Properties: Coverage
         layout.prop(self, "calculate_coverage")
 
@@ -525,49 +528,45 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             box.label("Coverage Options", icon="GROUP")
             box.active = self.calculate_coverage
 
-            def draw_coverage_property(label_text, prop_name, prop_toggler):
+            def draw_coverage_property(label_text):
                 """A helper function for drawing the coverage properties."""
 
                 row = box.row()
 
-                split = row.split(percentage=0.3)
+                split = row.split(percentage=0.28)
                 col = split.column()
                 col.label(label_text)
 
-                split = split.split(percentage=0.3)
+                split = split.split(percentage=0.43)
                 col = split.column()
-                col.prop(self, "coverage_{}_calculate".format(prop_name), "")
+                col.prop(self, "coverage_{}_hide".format(label_text.lower()), "")
 
                 split = split.split()
                 col = split.column()
-                col.active = prop_toggler
-                col.prop(self, "coverage_{}_hide".format(prop_name), "")
+                col.prop(self, "coverage_{}_calculate".format(label_text.lower()), "")
 
             row = box.row()
-            split = row.split(percentage=0.3)
+            split = row.split(percentage=0.27)
             col = split.column()
             col.label("")
             col.label("Side")
 
-            split = split.split(percentage=0.3)
-            col = split.column()
-            col.label("Hide")
-            col.label("Self")
-
-            split = split.split()
+            split = split.split(percentage=0.42)
             col = split.column()
             col.label("Hide")
             col.label("Adjacent")
 
-            draw_coverage_property("Top", "top", self.coverage_top_calculate)
-            draw_coverage_property("Bottom", "bottom", self.coverage_bottom_calculate)
-            draw_coverage_property("North", "north", self.coverage_north_calculate)
-            draw_coverage_property("East", "east", self.coverage_east_calculate)
-            draw_coverage_property("South", "south", self.coverage_east_calculate)
-            draw_coverage_property("West", "west", self.coverage_west_calculate)
+            split = split.split()
+            col = split.column()
+            col.label("Hide")
+            col.label("Self")
 
-        # Properties: Quad Sorting
-        layout.prop(self, "auto_sort_quads")
+            draw_coverage_property("Top")
+            draw_coverage_property("Bottom")
+            draw_coverage_property("North")
+            draw_coverage_property("East")
+            draw_coverage_property("South")
+            draw_coverage_property("West")
 
         # Properties: Custom Definition Tokens
         layout.prop(self, "custom_definitions")

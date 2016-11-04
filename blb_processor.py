@@ -656,7 +656,9 @@ def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=Non
         # 5 = f = +Y: West
         # ===========================================
 
-        # Technically this is wrong as the order would be different for -Y forward, but since the bricks must be cuboid in shape, they are symmetrical.
+        # Technically this is wrong as the order would be different for -Y
+        # forward, but since the bricks must be cuboid in shape, the
+        # transformations are symmetrical.
         if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
             # New North will be +Y.
             # Old North (+X) will be the new East
