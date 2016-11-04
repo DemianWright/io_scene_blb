@@ -2,30 +2,56 @@ import bpy
 import sys
 
 argv = sys.argv
-argv = argv[argv.index("--") + 1:]  # get all args after "--"
+# Get all args after "--".
+# Evaluate the Python string.
+# Quick and dirty.
+pd = eval(argv[argv.index("--") + 1:][0])
 
-blb_out = argv[0]
-export = argv[1].upper()
-log = argv[2].lower() == "true"
-log_warnings = argv[3].lower() == "true"
-forward = argv[4].upper()
-coverage = argv[5].lower() == "true"
-
-bpy.ops.export_scene.blb(filepath=blb_out,
-                         export_objects=export,
-                         write_log=log,
-                         write_log_warnings=log_warnings,
-                         axis_blb_forward=forward,
-                         calculate_coverage=coverage,
-                         coverage_top_calculate=coverage,
-                         coverage_top_hide=coverage,
-                         coverage_bottom_calculate=coverage,
-                         coverage_bottom_hide=coverage,
-                         coverage_north_calculate=coverage,
-                         coverage_north_hide=coverage,
-                         coverage_east_calculate=coverage,
-                         coverage_east_hide=coverage,
-                         coverage_south_calculate=coverage,
-                         coverage_south_hide=coverage,
-                         coverage_west_calculate=coverage,
-                         coverage_west_hide=coverage)
+bpy.ops.export_scene.blb(filepath=pd['output'],
+                         brick_name_source=pd['brick_name_source'],
+                         export_objects=pd['export_objects'],
+                         axis_blb_forward=pd['axis_blb_forward'],
+                         export_scale=pd['export_scale'],
+                         use_modifiers=pd['use_modifiers'],
+                         use_object_colors=pd['use_object_colors'],
+                         use_materials=pd['use_materials'],
+                         use_vertex_colors=pd['use_vertex_colors'],
+                         auto_sort_quads=pd['auto_sort_quads'],
+                         calculate_coverage=pd['calculate_coverage'],
+                         coverage_top_calculate=pd['coverage_top_calculate'],
+                         coverage_top_hide=pd['coverage_top_hide'],
+                         coverage_bottom_calculate=pd['coverage_bottom_calculate'],
+                         coverage_bottom_hide=pd['coverage_bottom_hide'],
+                         coverage_north_calculate=pd['coverage_north_calculate'],
+                         coverage_north_hide=pd['coverage_north_hide'],
+                         coverage_east_calculate=pd['coverage_east_calculate'],
+                         coverage_east_hide=pd['coverage_east_hide'],
+                         coverage_south_calculate=pd['coverage_south_calculate'],
+                         coverage_south_hide=pd['coverage_south_hide'],
+                         coverage_west_calculate=pd['coverage_west_calculate'],
+                         coverage_west_hide=pd['coverage_west_hide'],
+                         custom_definitions=pd['custom_definitions'],
+                         deftoken_bounds=pd['deftoken_bounds'],
+                         deftoken_collision=pd['deftoken_collision'],
+                         deftoken_color=pd['deftoken_color'],
+                         deftoken_quad_sort_top=pd['deftoken_quad_sort_top'],
+                         deftoken_quad_sort_bottom=pd['deftoken_quad_sort_bottom'],
+                         deftoken_quad_sort_north=pd['deftoken_quad_sort_north'],
+                         deftoken_quad_sort_east=pd['deftoken_quad_sort_east'],
+                         deftoken_quad_sort_south=pd['deftoken_quad_sort_south'],
+                         deftoken_quad_sort_west=pd['deftoken_quad_sort_west'],
+                         deftoken_quad_sort_omni=pd['deftoken_quad_sort_omni'],
+                         deftoken_gridx=pd['deftoken_gridx'],
+                         deftoken_griddash=pd['deftoken_griddash'],
+                         deftoken_gridu=pd['deftoken_gridu'],
+                         deftoken_gridd=pd['deftoken_gridd'],
+                         deftoken_gridb=pd['deftoken_gridb'],
+                         deftoken_gridx_priority=pd['deftoken_gridx_priority'],
+                         deftoken_griddash_priority=pd['deftoken_griddash_priority'],
+                         deftoken_gridu_priority=pd['deftoken_gridu_priority'],
+                         deftoken_gridd_priority=pd['deftoken_gridd_priority'],
+                         deftoken_gridb_priority=pd['deftoken_gridb_priority'],
+                         terse_mode=pd['terse_mode'],
+                         write_log=pd['write_log'],
+                         write_log_warnings=pd['write_log_warnings'],
+                         float_precision=pd['float_precision'])
