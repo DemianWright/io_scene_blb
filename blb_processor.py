@@ -259,7 +259,7 @@ def __get_world_min(obj):
     return vec_min
 
 
-def __get_world_min_max(obj, min_coords=Vector((float("+inf"), float("+inf"), float("+inf"))), max_coords=Vector((float("-inf"), float("-inf"), float("-inf")))):
+def __get_world_min_max(obj, min_coords=None, max_coords=None):
     """Checks if the specified Blender object's vertices' world space coordinates are smaller or greater than the coordinates stored in their respective minimum and maximum vectors.
 
     Args:
@@ -270,6 +270,16 @@ def __get_world_min_max(obj, min_coords=Vector((float("+inf"), float("+inf"), fl
     Returns:
         The smallest and largest world coordinates from the specified vectors or object's vertex coordinates.
     """
+    # I have no idea why but if I create the vectors as default values for the
+    # arguments, the min/max coord vectors from the last time this function
+    # was called are somehow carried over. I tried creating a new instance
+    # with the vector values but that didn't work either so it isn't an issue
+    # with object references.
+    if min_coords is None:
+        min_coords = Vector((float("+inf"), float("+inf"), float("+inf")))
+    if max_coords is None:
+        max_coords = Vector((float("-inf"), float("-inf"), float("-inf")))
+
     for vert in obj.data.vertices:
         coordinates = obj.matrix_world * vert.co
 
