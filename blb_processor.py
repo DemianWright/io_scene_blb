@@ -1516,9 +1516,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     Returns:
         A sequence of mesh data sorted into sections or a string containing an error message to display to the user.
     """
-    count_tris = 0
-    count_ngon = 0
-
     # Create an empty list for each quad section_idx.
     # This is my workaround to making a sort of dictionary where the keys are in insertion order.
     # The quads must be written in a specific order.
@@ -1526,6 +1523,8 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
 
     for obj in mesh_objects:
+        count_tris = 0
+        count_ngon = 0
         object_name = obj.name
         current_data = obj.data
 
@@ -1764,11 +1763,11 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         # Delete the mesh datablock that was created earlier.
         bpy.data.meshes.remove(mesh)
 
-    if count_tris > 0:
-        logger.warning("{} triangles degenerated to quads.".format(count_tris), 2)
+        if count_tris > 0:
+            logger.warning("{} triangles degenerated to quads.".format(count_tris), 2)
 
-    if count_ngon > 0:
-        logger.warning("{} n-gons skipped.".format(count_ngon), 2)
+        if count_ngon > 0:
+            logger.warning("{} n-gons skipped.".format(count_ngon), 2)
 
     count_quads = sum([len(sec) for sec in quads])
 
