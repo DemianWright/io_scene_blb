@@ -43,6 +43,7 @@ from . import export_blb, const, logger
 
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
+# TODO: README installation instructions.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
