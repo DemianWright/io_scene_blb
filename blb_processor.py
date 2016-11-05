@@ -678,7 +678,7 @@ def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=Non
     return coverage
 
 
-def __sort_quad(quad, bounds_dimensions, forward_axis, plate_height):
+def __sort_quad(quad, bounds_dimensions, plate_height):
     """Calculates the section (brick side) for the specified quad within the specified bounds dimensions.
 
     The section is determined by whether all vertices of the quad are in the same plane as one of the planes (brick sides) defined by the (cuboid) brick bounds.
@@ -687,7 +687,6 @@ def __sort_quad(quad, bounds_dimensions, forward_axis, plate_height):
     Args:
         quad (sequence): A sequence of various data that defines the quad.
         bounds_dimensions (sequence of Decimals): The dimensions of the brick bounds.
-        forward_axis (string): The name of the user-defined BLB forward axis.
         plate_height (Decimal): The height of a Blockland plate in Blender units.
 
     Returns:
@@ -753,6 +752,17 @@ def __sort_quad(quad, bounds_dimensions, forward_axis, plate_height):
             # Else the quad is not on the same plane with one of the bounding planes = Omni
         # Else the quad is not planar = Omni
 
+    return direction
+
+
+def __rotate_section_idx(direction, forward_axis):
+    """
+    Args:
+        forward_axis (string): The name of the user-defined BLB forward axis.
+
+    Returns:
+        The index of the section name in const.QUAD_SECTION_ORDER sequence.
+    """
     # ===========================
     # QUAD_SECTION_IDX_TOP    = 0
     # QUAD_SECTION_IDX_BOTTOM = 1
@@ -766,7 +776,7 @@ def __sort_quad(quad, bounds_dimensions, forward_axis, plate_height):
     # Top and bottom always the same and do not need to be rotated because Z axis remapping is not yet supported.
     # Omni is not planar and does not need to be rotated.
     # The initial values are calculated according to +X forward axis.
-    if direction <= const.QUAD_SECTION_IDX_BOTTOM or direction == const.QUAD_SECTION_IDX_OMNI or forward_axis == "POSITIVE_X":
+    if direction <= const.QUAD_SECTION_IDX_BOTTOM or direction == const.QUAD_SECTION_IDX_OMNI or forward_axis == 'POSITIVE_X':
         return direction
 
     # ========================================================================
@@ -777,17 +787,17 @@ def __sort_quad(quad, bounds_dimensions, forward_axis, plate_height):
     # 3. Use modulo make direction wrap around 3 -> 0:    dir - 2 + R % 4
     # 4. Add 2 to get back to the correct range [2, 5]:   dir - 2 + R % 4 + 2
     # ========================================================================
-    elif forward_axis == "POSITIVE_Y":
+    elif forward_axis == 'POSITIVE_Y':
         # 90 degrees clockwise.
         # [2] North -> [3] East:  (2 - 2 + 1) % 4 + 2 = 3
         # [5] West  -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
         return (direction - 1) % 4 + 2
-    elif forward_axis == "NEGATIVE_X":
+    elif forward_axis == 'NEGATIVE_X':
         # 180 degrees clockwise.
         # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
         # [4] South -> [2] North
         return direction % 4 + 2
-    elif forward_axis == "NEGATIVE_Y":
+    elif forward_axis == 'NEGATIVE_Y':
         # 270 degrees clockwise.
         # [2] North -> [5] West:  (2 - 2 + 3) % 4 + 2 = 5
         # [5] West  -> [4] South
@@ -1568,6 +1578,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         # Manual Quad Sorting
         # ===================
         # Manual sorting is per-object.
+        section = None
         quad_sections = __get_tokens_from_object_name(object_name, properties.quad_sort_definitions)
         section_count = len(quad_sections)
 
@@ -1577,8 +1588,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                 object_name, section_count, section), 2)
         elif section_count == 1:
             section = properties.quad_sort_definitions.index(quad_sections[0])
-        else:
-            section = None
 
         # This function creates a new mesh datablock.
         # It needs to be manually deleted later to release the memory, otherwise it will stick around until Blender is closed.
@@ -1659,7 +1668,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                     if material is not None:
                         # If the material name is "blank", use the spray can color by not defining any color for this quad.
                         # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
-                        if material.name.lower().startswith('blank'):
+                        if 'blank' in __split_object_name_to_tokens(material.name):
                             colors = None
                         else:
                             # 4 vertices per quad.
@@ -1752,16 +1761,17 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             if properties.blendprop.auto_sort_quads and quad[5] is None:
                 # Calculate the section name the quad belongs to.
                 # Get the index of that section name in the QUAD_SECTION_ORDER list.
-                section_idx = __sort_quad(quad, bounds_data.dimensions, properties.blendprop.axis_blb_forward, properties.plate_height)
+                section_idx = __sort_quad(quad, bounds_data.dimensions, properties.plate_height)
             # Else: No automatic sorting or the quad had a manual sort, in which case there is no point in calculating the section.
 
             # Regardless of automatic sorting, manual sort is always available.
             if quad[5] is not None:
                 section_idx = quad[5]
 
+            # Regardless of automatic or manual sorting, the section index needs to rotated according to the forward axis.
             # Append the quad data to the list in the tuple at the index of the section.
             # Drop the section index from the data since it is no longer needed.
-            sorted_quads[section_idx].append(quad[:-1])
+            sorted_quads[__rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)].append(quad[:-1])
 
         logger.info("Brick quads: {}".format(count_quads), 1)
 
