@@ -259,22 +259,25 @@ def __get_world_min(obj):
     return vec_min
 
 
-def __record_world_min_max(sequence_min, sequence_max, obj):
-    """Checks if the specified Blender object's vertices' world space coordinates are smaller or greater than the coordinates stored in their respective
-    minimum and maximum sequences and updates the values in those sequences with the object's coordinates if they are smaller or greater.
+def __get_world_min_max(obj, min_coords=Vector((float("+inf"), float("+inf"), float("+inf"))), max_coords=Vector((float("-inf"), float("-inf"), float("-inf")))):
+    """Checks if the specified Blender object's vertices' world space coordinates are smaller or greater than the coordinates stored in their respective minimum and maximum vectors.
 
     Args:
-        sequence_min (Vector): The Vector of smallest XYZ world space coordinates found so far.
-        sequence_max (Vector): The Vector of largest XYZ world space coordinates found so far.
         obj (Blender object): The Blender object whose vertex coordinates to check against the current minimum and maximum coordinates.
+        min_coords (Vector): The Vector of smallest XYZ world space coordinates to compare against. (Optional)
+        max_coords (Vector): The Vector of largest XYZ world space coordinates to compare against. (Optional)
+
+    Returns:
+        The smallest and largest world coordinates from the specified vectors or object's vertex coordinates.
     """
-    # TODO: Refactor to return tuple.
     for vert in obj.data.vertices:
         coordinates = obj.matrix_world * vert.co
 
         for i in range(3):
-            sequence_min[i] = min(sequence_min[i], coordinates[i])
-            sequence_max[i] = max(sequence_max[i], coordinates[i])
+            min_coords[i] = min(min_coords[i], coordinates[i])
+            max_coords[i] = max(max_coords[i], coordinates[i])
+
+    return min_coords, max_coords
 
 
 def __vert_index_to_world_coord(obj, mesh, index):
@@ -975,9 +978,7 @@ def __process_bounds_object(export_scale, obj):
         A BrickBounds object.
     """
     # Find the minimum and maximum world coordinates for the bounds object.
-    bounds_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-    bounds_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-    __record_world_min_max(bounds_min, bounds_max, obj)
+    bounds_min, bounds_max = __get_world_min_max(obj)
 
     # ROUND & CAST
     bounds_data = __calculate_bounds(export_scale, __to_decimals(bounds_min), __to_decimals(bounds_max))
@@ -1038,9 +1039,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
     halved_dimensions = [value / Decimal("2.0") for value in bounds_data.dimensions]
 
     # Find the minimum and maximum coordinates for the brick grid object.
-    grid_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-    grid_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-    __record_world_min_max(grid_min, grid_max, grid_obj)
+    grid_min, grid_max = __get_world_min_max(grid_obj)
 
     # ROUND & CAST
     # USER SCALE: Multiply by user defined scale.
@@ -1283,9 +1282,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
             # The mesh is still valid.
 
         # Find the minimum and maximum coordinates for the collision object.
-        col_min = Vector((float("+inf"), float("+inf"), float("+inf")))
-        col_max = Vector((float("-inf"), float("-inf"), float("-inf")))
-        __record_world_min_max(col_min, col_max, obj)
+        col_min, col_max = __get_world_min_max(obj)
 
         # ROUND & CAST
         # USER SCALE: Multiply by user defined scale.
@@ -1461,7 +1458,7 @@ def __process_definition_objects(properties, objects):
             # If no bounds object has been defined.
             if bounds_data is None:
                 # Record min/max world coordinates for calculating the bounds.
-                __record_world_min_max(min_world_coordinates, max_world_coordinates, obj)
+                min_world_coordinates, max_world_coordinates = __get_world_min_max(obj, min_world_coordinates, max_world_coordinates)
             # Else a bounds object has been defined, recording the min/max coordinates is pointless.
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
