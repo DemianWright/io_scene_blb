@@ -1152,6 +1152,65 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         raise OutOfBoundsException()
 
 
+def __calculate_uvs(section_idx, texture_name, brick_size):
+    """Calculates the UV coordinates for a quad in the specified section, using the specified texture name, in a brick of the specified size.
+
+    Not all combinations of sections and texture names are supported. In unsupported cases, default UVs are returned.
+
+    Args:
+        section_idx (int): The index of the section in const.QUAD_SECTION_ORDER this quad in in.
+        texture_name (string): A value from const.VALID_BRICK_TEXTURES.
+        brick_size (sequence of ints): The brick size in plates on the X, Y, and Z axes.
+
+    Returns:
+            A tuple containing 4 sets of UV coordinates, one for each vertex in the quad.
+    """
+    def get_uv(xy, z):
+        """Calculates the UV coordinate array for the specified values.
+
+        Args:
+            xy (int): The brick size in the X or Y axis, depending on which side these UV coordinates are being calculated for.
+            z (int): The brick height in plates.
+
+        Returns:
+            A tuple containing 4 sets of UV coordinates, one for each vertex in a quad.
+        """
+        # The UV coordinate calculation equations were created by a Blockland Forums user BlackDragonIV about 5 years ago.
+        # How he came up with these is anyone's guess.
+        u = (11 - 11 / xy * 2) / const.BRICK_TEXTURE_RESOLUTION
+        v = (11 - 11 / z * 5) / const.BRICK_TEXTURE_RESOLUTION
+
+        return ((1 - u, 1 - v),
+                (u, 1 - v),
+                (u, v),
+                (1 - u, v))
+
+    # For clarity.
+    x = brick_size[const.X]
+    y = brick_size[const.Y]
+    z = brick_size[const.Z]
+
+    if texture_name == 'TOP':
+        return ((y, x),
+                (0, x),
+                (0, 0),
+                (y, 0))
+    elif texture_name == 'SIDE':
+        if section_idx in (const.QUAD_SECTION_IDX_NORTH, const.QUAD_SECTION_IDX_SOUTH):
+            return get_uv(y, z)
+        elif section_idx in (const.QUAD_SECTION_IDX_EAST, const.QUAD_SECTION_IDX_WEST):
+            return get_uv(x, z)
+        # TODO: Top, bottom, omni.
+    elif texture_name == 'BOTTOMLOOP':
+        return ((y - 1, x - 1),
+                (y - 1, 0),
+                (0, 0),
+                (0, x - 1))
+
+    # Else: Return default UVs.
+    return const.DEFAULT_UV_COORDINATES
+
+
 def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
     """Processes the specified brick grid definitions.
 
@@ -1507,12 +1566,13 @@ def __process_definition_objects(properties, objects):
         return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
-def __process_mesh_data(context, properties, bounds_data, mesh_objects):
+def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objects):
     """Gets all the necessary data from the specified Blender objects and sorts all the quads of the mesh_objects into sections for brick coverage to work.
 
     Args:
         context (Blender context object): A Blender object containing scene data.
         properties (DerivateProperties): An object containing user properties.
+        brick_size (sequence of numbers): The size of the brick in plates.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         mesh_objects (sequence of Blender objects): Meshes to be processed.
 
@@ -1609,7 +1669,28 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             # If automatically sorting, reset variable to None because it is initially defined before the loop.
             if properties.blendprop.auto_sort_quads:
                 section_idx = None
-                
+
+            # ================
+            # BLB texture name
+            # ================
+            texture_name = None
+
+            # TODO: Make the use of lower() and upper() consistent.
+            if current_data.materials and current_data.materials[poly.material_index] is not None:
+                matname = current_data.materials[poly.material_index].name.upper()
+                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
+                texcount = len(texnames)
+
+                if texcount > 0:
+                    texture_name = texnames[0].upper()
+
+                    if texcount > 1:
+                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
+
+            if texture_name is None:
+                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
+                texture_name = 'SIDE'
+
             # ===================
             # Vertex loop indices
             # ===================
@@ -1652,7 +1733,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                     # Calculate the section name the quad belongs to.
                     # Get the index of that section name in the QUAD_SECTION_ORDER list.
                     section_idx = __sort_quad(positions, bounds_data.dimensions, properties.plate_height)
-                    print("sorted", section_idx)
                     section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
                 else:
                     # No auto sort, no definition, use omni.
@@ -1678,14 +1758,19 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             # ===
             # UVs
             # ===
+            # TODO: Print texture.
+            # TODO: Generate mesh data for the brick bottom if 'bottom' material is used.
             if uv_data:
                 # Get the UV coordinate for every vertex in the face loop.
                 uvs = [uv_data[index].uv for index in reversed(loop_indices)]
             else:
-                # No UVs present, use the defaults.
-                # These UV coordinates with the SIDE texture lead to a blank textureless face.
-                # TODO: Correct UV calculation according to the texture name.
-                uvs = (Vector((0.5, 0.5)),) * 4
+                if properties.blendprop.calculate_uvs:
+                    # TODO: Quad must be sorted before this. Automatic sorting is done at the end!
+                    uvs = __calculate_uvs(section_idx, texture_name, brick_size)
+                else:
+                    # No UVs present, use the defaults.
+                    # These UV coordinates with the SIDE texture lead to a blank textureless face.
+                    uvs = const.DEFAULT_UV_COORDINATES
 
             # ===============
             # Material Colors
@@ -1740,26 +1825,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                                 logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
 
                         colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
-
-            # ================
-            # BLB texture name
-            # ================
-            texture_name = None
-
-            if current_data.materials and current_data.materials[poly.material_index] is not None:
-                matname = current_data.materials[poly.material_index].name
-                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
-                texcount = len(texnames)
-
-                if texcount > 0:
-                    texture_name = texnames[0]
-
-                    if texcount > 1:
-                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
-
-            if texture_name is None:
-                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                texture_name = 'SIDE'
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
             quads[section_idx].append([positions, normals, uvs, colors, texture_name])
@@ -1870,7 +1935,7 @@ def process_blender_data(context, properties):
             logger.info('Processing meshes.')
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects)
+            quads = __process_mesh_data(context, properties, blb_data.brick_size, bounds_data, mesh_objects)
 
             if isinstance(quads, str):
                 # Something went wrong.

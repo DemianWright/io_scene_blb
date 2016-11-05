@@ -51,8 +51,8 @@ QUAD_SECTION_IDX_OMNI = 6
 # The quad sections in the correct order for writing to a BLB file.
 QUAD_SECTION_ORDER = ('TOP', 'BOTTOM', 'NORTH', 'EAST', 'SOUTH', 'WEST', 'OMNI')
 
-# A tuple of valid brick textures in alphabetical order-
-VALID_BRICK_TEXTURES = ('BOTTOMEDGE', 'BOTTOMLOOP', 'RAMP', 'SIDE', 'TOP')
+# A tuple of valid brick textures in alphabetical order.
+VALID_BRICK_TEXTURES = ('bottomedge', 'bottomloop', 'ramp', 'side', 'top')
 
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
@@ -67,3 +67,10 @@ GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
 
 # Maximum number of decimal places to write to file.
 MAX_FP_DECIMALS_TO_WRITE = 16
+
+# The width and height of the default brick textures in pixels.
+BRICK_TEXTURE_RESOLUTION = 512
+
+# The UV coordinates are a single point in the middle of the image = no uv coordinates.
+# The middle of the image is used instead of (0,0) due to the way Blockland brick textures are designed.
+DEFAULT_UV_COORDINATES = ((0.5, 0.5),) * 4

@@ -154,6 +154,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=False,
     )
 
+    # -------------
+    # Calculate UVs
+    # -------------
+    calculate_uvs = BoolProperty(
+        name="Calculate UVs",
+        description="Calculate correct UV coordinates based on the brick texture name (face material name)",
+        default=True,
+    )
+
     # -------
     # Sorting
     # -------
@@ -514,6 +523,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Use Object Colors
         layout.prop(self, "use_object_colors")
+
+        # Properties: UVs
+        layout.prop(self, "calculate_uvs")
 
         # Properties: Quad Sorting
         layout.prop(self, "auto_sort_quads")
