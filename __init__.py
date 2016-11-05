@@ -68,11 +68,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # Brick Name
     # ----------
     brick_name_source = EnumProperty(
-        items=[("FILE", "File", "Brick name is the same as this .blend file name (can be changed manually in the file dialog)"),
-               ("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (name in file dialog is ignored)")],
+        items=[("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (name in file dialog is ignored)"),
+               ("FILE", "File", "Brick name is the same as this .blend file name (can be changed manually in the file dialog)")],
         name="Brick Name From:",
         description="Where to get the name of the exported brick",
-        default="FILE"
+        default="BOUNDS"
     )
 
     # -------

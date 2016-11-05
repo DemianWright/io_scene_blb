@@ -63,8 +63,8 @@ Where the .BLB file name is defined.
 
 Value | Description
 ------|------------
-File | Brick name is the same as the file name. Can be manually set in the export file dialog. (Default)
-Bounds | Brick name is defined in the **Bounds** object after the bounds definition token, separated with a whitespace character. Cannot be manually set in the export file dialog.
+Bounds | Brick name is defined in the **Bounds** object after the bounds definition token, separated with a whitespace character. Cannot be manually set in the export file dialog. (Default)
+File | Brick name is the same as the file name. Can be manually set in the export file dialog.
 
 #### Export Only ####
 Which objects to process and export to the .BLB file.
@@ -150,17 +150,19 @@ Blender adds a running index (e.g. `.003`) to the end of duplicate object, mater
 ### Definition Objects ###
 When a definition object token is read in an object's name it is treated as a definition object. Definition objects are never exported as visual 3D models, in fact they are not exported at all. Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
 
-Definition Object | Token | Requirements | Maximum Count/Brick | Axis Aligned | Brick Grid Aligned | Description
-------------------|-------|--------------|--------------------:|:------------:|:------------------:|------------
-Bounds | `bounds` | At least 2 vertices, must have volume | 1 | Yes **(1)** | Yes | Defines the brick bounds (brick size).
-Collision | `collision` | At least 2 vertices, must be within **Bounds** object **(2)** | 10 | Yes **(3)**  | No | Defines a collision box.
-Brick Grid | See *Defining Brick Grid* below | At least 2 vertices, must have volume, must be within **Bounds** object | Unlimited | Yes **(1)** | Yes | Defines a volume in the brick grid to fill with a specific brick grid symbol.
+Definition Object | Token | Requirements | Maximum Count/Brick | Axis Aligned | Brick Grid Aligned | Can Overlap | Description
+------------------|-------|--------------|--------------------:|:------------:|:------------------:|:-----------:|------------
+Bounds | `bounds` | At least 2 vertices, must have volume | 1 | Yes **(1)** | Yes | N/A | Defines the brick bounds (brick size).
+Collision | `collision` | At least 2 vertices, must be within **Bounds** object **(2)** | 10 | Yes **(3)**  | No | Yes | Defines a collision box.
+Brick Grid | See *Defining Brick Grid* below | At least 2 vertices, must have volume, must be within **Bounds** object | Unlimited | Yes **(1)** | Yes | Yes **(4)** | Defines a volume in the brick grid to fill with a specific brick grid symbol.
 
 **(1)** It is highly recommended to use axis aligned cuboids to define bounds and the brick grid. However, if you insist on defining the size of your brick in monkey heads, you can. Only the minimum and maximum coordinates of the bounds and brick grid objects are used.
 
 **(2)** Collision boxes outside brick bounds are not invalid and the brick will function in-game. This behavior is not allowed by the exporter because collision outside brick bounds is horribly broken as it was never intended work in that manner.
 
 **(3)** Blockland only supports [AABB collision](https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box) with bricks. In other words brick collision may only be defined using boxes of varying sizes that align with the axes. You can rotate said boxes however you want but that does translate to collision boxes that are at an angle in-game. Only the the minimum and maximum coordinates of the object are used. Using anything else than cuboids to define collision is not recommended as it makes the Blender file more confusing to understand.
+
+**(4)** See *Defining Brick Grid* below for the specific rules about overlapping brick grid definitions.
 
 #### Defining Brick Grid ####
 Brick grid definitions represent a 3D volume in the 3D space the brick grid encompasses. You can imagine it as if the entire cuboidal shape of the brick would be filled with 1x1f plates and these volumes define the properties of all the 1x1f plates within that volume. Each brick grid definition has their own priority. When two or more brick grid definition objects overlap in 3D space, the one with the **higher** priority takes precedence and will overwrite the symbols in the brick grid that any definitions with lower priorities would have written.
