@@ -1773,7 +1773,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     if count_ngon > 0:
         logger.warning("{} n-gons skipped.".format(count_ngon), 2)
 
-    count_quads = len(quads)
+    count_quads = sum([len(sec) for sec in quads])
 
     if count_quads == 0:
         return 'No faces to export.'
