@@ -268,6 +268,7 @@ def __record_world_min_max(sequence_min, sequence_max, obj):
         sequence_max (Vector): The Vector of largest XYZ world space coordinates found so far.
         obj (Blender object): The Blender object whose vertex coordinates to check against the current minimum and maximum coordinates.
     """
+    # TODO: Refactor to return tuple.
     for vert in obj.data.vertices:
         coordinates = obj.matrix_world * vert.co
 
@@ -678,23 +679,20 @@ def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=Non
     return coverage
 
 
-def __sort_quad(quad, bounds_dimensions, plate_height):
+def __sort_quad(positions, bounds_dimensions, plate_height):
     """Calculates the section (brick side) for the specified quad within the specified bounds dimensions.
 
     The section is determined by whether all vertices of the quad are in the same plane as one of the planes (brick sides) defined by the (cuboid) brick bounds.
     The quad's section is needed for brick coverage.
 
     Args:
-        quad (sequence): A sequence of various data that defines the quad.
+        positions (sequence of numbers): A sequence containing the vertex positions of the quad to be sorted.
         bounds_dimensions (sequence of Decimals): The dimensions of the brick bounds.
         plate_height (Decimal): The height of a Blockland plate in Blender units.
 
     Returns:
         The index of the section name in const.QUAD_SECTION_ORDER sequence.
     """
-    # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
-    positions = quad[0]
-
     # ROUND & CAST
     # Divide all dimension values by 2 to get the local bounding plane values.
     # The dimensions are in Blender units so Z height needs to be converted to plates.
@@ -708,15 +706,15 @@ def __sort_quad(quad, bounds_dimensions, plate_height):
     # 1 = Y
     # 2 = Z
     for axis in range(3):
+        # This function only handles quads so there are always exactly 4 position lists. (One for each vertex.)
         # If the vertex coordinate is the same on an axis for all 4 vertices, this face is parallel to the plane perpendicular to that axis.
         if positions[0][axis] == positions[1][axis] == positions[2][axis] == positions[3][axis]:
             # If the common value is equal to one of the bounding values the quad is on the same plane as one of the edges of the brick.
             # Stop searching as soon as the first plane is found because it is impossible for the quad to be on multiple planes at the same time.
             # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
 
-            # Assuming that forward axis is Blender +X ("POSITIVE_X").
+            # Blockland assumes by default that forward axis is Blender +X ("POSITIVE_X"). (In terms of the algorithm.)
             # Then in-game the brick north is to the left of the player, which is +Y in Blender.
-            # I know it makes no sense.
 
             # All vertex coordinates are the same on this axis, only the first one needs to be checked.
 
@@ -1521,9 +1519,14 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     Returns:
         A sequence of mesh data sorted into sections or a string containing an error message to display to the user.
     """
-    quads = []
     count_tris = 0
     count_ngon = 0
+
+    # Create an empty list for each quad section_idx.
+    # This is my workaround to making a sort of dictionary where the keys are in insertion order.
+    # The quads must be written in a specific order.
+    # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
+    quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
 
     for obj in mesh_objects:
         object_name = obj.name
@@ -1544,7 +1547,9 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         else:
             uv_data = None
 
-        # PROCESS TOKENS.
+        # PROCESS TOKENS
+
+        # PROCESS OBJECT DATA
 
         # =============
         # Object Colors
@@ -1578,23 +1583,33 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         # Manual Quad Sorting
         # ===================
         # Manual sorting is per-object.
-        section = None
+
         quad_sections = __get_tokens_from_object_name(object_name, properties.quad_sort_definitions)
         section_count = len(quad_sections)
 
-        if section_count > 1:
-            section = properties.quad_sort_definitions.index(quad_sections[0])
-            logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
-                object_name, section_count, section), 2)
-        elif section_count == 1:
-            section = properties.quad_sort_definitions.index(quad_sections[0])
+        if section_count >= 1:
+            section_idx = properties.quad_sort_definitions.index(quad_sections[0])
+
+            if section_count > 1:
+                logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
+                    object_name, section_count, section_idx), 2)
+
+            # TODO: Do forward axis rotation of section in the format_blb_data function?
+            # The section_idx index needs to rotated according to the forward axis.
+            section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
+        # Else: No manual sort.
 
         # This function creates a new mesh datablock.
         # It needs to be manually deleted later to release the memory, otherwise it will stick around until Blender is closed.
         mesh = obj.to_mesh(context.scene, properties.blendprop.use_modifiers, 'PREVIEW', False, False)
 
-        # Process quad data.
+        # PROCESS QUAD DATA
+
         for poly in mesh.polygons:
+            # If automatically sorting, reset variable to None because it is initially defined before the loop.
+            if properties.blendprop.auto_sort_quads:
+                section_idx = None
+                
             # ===================
             # Vertex loop indices
             # ===================
@@ -1626,6 +1641,23 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                 # ROUND & CAST
                 coords = __multiply_sequence(properties.scale, __to_decimals(__vert_index_to_world_coord(obj, mesh, vert_index)))
                 positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center), properties.plate_height))
+
+            # ======================
+            # Automatic Quad Sorting
+            # ======================
+            # And the current object does not have a manual definition?
+            if section_idx is None:
+                # Does user want to automatically sort quads?
+                if properties.blendprop.auto_sort_quads:
+                    # Calculate the section name the quad belongs to.
+                    # Get the index of that section name in the QUAD_SECTION_ORDER list.
+                    section_idx = __sort_quad(positions, bounds_data.dimensions, properties.plate_height)
+                    print("sorted", section_idx)
+                    section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
+                else:
+                    # No auto sort, no definition, use omni.
+                    section_idx = const.QUAD_SECTION_IDX_OMNI
+            # Else: The quad had a manual sort, in which case there is no point in calculating the section per quad.
 
             # =======
             # Normals
@@ -1730,7 +1762,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                 texture_name = 'SIDE'
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-            quads.append([positions, normals, uvs, colors, texture_name, section])
+            quads[section_idx].append([positions, normals, uvs, colors, texture_name])
 
         # Delete the mesh datablock that was created earlier.
         bpy.data.meshes.remove(mesh)
@@ -1746,36 +1778,9 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     if count_quads == 0:
         return 'No faces to export.'
     else:
-        # Create an empty list for each quad section.
-        # This is my workaround to making a sort of dictionary where the keys are in insertion order.
-        # The quads must be written in a specific order.
-        # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-        sorted_quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
-
-        # Sort quads into sections.
-        for quad in quads:
-            section_idx = const.QUAD_SECTION_IDX_OMNI
-
-            # Does user want to automatically sort quads?
-            # And the current quad does not have a manual definition?
-            if properties.blendprop.auto_sort_quads and quad[5] is None:
-                # Calculate the section name the quad belongs to.
-                # Get the index of that section name in the QUAD_SECTION_ORDER list.
-                section_idx = __sort_quad(quad, bounds_data.dimensions, properties.plate_height)
-            # Else: No automatic sorting or the quad had a manual sort, in which case there is no point in calculating the section.
-
-            # Regardless of automatic sorting, manual sort is always available.
-            if quad[5] is not None:
-                section_idx = quad[5]
-
-            # Regardless of automatic or manual sorting, the section index needs to rotated according to the forward axis.
-            # Append the quad data to the list in the tuple at the index of the section.
-            # Drop the section index from the data since it is no longer needed.
-            sorted_quads[__rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)].append(quad[:-1])
-
         logger.info("Brick quads: {}".format(count_quads), 1)
 
-        return sorted_quads
+        return quads
 
 
 def __format_blb_data(forward_axis, blb_data):
@@ -1819,7 +1824,7 @@ def __format_blb_data(forward_axis, blb_data):
             for index, position in enumerate(quad_data[0]):
                 quad_data[0][index] = common.rotate(position, forward_axis)
 
-            # Normals also need to rotated.
+            # Normals also need to be rotated.
             for index, normal in enumerate(quad_data[1]):
                 quad_data[1][index] = common.rotate(normal, forward_axis)
 
