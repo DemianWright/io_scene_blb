@@ -24,7 +24,7 @@ Handles registering the add-on into Blender and drawing properties to the UI.
 bl_info = {
     "name": "Export: Blockland Brick (.blb)",
     "author": "Demian Wright & Nick Smith",
-    "version": (0, 1),
+    "version": (0, 1, 0),
     "blender": (2, 76, 0),
     "location": "File > Export > Blockland Brick (.blb)",
     "description": "Export Blockland brick format",
@@ -43,6 +43,8 @@ from . import export_blb, const, logger
 
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
+# TODO: Panels in the UI?
+# TODO: Brick quad limit?
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
