@@ -43,8 +43,6 @@ from . import export_blb, const, logger
 
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
-# TODO: Panels in the UI?
-# TODO: Brick quad limit?
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
