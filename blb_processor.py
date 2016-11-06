@@ -43,74 +43,6 @@ setcontext(Context(rounding=ROUND_HALF_UP))
 # multiples of the value since everything is rounded using this precision.
 __CALCULATION_FP_PRECISION_STR = None
 
-# =================
-# BrickBounds Class
-# =================
-
-
-class BrickBounds(object):
-    """A class for storing the Blender data of brick bounds.
-
-    Stores the following data:
-        - Blender object name,
-        - object dimensions,
-        - object's location in world coordinates,
-        - minimum vertex world coordinate,
-        - and maximum vertex world coordinate.
-    """
-
-    def __init__(self):
-        # The name of the Blender object.
-        self.object_name = None
-
-        # The dimensions are stored separately even though it is trivial to calculate them from the coordinates because they are used often.
-        self.dimensions = []
-
-        # The object center coordinates are stored separately for convenience.
-        self.world_center = []
-
-        self.world_coords_min = []
-        self.world_coords_max = []
-
-    def __repr__(self):
-        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
-
-
-# =============
-# BLBData Class
-# =============
-
-
-class BLBData(object):
-    """A class for storing the brick data to be written to a BLB file.
-
-    Stores the following data:
-        - BLB file name without extension
-        - size (dimensions) in plates,
-        - brick grid data,
-        - collision cuboids,
-        - coverage data,
-        - and sorted quad data.
-    """
-
-    def __init__(self):
-        # Brick BLB file name.
-        self.brick_name = None
-
-        # Brick XYZ integer size in plates.
-        self.brick_size = []
-
-        # Brick grid data sequences.
-        self.brick_grid = []
-
-        # Brick collision box coordinates.
-        self.collision = []
-
-        # Brick coverage data sequences.
-        self.coverage = []
-
-        # Sorted quad data sequences.
-        self.quads = []
 
 # ==============
 # Math Functions
@@ -360,67 +292,6 @@ def __all_within_bounds(local_coordinates, bounding_dimensions):
     return True
 
 
-def __sequence_z_to_plates(xyz, plate_height):
-    """Performs __to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
-    If the given sequence does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
-
-    Args:
-        xyz (sequence of numbers): A sequence of three numerical values.
-        plate_height (Decimal): The height of a Blockland plate in Blender units.
-
-    Returns:
-        A list of three Decimal type numbers.
-    """
-    if len(xyz) == 3:
-        # ROUND & CAST
-        sequence = __to_decimals(xyz)
-        sequence[const.Z] /= plate_height
-        return sequence
-    else:
-        return xyz
-
-
-def __round_to_plate_coordinates(local_coordinates, brick_dimensions, plate_height):
-    """Rounds the specified sequence of local space XYZ coordinates to the nearest valid plate coordinates in a brick with the specified dimensions.
-
-    Args:
-        local_coordinates (sequence of numbers): A sequence of local space coordinates.
-        brick_dimensions (sequence of numbers): A sequence of dimensions of the brick.
-        plate_height (Decimal): The height of a Blockland plate in Blender units.
-
-    Returns:
-        A list of rounded local space coordinates as Decimal values.
-    """
-    result = []
-
-    # 1 plate is 1.0 Blender units wide and deep.
-    # Plates can only be 1.0 units long on the X and Y axes.
-    # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
-    if __is_even(brick_dimensions[const.X]):
-        # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.X], "1.0"))
-    else:
-        # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.X], "0.5"))
-
-    if __is_even(brick_dimensions[const.Y]):
-        # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Y], "1.0"))
-    else:
-        # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Y], "0.5"))
-
-    # Round to the nearest full plate height. (Half is rounded up)
-    if __is_even(brick_dimensions[const.Z] / plate_height):
-        # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Z], plate_height))
-    else:
-        # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Z], (plate_height / Decimal("2.0"))))
-
-    return result
-
-
 def __calculate_center(object_minimum_coordinates, object_dimensions):
     """Calculates the coordinates of the center of a 3D object.
 
@@ -512,9 +383,86 @@ def __sequence_product(sequence):
 
     return product
 
+
+def __has_volume(min_coords, max_coords):
+    """Checks if a n-dimensional object has volume in n-dimensional space.
+
+    Args:
+        min_coords (sequence of numbers): The minimum coordinates of an object.
+        max_coords (sequence of numbers): The maximum coordinates of an object.
+
+    Returns:
+        True if an object with the specified coordinates has volume, False otherwise.
+    """
+    for index, value in enumerate(max_coords):
+        if (value - min_coords[index]) == 0:
+            return False
+
+    return True
+
 # =================================
 # Blender Data Processing Functions
 # =================================
+
+
+class BrickBounds(object):
+    """A class for storing the Blender data of brick bounds.
+
+    Stores the following data:
+        - Blender object name,
+        - object dimensions,
+        - object's location in world coordinates,
+        - minimum vertex world coordinate,
+        - and maximum vertex world coordinate.
+    """
+
+    def __init__(self):
+        # The name of the Blender object.
+        self.object_name = None
+
+        # The dimensions are stored separately even though it is trivial to calculate them from the coordinates because they are used often.
+        self.dimensions = []
+
+        # The object center coordinates are stored separately for convenience.
+        self.world_center = []
+
+        self.world_coords_min = []
+        self.world_coords_max = []
+
+    def __repr__(self):
+        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
+
+
+class BLBData(object):
+    """A class for storing the brick data to be written to a BLB file.
+
+    Stores the following data:
+        - BLB file name without extension
+        - size (dimensions) in plates,
+        - brick grid data,
+        - collision cuboids,
+        - coverage data,
+        - and sorted quad data.
+    """
+
+    def __init__(self):
+        # Brick BLB file name.
+        self.brick_name = None
+
+        # Brick XYZ integer size in plates.
+        self.brick_size = []
+
+        # Brick grid data sequences.
+        self.brick_grid = []
+
+        # Brick collision box coordinates.
+        self.collision = []
+
+        # Brick coverage data sequences.
+        self.coverage = []
+
+        # Sorted quad data sequences.
+        self.quads = []
 
 
 class OutOfBoundsException(Exception):
@@ -525,6 +473,71 @@ class OutOfBoundsException(Exception):
 class ZeroSizeException(Exception):
     """An exception thrown when a definition object has zero brick size on at least one axis."""
     pass
+
+# ================
+# Helper Functions
+# ================
+
+
+def __round_to_plate_coordinates(local_coordinates, brick_dimensions, plate_height):
+    """Rounds the specified sequence of local space XYZ coordinates to the nearest valid plate coordinates in a brick with the specified dimensions.
+
+    Args:
+        local_coordinates (sequence of numbers): A sequence of local space coordinates.
+        brick_dimensions (sequence of numbers): A sequence of dimensions of the brick.
+        plate_height (Decimal): The height of a Blockland plate in Blender units.
+
+    Returns:
+        A list of rounded local space coordinates as Decimal values.
+    """
+    result = []
+
+    # 1 plate is 1.0 Blender units wide and deep.
+    # Plates can only be 1.0 units long on the X and Y axes.
+    # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
+    if __is_even(brick_dimensions[const.X]):
+        # ROUND & CAST
+        result.append(__to_decimal(local_coordinates[const.X], "1.0"))
+    else:
+        # ROUND & CAST
+        result.append(__to_decimal(local_coordinates[const.X], "0.5"))
+
+    if __is_even(brick_dimensions[const.Y]):
+        # ROUND & CAST
+        result.append(__to_decimal(local_coordinates[const.Y], "1.0"))
+    else:
+        # ROUND & CAST
+        result.append(__to_decimal(local_coordinates[const.Y], "0.5"))
+
+    # Round to the nearest full plate height. (Half is rounded up)
+    if __is_even(brick_dimensions[const.Z] / plate_height):
+        # ROUND & CAST
+        result.append(__to_decimal(local_coordinates[const.Z], plate_height))
+    else:
+        # ROUND & CAST
+        result.append(__to_decimal(local_coordinates[const.Z], (plate_height / Decimal("2.0"))))
+
+    return result
+
+
+def __sequence_z_to_plates(xyz, plate_height):
+    """Performs __to_decimals(sequence) on the given sequence and scales the Z component to match Blockland plates.
+    If the given sequence does not have exactly three components (assumed format is (X, Y, Z)) the input is returned unchanged.
+
+    Args:
+        xyz (sequence of numbers): A sequence of three numerical values.
+        plate_height (Decimal): The height of a Blockland plate in Blender units.
+
+    Returns:
+        A list of three Decimal type numbers.
+    """
+    if len(xyz) == 3:
+        # ROUND & CAST
+        sequence = __to_decimals(xyz)
+        sequence[const.Z] /= plate_height
+        return sequence
+    else:
+        return xyz
 
 
 def __split_object_name_to_tokens(name, replace_commas=False):
@@ -977,79 +990,6 @@ def __get_color_values(tokens):
     return floats
 
 
-def __has_volume(min_coords, max_coords):
-    """Checks if a n-dimensional object has volume in n-dimensional space.
-
-    Args:
-        min_coords (sequence of numbers): The minimum coordinates of an object.
-        max_coords (sequence of numbers): The maximum coordinates of an object.
-
-    Returns:
-        True if an object with the specified coordinates has volume, False otherwise.
-    """
-    for index, value in enumerate(max_coords):
-        if (value - min_coords[index]) == 0:
-            return False
-
-    return True
-
-
-def __process_bounds_object(export_scale, obj):
-    """Processes a manually defined bounds Blender object.
-
-    Args:
-        export_scale (float): A user defined percentage value to scale all values by.
-        obj (Blender object): The Blender object defining the bounds of the brick that the user created.
-
-    Returns:
-        A BrickBounds object.
-    """
-    # Find the minimum and maximum world coordinates for the bounds object.
-    bounds_min, bounds_max = __get_world_min_max(obj)
-
-    # ROUND & CAST
-    bounds_data = __calculate_bounds(export_scale, __to_decimals(bounds_min), __to_decimals(bounds_max))
-
-    # Store the name for logging and determining whether the bounds were defined or automatically calculated.
-    bounds_data.object_name = obj.name
-
-    return bounds_data
-
-
-def __process_coverage(properties, blb_data):
-    """Calculates the coverage data if the user has defined so in the properties.
-    If user does not want coverage, default coverage data will be used.
-
-    Args:
-        properties (Blender properties object): A Blender object containing user preferences.
-        blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
-
-    Returns:
-        A sequence of BLB coverage data.
-    """
-    if properties.blendprop.calculate_coverage:
-        calculate_side = ((properties.blendprop.coverage_top_calculate,
-                           properties.blendprop.coverage_bottom_calculate,
-                           properties.blendprop.coverage_north_calculate,
-                           properties.blendprop.coverage_east_calculate,
-                           properties.blendprop.coverage_south_calculate,
-                           properties.blendprop.coverage_west_calculate))
-
-        hide_adjacent = ((properties.blendprop.coverage_top_hide,
-                          properties.blendprop.coverage_bottom_hide,
-                          properties.blendprop.coverage_north_hide,
-                          properties.blendprop.coverage_east_hide,
-                          properties.blendprop.coverage_south_hide,
-                          properties.blendprop.coverage_west_hide))
-
-        return __calculate_coverage(blb_data.brick_size,
-                                    calculate_side,
-                                    hide_adjacent,
-                                    properties.blendprop.axis_blb_forward)
-    else:
-        return __calculate_coverage()
-
-
 def __grid_object_to_volume(properties, bounds_data, grid_obj):
     """Calculates the brick grid definition index range [min, max[ for each axis from the vertex coordinates of the specified object.
     The indices represent a three dimensional volume in the local space of the bounds object where the origin is in the -X +Y +Z corner.
@@ -1168,6 +1108,66 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
                     (grid_min[const.Z], grid_max[const.Z]))
     else:
         raise OutOfBoundsException()
+
+# =========================
+# Main Processing Functions
+# =========================
+
+
+def __process_bounds_object(export_scale, obj):
+    """Processes a manually defined bounds Blender object.
+
+    Args:
+        export_scale (float): A user defined percentage value to scale all values by.
+        obj (Blender object): The Blender object defining the bounds of the brick that the user created.
+
+    Returns:
+        A BrickBounds object.
+    """
+    # Find the minimum and maximum world coordinates for the bounds object.
+    bounds_min, bounds_max = __get_world_min_max(obj)
+
+    # ROUND & CAST
+    bounds_data = __calculate_bounds(export_scale, __to_decimals(bounds_min), __to_decimals(bounds_max))
+
+    # Store the name for logging and determining whether the bounds were defined or automatically calculated.
+    bounds_data.object_name = obj.name
+
+    return bounds_data
+
+
+def __process_coverage(properties, blb_data):
+    """Calculates the coverage data if the user has defined so in the properties.
+    If user does not want coverage, default coverage data will be used.
+
+    Args:
+        properties (Blender properties object): A Blender object containing user preferences.
+        blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
+
+    Returns:
+        A sequence of BLB coverage data.
+    """
+    if properties.blendprop.calculate_coverage:
+        calculate_side = ((properties.blendprop.coverage_top_calculate,
+                           properties.blendprop.coverage_bottom_calculate,
+                           properties.blendprop.coverage_north_calculate,
+                           properties.blendprop.coverage_east_calculate,
+                           properties.blendprop.coverage_south_calculate,
+                           properties.blendprop.coverage_west_calculate))
+
+        hide_adjacent = ((properties.blendprop.coverage_top_hide,
+                          properties.blendprop.coverage_bottom_hide,
+                          properties.blendprop.coverage_north_hide,
+                          properties.blendprop.coverage_east_hide,
+                          properties.blendprop.coverage_south_hide,
+                          properties.blendprop.coverage_west_hide))
+
+        return __calculate_coverage(blb_data.brick_size,
+                                    calculate_side,
+                                    hide_adjacent,
+                                    properties.blendprop.axis_blb_forward)
+    else:
+        return __calculate_coverage()
 
 
 def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
