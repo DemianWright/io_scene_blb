@@ -63,7 +63,7 @@ Where the .BLB file name is defined.
 
 Value | Description
 ------|------------
-Bounds | Brick name is defined in the **Bounds** object after the bounds definition token, separated with a whitespace character. Cannot be manually set in the export file dialog. (Default)
+Bounds | Brick name is defined in the **Bounds** object after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. (Default)
 File | Brick name is the same as the file name. Can be manually set in the export file dialog.
 
 #### Export Only ####
