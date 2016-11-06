@@ -977,6 +977,23 @@ def __get_color_values(tokens):
     return floats
 
 
+def __has_volume(min_coords, max_coords):
+    """Checks if a n-dimensional object has volume in n-dimensional space.
+
+    Args:
+        min_coords (sequence of numbers): The minimum coordinates of an object.
+        max_coords (sequence of numbers): The maximum coordinates of an object.
+
+    Returns:
+        True if an object with the specified coordinates has volume, False otherwise.
+    """
+    for index, value in enumerate(max_coords):
+        if (value - min_coords[index]) == 0:
+            return False
+
+    return True
+
+
 def __process_bounds_object(export_scale, obj):
     """Processes a manually defined bounds Blender object.
 
@@ -1142,15 +1159,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         grid_min = __force_to_ints(grid_min)
         grid_max = __force_to_ints(grid_max)
 
-        zero_size = False
-
-        # Check for zero size.
-        for index, value in enumerate(grid_max):
-            if (value - grid_min[index]) == 0:
-                zero_size = True
-                break
-
-        if zero_size:
+        if not __has_volume(grid_min, grid_max):
             raise ZeroSizeException()
         else:
             # Return the index ranges as a tuple: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
@@ -1194,7 +1203,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
                     logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
                         grid_obj.name, bounds_data.object_name))
             except ZeroSizeException:
-                logger.error("Brick grid definition object '{}' has zero size on at least one axis. Definition ignored.".format(grid_obj.name))
+                logger.error("Brick grid definition object '{}' has no volume. Definition ignored.".format(grid_obj.name))
 
     # Log messages for brick grid definitions.
     if total_definitions == 0:
@@ -1305,16 +1314,8 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
 
         # Technically collision outside brick bounds is not invalid but the collision is also horribly broken and as such is not allowed.
         if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
-            zero_size = False
-
-            # Check for zero size.
-            for index, value in enumerate(col_max):
-                if (value - col_min[index]) == 0:
-                    zero_size = True
-                    break
-
-            if zero_size:
-                logger.error("Collision definition object '{}' has zero size on at least one axis. Definition ignored.".format(obj.name), 1)
+            if not __has_volume(col_min, col_max):
+                logger.error("Collision definition object '{}' has no volume. Definition ignored.".format(obj.name), 1)
                 # Skip the rest of the loop.
                 continue
 
