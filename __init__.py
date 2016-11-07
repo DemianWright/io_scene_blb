@@ -70,7 +70,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     export_count = EnumProperty(
         items=[("SINGLE", "Single", "Export a single brick"),
                ("MULTIPLE", "Multiple", "Export multiple bricks at once")],
-        name="Export Count",
+        name="Bricks To Export",
         description="How many bricks to export from this file",
         default="SINGLE"
     )
@@ -101,11 +101,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # Brick Name Multiple
     # -------------------
     brick_name_source_multi = EnumProperty(
-        items=[("GROUP", "Group", "Brick name is the group name (directory set in export file dialog)"),
-               ("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (directory set in export file dialog)")],
+        items=[("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (directory set in export file dialog)"),
+               ("GROUPS", "Group", "Brick name is the group name (directory set in export file dialog)")],
         name="Brick Names From:",
         description="Where to get the name of the exported bricks",
-        default="GROUP"
+        default="BOUNDS"
     )
 
     # -------
@@ -118,6 +118,17 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         name="Export Objects In:",
         description="Only export the specified objects",
         default="SELECTION"
+    )
+
+    # -------------
+    # Objects Multi
+    # -------------
+    export_objects_multi = EnumProperty(
+        items=[("LAYERS", "Layers", "Export all bricks in the visible layers"),
+               ("SCENE", "Scene", "Export all bricks in the active scene")],
+        name="Export Bricks In:",
+        description="Only export the specified bricks",
+        default="LAYERS"
     )
 
     # --------
@@ -492,6 +503,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         message = export_blb.export(context, props, export_dir, export_file, file_name)
 
         if isinstance(message, str):
+            # Log the message in case the user missed it.
+            logger.error(message)
+
+            # Show an error popup in the UI.
             self.report({'ERROR'}, message)
         # Else: No error message, everything is OK.
 
@@ -513,24 +528,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Export Count
         row = layout.row()
-        row.label("Export Count:")
+        row.label("Bricks To Export:")
 
         row = layout.row()
         row.prop(self, "export_count", expand=True)
 
         multi_export = self.export_count == 'MULTIPLE'
 
-        # When doing multi-brick export, swap the brick name property and add in the brick definition property.
+        # When doing multi-brick export, swap the brick name and objects properties and add in the brick definition property.
         if multi_export:
-            # Property: Brick Definition
-            row = layout.row()
-            row.active = multi_export
-            row.label("Bricks Defined By:")
-
-            row = layout.row()
-            row.active = multi_export
-            row.prop(self, "brick_definition", expand=True)
-
             brickgroups = self.brick_definition == 'GROUPS'
 
             # Property: Brick Name Multiple
@@ -548,8 +554,22 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
                 # Otherwise you need to put all objects in every layer in their own group to define the name which defeats the purpose.
                 self.brick_name_source_multi = 'BOUNDS'
 
-            # For exporting the whole scene.
-            self.export_objects = 'SCENE'
+            # Property: Brick Definition
+            row = layout.row()
+            row.active = multi_export
+            row.label("Bricks Defined By:")
+
+            row = layout.row()
+            row.active = multi_export
+            row.prop(self, "brick_definition", expand=True)
+
+            # Property: Export Objects Multi
+            row = layout.row()
+            row.label("Export Bricks In:")
+
+            row = layout.row()
+            row.enabled = multi_export
+            row.prop(self, "export_objects_multi", expand=True)
         else:
             # Property: Brick Name
             row = layout.row()
@@ -560,14 +580,13 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             row.active = not multi_export
             row.prop(self, "brick_name_source", expand=True)
 
-        # Property: Export Objects
-        row = layout.row()
-        row.label("Export Only:")
+            # Property: Export Objects
+            row = layout.row()
+            row.label("Export Only:")
 
-        row = layout.row()
-        # Disable selecting values when exporting multiple bricks.
-        row.enabled = not multi_export
-        row.prop(self, "export_objects", expand=True)
+            row = layout.row()
+            row.enabled = not multi_export
+            row.prop(self, "export_objects", expand=True)
 
         layout.separator()
 
