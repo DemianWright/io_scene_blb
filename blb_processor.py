@@ -828,50 +828,6 @@ def __rotate_section_idx(direction, forward_axis):
         return (direction + 1) % 4 + 2
 
 
-def __get_object_sequence(context, properties):
-    """Determines the sequence of Blender objects to be processed.
-
-    Args:
-        context (Blender context object): A Blender object containing scene data.
-        properties (DerivateProperties): An object containing user properties.
-
-    Returns:
-        The sequence of Blender objects from the specified Blender context to be exported according to the specified user preferences.
-    """
-    objects = []
-
-    # Use selected objects?
-    if properties.blendprop.export_objects == "SELECTION":
-        logger.info("Exporting selected objects to BLB.")
-        objects = context.selected_objects
-        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects selected."), 1)
-
-    # Use objects in visible layers?
-    if properties.blendprop.export_objects == "LAYERS":
-        logger.info("Exporting objects in visible layers to BLB.")
-        # For every object in the scene.
-        for obj in context.scene.objects:
-            # For every layer in the scene.
-            for index in range(len(context.scene.layers)):
-                # If this layer is visible.
-                # And this object is in the layer.
-                if True == obj.layers[index] == context.scene.layers[index]:
-                    # Append to the list of objects.
-                    objects.append(obj)
-
-        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects in visible layers."), 1)
-
-    # If user wants to export the whole scene.
-    # Or if user wanted to export only the selected objects or layers but they contained nothing.
-    # Get all scene objects.
-    if properties.blendprop.export_objects == "SCENE" or len(objects) == 0:
-        logger.info("Exporting scene to BLB.")
-        objects = context.scene.objects
-        logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "Scene has no objects."), 1)
-
-    return objects
-
-
 def __record_bounds_data(properties, blb_data, bounds_data):
     """Adds the brick bounds data to the specified BLB data object.
 
@@ -910,7 +866,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
 
-    if properties.blendprop.brick_name_source == 'BOUNDS':
+    if properties.blendprop.export_count == 'SINGLE' and properties.blendprop.brick_name_source == 'BOUNDS':
         if bounds_data.object_name is None:
             logger.warning(
                 "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
@@ -921,6 +877,27 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             if len(name_elements) == 1:
                 logger.warning(
                     "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
+            else:
+                # Brick name follows the bounds definition, spaces are not allowed.
+                blb_data.brick_name = name_elements[name_elements.index(properties.blendprop.deftoken_bounds) + 1]
+                logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
+    elif properties.blendprop.export_count == 'MULTIPLE' and properties.blendprop.brick_name_source_multi == 'BOUNDS':
+        if bounds_data.object_name is None:
+            if properties.blendprop.brick_definition == 'LAYERS':
+                return 'When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick.'
+            else:
+                logger.warning(
+                    'Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.', 1)
+        else:
+            # Split the bounds object name at whitespace.
+            name_elements = bounds_data.object_name.split()
+
+            if len(name_elements) == 1:
+                if properties.blendprop.brick_definition == 'LAYERS':
+                    return 'When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name.'
+                else:
+                    logger.warning(
+                        "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
                 # Brick name follows the bounds definition, spaces are not allowed.
                 blb_data.brick_name = name_elements[name_elements.index(properties.blendprop.deftoken_bounds) + 1]
@@ -1428,19 +1405,23 @@ def __process_definition_objects(properties, objects):
                 bounds_data = __process_bounds_object(properties.scale, obj)
                 blb_data = __record_bounds_data(properties, blb_data, bounds_data)
 
-                plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
-                bricks = int(bricks)
-
-                if plates == 0.0:
-                    logger.info("Defined brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
-                                                                                         blb_data.brick_size[const.Y],
-                                                                                         logger.build_countable_message('', bricks, (' brick', ' bricks'))), 1)
+                if isinstance(blb_data, str):
+                    # Got an error message.
+                    return blb_data
                 else:
-                    logger.info("Defined brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
-                                                                                            blb_data.brick_size[const.Y],
-                                                                                            logger.build_countable_message(
-                                                                                                '', bricks, (' brick', ' bricks')),
-                                                                                            logger.build_countable_message('', blb_data.brick_size[const.Z] - bricks * 3, (' plate', ' plates'))), 1)
+                    plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
+                    bricks = int(bricks)
+
+                    if plates == 0.0:
+                        logger.info("Defined brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
+                                                                                             blb_data.brick_size[const.Y],
+                                                                                             logger.build_countable_message('', bricks, (' brick', ' bricks'))), 1)
+                    else:
+                        logger.info("Defined brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
+                                                                                                blb_data.brick_size[const.Y],
+                                                                                                logger.build_countable_message(
+                                                                                                    '', bricks, (' brick', ' bricks')),
+                                                                                                logger.build_countable_message('', blb_data.brick_size[const.Z] - bricks * 3, (' plate', ' plates'))), 1)
             else:
                 logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
                 continue
@@ -1480,7 +1461,13 @@ def __process_definition_objects(properties, objects):
         bounds_data = __calculate_bounds(properties.scale, __to_decimals(min_world_coordinates), __to_decimals(max_world_coordinates))
 
         blb_data = __record_bounds_data(properties, blb_data, bounds_data)
-        plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
+
+        if isinstance(blb_data, str):
+            # Got an error message.
+            return blb_data
+        else:
+            plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
+
         bricks = int(bricks)
 
         if plates == 0.0:
@@ -1838,7 +1825,7 @@ def __format_blb_data(forward_axis, blb_data):
     return blb_data
 
 
-def process_blender_data(context, properties):
+def process_blender_data(context, properties, objects):
     """Processes the specified Blender data into a format that can be written in a BLB file.
 
     Args:
@@ -1853,15 +1840,12 @@ def process_blender_data(context, properties):
     # Using a global variable for the sake of convenience and code readability.
     __CALCULATION_FP_PRECISION_STR = properties.precision
 
-    # Determine which objects to process.
-    object_sequence = __get_object_sequence(context, properties)
-
-    if len(object_sequence) > 0:
+    if len(objects) > 0:
         logger.info('Processing definition objects.')
 
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible mesh_objects from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
-        result = __process_definition_objects(properties, object_sequence)
+        result = __process_definition_objects(properties, objects)
 
         if isinstance(result, str):
             # Something went wrong, return error message.
