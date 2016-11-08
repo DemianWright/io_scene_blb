@@ -659,6 +659,7 @@ def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=Non
         # Initially assume that forward axis is +X, data will be swizzled later.
         for index, side in enumerate(calculate_side):
             if side:
+                # FIXME: I learned something new today. This is not how the coverage works. It is not the whole side of the brick, it is the area of the brick grid on a side.
                 # Calculate the area of side.
                 if index == const.QUAD_SECTION_IDX_TOP or index == const.QUAD_SECTION_IDX_BOTTOM:
                     area = brick_size[const.X] * brick_size[const.Y]
@@ -1578,6 +1579,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         # ===================
         # Manual sorting is per-object.
         section_idx = None
+        reset_section = True
 
         quad_sections = __get_tokens_from_object_name(object_name, properties.quad_sort_definitions)
         section_count = len(quad_sections)
@@ -1592,6 +1594,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             # TODO: Do forward axis rotation of section in the format_blb_data function?
             # The section_idx index needs to rotated according to the forward axis.
             section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
+            reset_section = False
         # Else: No manual sort.
 
         # This function creates a new mesh datablock.
@@ -1601,10 +1604,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         # PROCESS QUAD DATA
 
         for poly in mesh.polygons:
-            # If automatically sorting, reset variable to None because it is initially defined before the loop.
-            if properties.blendprop.auto_sort_quads:
-                section_idx = None
-
             # ===================
             # Vertex loop indices
             # ===================
@@ -1640,7 +1639,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             # ======================
             # Automatic Quad Sorting
             # ======================
-            # And the current object does not have a manual definition?
+            # The current object does not have a manual definition?
             if section_idx is None:
                 # Does user want to automatically sort quads?
                 if properties.blendprop.auto_sort_quads:
@@ -1757,6 +1756,10 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
             quads[section_idx].append([positions, normals, uvs, colors, texture_name])
+
+            if reset_section:
+                print("reset")
+                section_idx = None
 
         # Delete the mesh datablock that was created earlier.
         bpy.data.meshes.remove(mesh)
