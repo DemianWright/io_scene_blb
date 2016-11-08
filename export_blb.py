@@ -232,7 +232,6 @@ def export(context, properties, export_dir, export_file, file_name):
                     # If this layer is visible.
                     # And this object is in the layer.
                     if True == obj.layers[index] == context.scene.layers[index]:
-                        print("laob", index, obj.layers[index], context.scene.layers[index], obj.name)
                         # Append to the list of objects.
                         objects.append(obj)
 

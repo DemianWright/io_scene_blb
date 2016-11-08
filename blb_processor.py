@@ -1758,7 +1758,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             quads[section_idx].append([positions, normals, uvs, colors, texture_name])
 
             if reset_section:
-                print("reset")
                 section_idx = None
 
         # Delete the mesh datablock that was created earlier.
