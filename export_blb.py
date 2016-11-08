@@ -291,6 +291,8 @@ def export(context, properties, export_dir, export_file, file_name):
             # Build the full path and write the log.
             logger.write_log("{}{}".format(export_dir, logname))
 
+            logger.clear_log()
+
             return None
         else:
             # Something went wrong, pass on the message.
