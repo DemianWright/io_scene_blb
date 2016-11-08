@@ -70,7 +70,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     export_count = EnumProperty(
         items=[("SINGLE", "Single", "Export a single brick"),
                ("MULTIPLE", "Multiple", "Export multiple bricks at once")],
-        name="Bricks To Export",
+        name="Bricks to Export",
         description="How many bricks to export from this file",
         default="SINGLE"
     )
@@ -102,7 +102,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -------------------
     brick_name_source_multi = EnumProperty(
         items=[("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (directory set in export file dialog)"),
-               ("GROUPS", "Group", "Brick name is the group name (directory set in export file dialog)")],
+               ("GROUPS", "Groups", "Brick name is the group name (directory set in export file dialog)")],
         name="Brick Names From:",
         description="Where to get the name of the exported bricks",
         default="BOUNDS"
@@ -528,7 +528,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Export Count
         row = layout.row()
-        row.label("Bricks To Export:")
+        row.label("Bricks to Export:")
 
         row = layout.row()
         row.prop(self, "export_count", expand=True)
