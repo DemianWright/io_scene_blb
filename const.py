@@ -59,11 +59,11 @@ VALID_BRICK_TEXTURES = ('BOTTOMEDGE', 'BOTTOMLOOP', 'RAMP', 'SIDE', 'TOP')
 DEFAULT_COVERAGE = 99999
 
 # Brick grid symbols.
-GRID_INSIDE = "x"  # Disallow building inside brick.
-GRID_OUTSIDE = "-"  # Allow building in empty space.
-GRID_UP = "u"  # Allow placing bricks above this plate.
-GRID_DOWN = "d"  # Allow placing bricks below this plate.
-GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
+GRID_INSIDE = 'x'  # Disallow building inside brick.
+GRID_OUTSIDE = '-'  # Allow building in empty space.
+GRID_UP = 'u'  # Allow placing bricks above this plate.
+GRID_DOWN = 'd'  # Allow placing bricks below this plate.
+GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
 
 # Maximum number of decimal places to write to file.
 MAX_FP_DECIMALS_TO_WRITE = 16

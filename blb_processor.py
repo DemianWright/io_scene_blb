@@ -400,6 +400,23 @@ def __has_volume(min_coords, max_coords):
 
     return True
 
+
+def __count_occurrences(value, sequence, not_equal=False):
+    """Counts the number of occurrences of the specified value in the sequence.
+
+    Args:
+        value (value): Value to count the occurrences of.
+        sequence (sequence): Sequence to iterate over.
+        not_equal (boolean): Count the number of times the value does not appear in the sequence instead. (Default: False)
+
+    Return:
+        The number of times the value did/did not appear in the sequence.
+    """
+    if not_equal:
+        return len([val for val in sequence if val != value])
+    else:
+        return len([val for val in sequence if val == value])
+
 # =================================
 # Blender Data Processing Functions
 # =================================
@@ -632,22 +649,24 @@ def __modify_brick_grid(brick_grid, volume, symbol):
                 brick_grid[w][h][d] = symbol
 
 
-def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=None, forward_axis=None):
+def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_size=None,  brick_grid=None, forward_axis=None):
     """Calculates the BLB coverage data for a brick.
 
     Args:
-        brick_size (sequence of integers): An optional sequence of the sizes of the brick on each of the XYZ axes.
-                                           If not defined, default coverage will be used.
         calculate_side (sequence of booleans): An optional sequence of boolean values where the values must in the same order as const.QUAD_SECTION_ORDER.
                                                A value of true means that coverage will be calculated for that side of the brick according the specified size of the brick.
                                                A value of false means that the default coverage value will be used for that side.
-                                               Must be defined if brick_size is defined.
+                                               If not defined, default coverage will be used.
         hide_adjacent (sequence of booleans): An optional sequence of boolean values where the values must in the same order as const.QUAD_SECTION_ORDER.
                                               A value of true means that faces of adjacent bricks covering this side of this brick will be hidden.
                                               A value of false means that adjacent brick faces will not be hidden.
-                                              Must be defined if brick_size is defined.
+                                              Must be defined if calculate_side is defined.
+        brick_size (sequence of integers): An optional sequence of the sizes of the brick on each of the XYZ axes.
+                                           Must be defined if calculate_side is defined.
+        brick_grid (sequence of integers): An optional sequence of the sizes of the brick on each of the XYZ axes.
+                                           Must be defined if calculate_side is defined.
         forward_axis (Axis): The optional user-defined BLB forward axis.
-                             Must be defined if brick_size is defined.
+                             Must be defined if calculate_side is defined.
 
     Returns:
         A sequence of BLB coverage data.
@@ -659,18 +678,61 @@ def __calculate_coverage(brick_size=None, calculate_side=None, hide_adjacent=Non
         # Initially assume that forward axis is +X, data will be swizzled later.
         for index, side in enumerate(calculate_side):
             if side:
-                # FIXME: I learned something new today. This is not how the coverage works. It is not the whole side of the brick, it is the area of the brick grid on a side.
-                # Calculate the area of side.
-                if index == const.QUAD_SECTION_IDX_TOP or index == const.QUAD_SECTION_IDX_BOTTOM:
-                    area = brick_size[const.X] * brick_size[const.Y]
-                if index == const.QUAD_SECTION_IDX_NORTH or index == const.QUAD_SECTION_IDX_SOUTH:
-                    area = brick_size[const.X] * brick_size[const.Z]
-                if index == const.QUAD_SECTION_IDX_EAST or index == const.QUAD_SECTION_IDX_WEST:
-                    area = brick_size[const.Y] * brick_size[const.Z]
+                # Bricks are cuboid in shape.
+                # The brick sides in the grid are as follows:
+                # - Blender top    / grid top   : first row   of every slice.
+                # - Blender bottom / grid bottom: last  row   of every slice.
+                # - Blender north  / grid east  : last  index of every row.
+                # - Blender east   / grid south : last  slice in grid.
+                # - Blender south  / grid west  : first index of every row.
+                # - Blender west   / grid north : first slice in grid.
+                # Coverage only takes into account symbols that are not empty space '-'.
+                # Calculate the area of the brick grid symbols on each the brick side.
+                if index == const.QUAD_SECTION_IDX_TOP:
+                    area = 0
+
+                    for axis_slice in brick_grid:
+                        area += __count_occurrences(const.GRID_OUTSIDE, axis_slice[0], True)
+
+                elif index == const.QUAD_SECTION_IDX_BOTTOM:
+                    area = 0
+                    slice_last_row_idx = len(brick_grid[0]) - 1
+
+                    for axis_slice in brick_grid:
+                        area += __count_occurrences(const.GRID_OUTSIDE, axis_slice[slice_last_row_idx], True)
+
+                elif index == const.QUAD_SECTION_IDX_NORTH:
+                    area = 0
+                    row_last_symbol_idx = len(brick_grid[0][0]) - 1
+
+                    for axis_slice in brick_grid:
+                        for row in axis_slice:
+                            area += 0 if row[row_last_symbol_idx] == const.GRID_OUTSIDE else 1
+
+                elif index == const.QUAD_SECTION_IDX_EAST:
+                    area = 0
+
+                    for row in brick_grid[len(brick_grid) - 1]:
+                        area += __count_occurrences(const.GRID_OUTSIDE, row, True)
+
+                elif index == const.QUAD_SECTION_IDX_SOUTH:
+                    area = 0
+
+                    for axis_slice in brick_grid:
+                        for row in axis_slice:
+                            area += 0 if row[0] == const.GRID_OUTSIDE else 1
+
+                elif index == const.QUAD_SECTION_IDX_WEST:
+                    area = 0
+
+                    for row in brick_grid[0]:
+                        area += __count_occurrences(const.GRID_OUTSIDE, row, True)
+
             else:
                 area = const.DEFAULT_COVERAGE
 
             # Hide adjacent face?
+            # Valid values are 1 and 0, Python will write True and False as integers.
             coverage.append((hide_adjacent[index], area))
 
         # Swizzle the coverage values around according to the defined forward axis.
@@ -1140,9 +1202,10 @@ def __process_coverage(properties, blb_data):
                           properties.blendprop.coverage_south_hide,
                           properties.blendprop.coverage_west_hide))
 
-        return __calculate_coverage(blb_data.brick_size,
-                                    calculate_side,
+        return __calculate_coverage(calculate_side,
                                     hide_adjacent,
+                                    blb_data.brick_size,
+                                    blb_data.brick_grid,
                                     properties.blendprop.axis_blb_forward)
     else:
         return __calculate_coverage()
