@@ -167,6 +167,29 @@ class DerivativeProperties(object):
                 properties.deftoken_quad_sort_omni)
 
 
+def __has_object_in_visible_layer(context, objects):
+    """Check if the specified sequence of Blender objects contains at least one object that is in a visible layer in thecurrent scene.
+
+    Args:
+        context (Blender context object): A Blender object containing scene data.
+        objects (sequence of Blender objects): Objects to the checked.
+
+    Returns:
+        True if at least one object is in a visible layer.
+    """
+    # Is there anything to check?
+    if len(objects) > 0:
+        # For all layers in the scene.
+        for index, layer in enumerate(context.scene.layers):
+            # List's first object is in current layer.
+            # Current layer is visible.
+            if True == objects[0].layers[index] == layer:
+                # List has at least one object in visible layer.
+                return True
+    # No objects in visible layers.
+    return False
+
+
 def export(context, properties, export_dir, export_file, file_name):
     """Processes the data from the scene and writes it to a BLB file.
 
@@ -175,25 +198,72 @@ def export(context, properties, export_dir, export_file, file_name):
         properties (Blender properties object): A Blender object containing user preferences.
         export_dir (string): The absolute path to the directory where to write the BLB file.
         export_file (string): The name of the file to be written with the extension or None if brick name is to be retrieved from the bounds definition object.
-        file_name (string):  The name of the .blend file with the BLB extension to be used as a fall back option.
+        file_name (string): The name of the .blend file with the BLB extension to be used as a fall back option.
 
     Returns:
         None if everything went OK or a string containing an error message to display to the user if the file was not written
     """
-    # TODO: Exporting multiple bricks from a single file.
 
-    logger.configure(properties.write_log, properties.write_log_warnings)
+    def get_objects(context, properties):
+        """Determines the sequence of Blender objects to be processed.
 
-    # Process the user properties further.
-    deriv_properties = DerivativeProperties(properties)
+        Args:
+            context (Blender context object): A Blender object containing scene data.
+            properties (DerivateProperties): An object containing user properties.
 
-    if deriv_properties.error_message is not None:
-        return deriv_properties.error_message
-    else:
+        Returns:
+            The sequence of Blender objects from the specified Blender context to be exported according to the specified user preferences.
+        """
+        objects = []
+
+        # Use selected objects?
+        if properties.blendprop.export_objects == "SELECTION":
+            logger.info("Exporting selected objects to BLB.")
+            objects = context.selected_objects
+            logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects selected."), 1)
+
+        # Use objects in visible layers?
+        if properties.blendprop.export_objects == "LAYERS":
+            logger.info("Exporting objects in visible layers to BLB.")
+            # For every object in the scene.
+            for obj in context.scene.objects:
+                # For every layer in the scene.
+                for index in range(len(context.scene.layers)):
+                    # If this layer is visible.
+                    # And this object is in the layer.
+                    if True == obj.layers[index] == context.scene.layers[index]:
+                        print("laob", index, obj.layers[index], context.scene.layers[index], obj.name)
+                        # Append to the list of objects.
+                        objects.append(obj)
+
+            logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects in visible layers."), 1)
+
+        # If user wants to export the whole scene.
+        # Or if user wanted to export only the selected objects or layers but they contained nothing.
+        # Get all scene objects.
+        if properties.blendprop.export_objects == "SCENE" or len(objects) == 0:
+            logger.info("Exporting scene to BLB.")
+            objects = context.scene.objects
+            logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "Scene has no objects."), 1)
+
+        return objects
+
+    def export_brick(context, properties, export_dir, export_file, file_name, objects):
+        """Helper function for exporting a single brick.
+
+        Args:
+            context (Blender context object): A Blender object containing scene data.
+            properties (DerivateProperties): An object containing user properties.
+            export_dir (string): The absolute path to the directory where to write the BLB file.
+            export_file (string): The name of the file to be written with the extension or None if brick name is to be retrieved from the bounds definition object.
+            file_name (string): The name of the .blend file with the BLB extension to be used as a fall back option.
+            objects (sequence of Blender objects): Objects to be exported
+
+        Returns:
+            None if everything went OK or a string containing an error message to display to the user if the file was not written
+        """
         # Process Blender data into a writable format.
-        # The context variable contains all the Blender data.
-        # The properties variable contains all user-defined settings to take into account when processing the data.
-        data = blb_processor.process_blender_data(context, deriv_properties)
+        data = blb_processor.process_blender_data(context, properties, objects)
 
         # Got the BLBData we need.
         if isinstance(data, blb_processor.BLBData):
@@ -221,7 +291,83 @@ def export(context, properties, export_dir, export_file, file_name):
             # Build the full path and write the log.
             logger.write_log("{}{}".format(export_dir, logname))
 
+            logger.clear_log()
+
             return None
         else:
             # Something went wrong, pass on the message.
             return data
+
+    logger.configure(properties.write_log, properties.write_log_warnings)
+
+    # Process the user properties further.
+    deriv_properties = DerivativeProperties(properties)
+
+    if deriv_properties.error_message is not None:
+        return deriv_properties.error_message
+    else:
+        # Determine how many bricks to export from this file and the objects in every brick.
+        if deriv_properties.blendprop.export_count == 'SINGLE':
+            # Standard single brick export.
+            return export_brick(context, deriv_properties, export_dir, export_file, file_name, get_objects(context, deriv_properties))
+        else:
+            # Export multiple.
+            logger.info('Exporting multiple bricks.')
+            # Bricks in groups.
+            if deriv_properties.blendprop.brick_definition == 'GROUPS':
+                if len(bpy.data.groups) == 0:
+                    return 'No groups to export.'
+                else:
+                    # For all groups in the scene.
+                    for group in bpy.data.groups:
+                        group_objects = group.objects
+
+                        if deriv_properties.blendprop.export_objects_multi == 'LAYERS':
+                            if not __has_object_in_visible_layer(context, group_objects):
+                                # This group didn't have objects in visible layers.
+                                # Skip the rest of the loop.
+                                continue
+                            # Group has at least one object in a visible layer, export group.
+                        # Else: Export all groups in the scene, no need to check anything.
+
+                        logger.info("\nExporting group '{}'.".format(group.name))
+
+                        # Objects in multiple groups will be exported more than once.
+                        if deriv_properties.blendprop.brick_name_source_multi == 'GROUPS':
+                            export_file = "{}{}".format(group.name, const.BLB_EXT)
+                            message = export_brick(context, deriv_properties, export_dir, export_file, file_name, group_objects)
+                        else:
+                            # Get brick name from bounds.
+                            message = export_brick(context, deriv_properties, export_dir, None, file_name, group_objects)
+
+                        # If something went wrong stop export and return the error message.
+                        if message is not None:
+                            return message
+
+            else:
+                # Bricks in layers.
+                exported = 0
+                # Blender has 20 layers, check every one.
+                for layer_idx in range(0, 19):
+                    # Add to list if object is in the layer.
+                    # Objects on multiple layers will be exported more than once.
+                    layer_objects = [ob for ob in bpy.context.scene.objects if ob.layers[layer_idx]]
+
+                    if deriv_properties.blendprop.export_objects_multi == 'LAYERS':
+                        if not __has_object_in_visible_layer(context, layer_objects):
+                            # This group didn't have objects in visible layers.
+                            # Skip the rest of the loop.
+                            continue
+                        # Layer has at least one object in a visible layer, export layer objects.
+
+                    logger.info("\nExporting layer {}.".format(layer_idx + 1))
+                    # Get brick name from bounds.
+                    message = export_brick(context, deriv_properties, export_dir, None, file_name, layer_objects)
+                    exported += 1
+
+                    # If something went wrong stop export and return the error message.
+                    if message is not None:
+                        return message
+
+                if exported == 0:
+                    return 'Nothing to export in layers.'

@@ -32,6 +32,7 @@ The exporter supports all BLB features.
 
 ### Additional Features ###
 - [x] Save and load export settings
+- [x] Export multiple bricks from the same file
 - [x] Vertices are all relative to the defined or calculated brick bounds
    - Object centers (orange dot) are irrelevant: calculations are performed using raw vertex world coordinates
    - Object locations relative to the origin of the world are irrelevant: the calculated center of the brick bounds acts as the new world origin
@@ -50,7 +51,6 @@ The exporter supports all BLB features.
 These features may or may not be implemented at some unspecified time in the future.
 
 - Automatic UV calculation for brick textures
-- Exporting multiple bricks from the same file at once
 - Importing .BLB files
 - Export-time brick rotation on the Z-axis
 - Automatic rendering of the brick preview icon
@@ -58,7 +58,15 @@ These features may or may not be implemented at some unspecified time in the fut
 ## Blender Export Properties ##
 The following properties are present in the current version of the exporter.
 
-#### Brick Name From ####
+#### Bricks to Export ####
+How many bricks to export in one go from the file.
+
+Value | Description
+------|------------
+Single | Export only one brick. (Default)
+Multiple | Export one or more bricks. Shows additional settings when selected.
+
+#### Brick Name From (Single Export) ####
 Where the .BLB file name is defined.
 
 Value | Description
@@ -66,14 +74,38 @@ Value | Description
 Bounds | Brick name is defined in the **Bounds** object after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. (Default)
 File | Brick name is the same as the file name. Can be manually set in the export file dialog.
 
-#### Export Only ####
+#### Export Only (Single Export) ####
 Which objects to process and export to the .BLB file.
 
 Value | Description
 ------|------------
 Selection | Objects that are selected and have an orange outline. (Default)
 Layers | All objects in the layers that are currently visible, regardless of selection.
-Scene | All objects in the current scene. I.e. all objects in all layers regardless of their visibility.
+Scene | All objects in the current scene. I.e. all objects in all layers regardless of the layer visibility.
+
+#### Brick Names From (Multiple Export) ####
+Where the names of the .BLB files are defined.
+
+Value | Description
+------|------------
+Bounds | Brick names are defined in the **Bounds** object after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. (Default)
+Groups | Brick names are the same as the names of the groups name. Export file dialog is only used set to directory.
+
+#### Bricks Defined By (Multiple Export) ####
+How is a single brick defined.
+
+Value | Description
+------|------------
+Groups | Each brick is in its own group. Objects in multiple groups belong to multiple bricks. (Default)
+Layers | Each brick is in its own layer. Objects in multiple layers belong to multiple bricks. When selected brick names must be defined in the **Bounds** object.
+
+#### Export Bricks In (Multiple Export) ####
+Which bricks to process and export to .BLB files.
+
+Value | Description
+------|------------
+Layers | Export all bricks in the layers that are currently visible. (Default)
+Scene | Export all bricks in the current scene. I.e. all bricks in all layers regardless of the layer visibility.
 
 #### Forward Axis ####
 The Blender 3D axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it. Does not change the rotation of the objects in the Blender scene.
@@ -105,16 +137,16 @@ Get object colors from object names. (Default: False)
 Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless **Coverage** is enabled. (Default: False)
 
 #### Coverage ####
-Enable coverage calculations. This is pointless unless **Automatic Quad Sorting** is enabled or at least one object has a quad sorting definition. See *Defining Coverage & Quad Sorting* below for more information. (Default: False)
+Enable coverage calculations. Shows additional settings when selected. This is pointless unless **Automatic Quad Sorting** is enabled or at least one object has a quad sorting definition. See *Defining Coverage & Quad Sorting* below for more information. (Default: False)
 
 #### Custom Definition Tokens ####
-Allows you to specify the definition tokens the exporter uses. See *Defining Tokens* below for more information. (Default: False)
+Allows you to specify the definition tokens the exporter uses. Shows additional settings when selected. See *Defining Tokens* below for more information. (Default: False)
 
 #### Terse Mode ####
 When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections. Using this option is not recommended as it makes the .BLB file harder to read and understand. Although the file is shorter, the difference in file size is negligible. (Default: False)
 
 #### Write Log ####
-Write a log file to the same folder as the exported brick detailing the export process. (Default: True)
+Write a log file to the same folder as the exported brick detailing the export process. Shows additional settings when selected. (Default: True)
 
 **Only on Warnings:** Write a log file only if warnings or errors occurred during the export process. (Default: True)
 
