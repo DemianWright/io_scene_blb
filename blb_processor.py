@@ -1546,7 +1546,6 @@ def __process_definition_objects(properties, objects):
 
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
-
         if __sequence_product(blb_data.brick_size) < 1.0:
             return 'Brick has no volume, brick could not be rendered in-game.'
         else:

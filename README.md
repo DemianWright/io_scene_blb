@@ -12,8 +12,8 @@ The exporter supports all BLB features.
 - [x] Brick grid
    - Automatic calculation (cuboid shape only) or manually defined
 - [x] Coverage
-   - Automatic brick size calculation
    - Manually define hiding own and adjacent brick quads
+   - Automatic area calculation for arbitrary brick grid shapes
    - Automatic and/or manual quad sorting
 - [x] Collision boxes
 - [x] Textures
@@ -36,8 +36,9 @@ The exporter supports all BLB features.
 - [x] Vertices are all relative to the defined or calculated brick bounds
    - Object centers (orange dot) are irrelevant: calculations are performed using raw vertex world coordinates
    - Object locations relative to the origin of the world are irrelevant: the calculated center of the brick bounds acts as the new world origin
-   - Object locations relative to the Blender grid are irrelevant: the brick bounds define the brick grid (however it is highly recommended to align the brick bounds object with the Blender grid for ease of use)
+   - Object locations relative to the Blender grid are irrelevant: the brick bounds define the brick grid origin (however it is highly recommended to align the brick bounds object with the Blender grid for ease of use)
    - This allows you to easily create multiple bricks in the same file in any location in the 3D space and the bricks still export correctly as expected
+   - Arbitrary brick grid rotation, however, is not supported
 - [x] Selective object export: selection, visible layers, entire scene
 - [x] Change brick rotation during export: does not affect objects in viewport
 - [x] Change brick scale during export: does not affect objects in viewport
