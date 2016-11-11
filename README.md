@@ -3,7 +3,7 @@
 
 A [Blender](https://www.blender.org/) add-on written in Python 3 for exporting [Blockland](http://blockland.us/) bricks (.BLB files) directly from Blender without the need for intermediary formats or external programs. It works on the principle of "what you see is what you get", the brick will look exactly the same in-game as it does in the 3D viewport.
 
-The add-on does not support importing .BLB files yet.
+The add-on does not support importing .BLB files yet. For Blender 2.67 and newer.
 
 ## Features ##
 The exporter supports all BLB features.
