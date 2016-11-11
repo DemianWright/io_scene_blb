@@ -170,40 +170,13 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
-    # -------------
-    # Use Materials
-    # -------------
-    use_materials = BoolProperty(
-        name="Use Material Colors",
-        description="Read quad colors from materials (preferred method, overrides object colors)",
+    # -------------------
+    # Calculate Collision
+    # -------------------
+    calculate_collision = BoolProperty(
+        name="Calculate Collision",
+        description="Calculate cuboid collision for the brick if nothing is defined manually",
         default=True,
-    )
-
-    # -----------------
-    # Use Vertex Colors
-    # -----------------
-    use_vertex_colors = BoolProperty(
-        name="Use Vertex Colors",
-        description="Read quad colors from the first vertex color layer (overrides material colors)",
-        default=True,
-    )
-
-    # -----------------
-    # Use Object Colors
-    # -----------------
-    use_object_colors = BoolProperty(
-        name="Parse Object Colors",
-        description="Parse quad colors from object names using the definition token (intended as legacy support)",
-        default=False,
-    )
-
-    # -------
-    # Sorting
-    # -------
-    auto_sort_quads = BoolProperty(
-        name="Automatic Quad Sorting",
-        description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
-        default=False,
     )
 
     # --------
@@ -287,13 +260,40 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=False,
     )
 
+    # -------
+    # Sorting
+    # -------
+    auto_sort_quads = BoolProperty(
+        name="Automatic Quad Sorting",
+        description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
+        default=False,
+    )
+
     # -------------
-    # Calculate Collision
+    # Use Materials
     # -------------
-    calculate_collision = BoolProperty(
-        name="Calculate Collision",
-        description="Calculate cuboid collision for the brick if nothing is defined manually",
+    use_materials = BoolProperty(
+        name="Use Material Colors",
+        description="Read quad colors from materials (preferred method, overrides object colors)",
         default=True,
+    )
+
+    # -----------------
+    # Use Vertex Colors
+    # -----------------
+    use_vertex_colors = BoolProperty(
+        name="Use Vertex Colors",
+        description="Read quad colors from the first vertex color layer (overrides material colors)",
+        default=True,
+    )
+
+    # -----------------
+    # Use Object Colors
+    # -----------------
+    use_object_colors = BoolProperty(
+        name="Parse Object Colors",
+        description="Parse quad colors from object names using the definition token (intended as legacy support)",
+        default=False,
     )
 
     # -----------
@@ -599,6 +599,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         layout.separator()
 
+        # ==================
+        # Blender Properties
+        # ==================
+
         # Property: BLB Forward Axis
         row = layout.row()
         row.label("Forward Axis:")
@@ -612,17 +616,14 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Property: Use Modifiers.
         layout.prop(self, "use_modifiers")
 
-        # Property: Use Material Colors
-        layout.prop(self, "use_materials")
+        layout.separator()
 
-        # Property: Use Vertex Colors
-        layout.prop(self, "use_vertex_colors")
+        # ===
+        # BLB
+        # ===
 
-        # Property: Use Object Colors
-        layout.prop(self, "use_object_colors")
-
-        # Properties: Quad Sorting
-        layout.prop(self, "auto_sort_quads")
+        # Properties: Collision
+        layout.prop(self, "calculate_collision")
 
         # Properties: Coverage
         layout.prop(self, "calculate_coverage")
@@ -672,8 +673,17 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_coverage_property("South")
             draw_coverage_property("West")
 
-        # Properties: Collision
-        layout.prop(self, "calculate_collision")
+        # Properties: Quad Sorting
+        layout.prop(self, "auto_sort_quads")
+
+        # Property: Use Material Colors
+        layout.prop(self, "use_materials")
+
+        # Property: Use Vertex Colors
+        layout.prop(self, "use_vertex_colors")
+
+        # Property: Use Object Colors
+        layout.prop(self, "use_object_colors")
 
         # Properties: Custom Definition Tokens
         layout.prop(self, "custom_definitions")
@@ -751,11 +761,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_grid_definition_property("-", "deftoken_griddash")
             draw_grid_definition_property("x", "deftoken_gridx")
 
+        layout.separator()
+
         # =======
         # Writing
         # =======
-
-        layout.separator()
 
         # Property: Terse Mode
         layout.prop(self, "terse_mode")
