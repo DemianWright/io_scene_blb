@@ -302,7 +302,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     round_normals = BoolProperty(
         name="Round Normals",
         description="Round vertex normal values to the precision defined below, if disabled normals will be written using up to 16 decimals whenever possible",
-        default=False,
+        default=True,
     )
 
     # -----------
