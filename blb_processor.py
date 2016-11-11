@@ -447,7 +447,8 @@ class BrickBounds(object):
         self.world_coords_max = []
 
     def __repr__(self):
-        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
+        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(
+            self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
 
 
 class BLBData(object):
@@ -649,7 +650,7 @@ def __modify_brick_grid(brick_grid, volume, symbol):
                 brick_grid[w][h][d] = symbol
 
 
-def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_size=None, brick_grid=None, forward_axis=None):
+def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_grid=None, forward_axis=None):
     """Calculates the BLB coverage data for a brick.
 
     Args:
@@ -661,8 +662,6 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_size=Non
                                               A value of true means that faces of adjacent bricks covering this side of this brick will be hidden.
                                               A value of false means that adjacent brick faces will not be hidden.
                                               Must be defined if calculate_side is defined.
-        brick_size (sequence of integers): An optional sequence of the sizes of the brick on each of the XYZ axes.
-                                           Must be defined if calculate_side is defined.
         brick_grid (sequence of integers): An optional sequence of the sizes of the brick on each of the XYZ axes.
                                            Must be defined if calculate_side is defined.
         forward_axis (Axis): The optional user-defined BLB forward axis.
@@ -1204,7 +1203,6 @@ def __process_coverage(properties, blb_data):
 
         return __calculate_coverage(calculate_side,
                                     hide_adjacent,
-                                    blb_data.brick_size,
                                     blb_data.brick_grid,
                                     properties.blendprop.axis_blb_forward)
     else:
@@ -1557,7 +1555,8 @@ def __process_definition_objects(properties, objects):
                                                                                        logger.build_countable_message("", blb_data.brick_size[const.Z] - bricks * 3, (" plate", " plates"))), 1)
 
     # Bounds have been defined, check that brick size is within the limits.
-    if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
+    if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
+            const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
         if __sequence_product(blb_data.brick_size) < 1.0:
             return "Brick has no volume, brick could not be rendered in-game."
         else:
