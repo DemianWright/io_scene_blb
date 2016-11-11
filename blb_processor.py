@@ -1731,15 +1731,24 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             if poly.use_smooth:
                 # Smooth shading.
                 # For every loop index in the loop_indices, calculate the vertex normal and add it to the list.
-                # Do not round smooth shaded normals, that would cause visual errors.
-                normals = [__loop_index_to_normal_vector(obj, mesh, loop_index) for loop_index in reversed(loop_indices)]
+
+                # Does the user want to round normals?
+                if properties.blendprop.round_normals:
+                    normals = [__to_decimals(__loop_index_to_normal_vector(obj, mesh, loop_index)) for loop_index in reversed(loop_indices)]
+                else:
+                    normals = [__loop_index_to_normal_vector(obj, mesh, loop_index) for loop_index in reversed(loop_indices)]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
                 # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
-                normals = [__normalize_vector(obj, poly.normal), ] * 4
+
+                # Does the user want to round normals?
+                if properties.blendprop.round_normals:
+                    normals = [__to_decimals(__normalize_vector(obj, poly.normal)), ] * 4
+                else:
+                    normals = [__normalize_vector(obj, poly.normal), ] * 4
 
             # ===
             # UVs

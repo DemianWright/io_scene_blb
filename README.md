@@ -144,6 +144,9 @@ Get object colors from vertex color layers. (Default: True)
 #### Parse Object Colors ####
 Get object colors from object names. (Default: False)
 
+#### Round Normals ####
+Round vertex normals to the user-defined floating point value precision. If disabled normals will be written as accurately as possible but extraneous zeros will still be removed. (Default: False)
+
 #### Custom Definition Tokens ####
 Allows you to specify the definition tokens the exporter uses. Shows additional settings when selected. See *Defining Tokens* below for more information. (Default: False)
 

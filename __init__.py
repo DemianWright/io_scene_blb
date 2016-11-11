@@ -274,7 +274,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -------------
     use_materials = BoolProperty(
         name="Use Material Colors",
-        description="Read quad colors from materials (preferred method, overrides object colors)",
+        description="Read quad colors from materials (recommended method, overrides object colors)",
         default=True,
     )
 
@@ -293,6 +293,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     use_object_colors = BoolProperty(
         name="Parse Object Colors",
         description="Parse quad colors from object names using the definition token (intended as legacy support)",
+        default=False,
+    )
+
+    # -------------
+    # Round Normals
+    # -------------
+    round_normals = BoolProperty(
+        name="Round Normals",
+        description="Round vertex normal values to the precision defined below, if disabled normals will be written using up to 16 decimals whenever possible",
         default=False,
     )
 
@@ -684,6 +693,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Use Object Colors
         layout.prop(self, "use_object_colors")
+
+        # Property: Round Normals
+        layout.prop(self, "round_normals")
 
         # Properties: Custom Definition Tokens
         layout.prop(self, "custom_definitions")
