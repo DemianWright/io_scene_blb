@@ -256,7 +256,7 @@ Vertex Colors | Material Colors | Entire object (per-vertex color), entire objec
 **(1)** The exporter understands two ways of defining an RGBA color using text:
 1. The commonly used method of writing 4 integers that are in the range 0–255, where 0 is black, separated with a whitespace character such as a space. For example `127 255 10 191` for a yellow-green color that is 25% transparent. A full object name could be for example `glass c 240 255 255 128.001`.
    - In the above example the running index `.001` that Blender added at the end would be removed by the exporter.
-2. Writing 4 decimals in the range 0.0–1.0, where 0.0 is black, separated with a whitespace character such as a space. An object could have a name such as `c 0,125 0,0 0,5 1,0 flower`, for example.
+1. Writing 4 decimals in the range 0.0–1.0, where 0.0 is black, separated with a whitespace character such as a space. An object could have a name such as `c 0,125 0,0 0,5 1,0 flower`, for example.
    - :exclamation: Please note that you **must** use a comma character (`,`) as the decimal separator.
    - The leading zero may be omitted.
    - Up to 16 decimals are supported.
@@ -294,6 +294,13 @@ RGBA color values | No
 Normal vectors | No
 UV coordinates | No
 
-## Credits ##
+## Installation ##
+1. Go to [Releases](https://github.com/DemianWright/io_scene_blb/releases) and download the latest add-on source code.
+1. Open Blender and go to `File > User Preferences > Add-ons`.
+1. Press the `Install from File...` button at the bottom of the dialog and find the downloaded source code.
+1. Press `Install from File...` again.
+1. The export option is under `File > Export > Blockland Brick (.blb)`.
+
+## Contributors ##
 - [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.
 - [Demian Wright](https://github.com/DemianWright) - Everything else.
