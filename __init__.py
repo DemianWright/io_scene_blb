@@ -32,7 +32,7 @@ from . import export_blb, const, logger
 bl_info = {
     "name": "Export: Blockland Brick (.blb)",
     "author": "Demian Wright & Nick Smith",
-    "version": (0, 1, 0),
+    "version": (1, 0, 0),
     "blender": (2, 67, 0),
     "location": "File > Export > Blockland Brick (.blb)",
     "description": "Export Blockland brick format",
