@@ -15,11 +15,11 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 A module for exporting Blender data into the BLB format.
 
 @author: Demian Wright
-'''
+"""
 from decimal import Decimal
 import bpy
 
@@ -62,7 +62,7 @@ class DerivativeProperties(object):
         result = self.__build_grid_priority_tuples(properties)
 
         if result is None:
-            self.error_message = 'Two or more brick grid definitions had the same priority.'
+            self.error_message = "Two or more brick grid definitions had the same priority."
         else:
             #===========
             # Brick Grid
@@ -101,12 +101,12 @@ class DerivativeProperties(object):
             prec = properties.float_precision
 
             if common.to_float_or_none(prec) is None:
-                self.error_message = 'Invalid floating point precision value given.'
+                self.error_message = "Invalid floating point precision value given."
             else:
-                if prec == '0':
-                    logger.info('Setting floating point precision to minimum.')
+                if prec == "0":
+                    logger.info("Setting floating point precision to minimum.")
                     # We're only writing 16 decimals anyway.
-                    prec = "0.{}1".format('0' * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
+                    prec = "0.{}1".format("0" * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
 
                 logger.info("Using floating point precision: {}".format(prec))
 
@@ -278,7 +278,7 @@ def export(context, properties, export_dir, export_file, file_name):
 
             export_path = "{}{}".format(export_dir, export_file)
 
-            logger.info('Writing to file.')
+            logger.info("Writing to file.")
             # Write the data to a file.
             blb_writer.write_file(deriv_properties, export_path, data)
 
@@ -306,22 +306,22 @@ def export(context, properties, export_dir, export_file, file_name):
         return deriv_properties.error_message
     else:
         # Determine how many bricks to export from this file and the objects in every brick.
-        if deriv_properties.blendprop.export_count == 'SINGLE':
+        if deriv_properties.blendprop.export_count == "SINGLE":
             # Standard single brick export.
             return export_brick(context, deriv_properties, export_dir, export_file, file_name, get_objects(context, deriv_properties))
         else:
             # Export multiple.
-            logger.info('Exporting multiple bricks.')
+            logger.info("Exporting multiple bricks.")
             # Bricks in groups.
-            if deriv_properties.blendprop.brick_definition == 'GROUPS':
+            if deriv_properties.blendprop.brick_definition == "GROUPS":
                 if len(bpy.data.groups) == 0:
-                    return 'No groups to export.'
+                    return "No groups to export."
                 else:
                     # For all groups in the scene.
                     for group in bpy.data.groups:
                         group_objects = group.objects
 
-                        if deriv_properties.blendprop.export_objects_multi == 'LAYERS':
+                        if deriv_properties.blendprop.export_objects_multi == "LAYERS":
                             if not __has_object_in_visible_layer(context, group_objects):
                                 # This group didn't have objects in visible layers.
                                 # Skip the rest of the loop.
@@ -332,7 +332,7 @@ def export(context, properties, export_dir, export_file, file_name):
                         logger.info("\nExporting group '{}'.".format(group.name))
 
                         # Objects in multiple groups will be exported more than once.
-                        if deriv_properties.blendprop.brick_name_source_multi == 'GROUPS':
+                        if deriv_properties.blendprop.brick_name_source_multi == "GROUPS":
                             export_file = "{}{}".format(group.name, const.BLB_EXT)
                             message = export_brick(context, deriv_properties, export_dir, export_file, file_name, group_objects)
                         else:
@@ -352,7 +352,7 @@ def export(context, properties, export_dir, export_file, file_name):
                     # Objects on multiple layers will be exported more than once.
                     layer_objects = [ob for ob in bpy.context.scene.objects if ob.layers[layer_idx]]
 
-                    if deriv_properties.blendprop.export_objects_multi == 'LAYERS':
+                    if deriv_properties.blendprop.export_objects_multi == "LAYERS":
                         if not __has_object_in_visible_layer(context, layer_objects):
                             # This group didn't have objects in visible layers.
                             # Skip the rest of the loop.
@@ -369,4 +369,4 @@ def export(context, properties, export_dir, export_file, file_name):
                         return message
 
                 if exported == 0:
-                    return 'Nothing to export in layers.'
+                    return "Nothing to export in layers."

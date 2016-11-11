@@ -15,18 +15,18 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 A module for writing data into a BLB file.
 
 @author: Demian Wright
-'''
+"""
 
 # Blender requires imports from ".".
 from . import const
 
 
 def __write_sequence(file, sequence, new_line=True, decimal_digits=const.MAX_FP_DECIMALS_TO_WRITE):
-    '''Writes the values of the specified sequence separated with spaces into the specified file.
+    """Writes the values of the specified sequence separated with spaces into the specified file.
     An optional new line character is added at the end of the line by default.
 
     Args:
@@ -35,34 +35,34 @@ def __write_sequence(file, sequence, new_line=True, decimal_digits=const.MAX_FP_
         new_line (bool): Add a newline character at the end of the line? (Default: True)
         decimal_digits (int): The number of decimal digits to write if the sequence contains floating point values or None to ignore. (Default: const.MAX_FP_DECIMALS_TO_WRITE)
                               The default value prevents very small values from being written in scientific notation, which the game does not understand.
-    '''
+    """
     for index, value in enumerate(sequence):
         if index != 0:
             # Write a space before each value except the first one.
-            file.write(' ')
+            file.write(" ")
         if value == 0:
             # Handle zeros.
-            file.write('0')
+            file.write("0")
         else:
             # Format the value into string, remove all zeros from the end (if any), then remove all periods from the end (if any).
             if decimal_digits is None:
-                file.write("{}".format(value).rstrip('0').rstrip('.'))
+                file.write("{}".format(value).rstrip("0").rstrip("."))
             else:
-                file.write("{0:.{1}f}".format(value, decimal_digits).rstrip('0').rstrip('.'))
+                file.write("{0:.{1}f}".format(value, decimal_digits).rstrip("0").rstrip("."))
     if new_line:
         # Write a new line after all values.
         file.write("\n")
 
 
 def write_file(properties, filepath, blb_data):
-    '''Writes the BLB file.
+    """Writes the BLB file.
 
     Args:
         properties (DerivateProperties): An object containing user properties.
         filepath (string): Path to the BLB file to be written.
         blb_data (BLBData): A BLBData object containing the data to be written.
-    '''
-    with open(filepath, 'w') as file:
+    """
+    with open(filepath, "w") as file:
         # ----------
         # Brick Size
         # ----------
@@ -123,7 +123,7 @@ def write_file(properties, filepath, blb_data):
         # -----
         for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
             # Write section name.
-            file.write("{}\n".format('' if properties.blendprop.terse_mode else "---------------- {} QUADS ----------------".format(section_name)))
+            file.write("{}\n".format("" if properties.blendprop.terse_mode else "---------------- {} QUADS ----------------".format(section_name)))
 
             # Write section length.
             file.write("{}\n".format(str(len(blb_data.quads[index]))))
@@ -133,23 +133,23 @@ def write_file(properties, filepath, blb_data):
                 file.write("\nTEX:{}\n".format(texture_name))
 
                 # Vertex positions.
-                file.write("{}\n".format('' if properties.blendprop.terse_mode else 'POSITION:'))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else "POSITION:"))
 
                 for position in positions:
                     __write_sequence(file, position)
 
                 # Face UV coordinates.
-                file.write("{}\n".format('' if properties.blendprop.terse_mode else 'UV COORDS:'))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else "UV COORDS:"))
                 for uv_vector in uvs:
                     __write_sequence(file, uv_vector)
 
                 # Vertex colors, if any.
                 if colors is not None:
-                    file.write("{}\n".format('' if properties.blendprop.terse_mode else 'COLORS:'))
+                    file.write("{}\n".format("" if properties.blendprop.terse_mode else "COLORS:"))
                     for color in colors:
                         __write_sequence(file, color)
 
                 # Vertex normals.
-                file.write("{}\n".format('' if properties.blendprop.terse_mode else 'NORMALS:'))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else "NORMALS:"))
                 for normal in normals:
                     __write_sequence(file, normal)

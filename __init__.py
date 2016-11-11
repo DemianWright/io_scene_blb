@@ -15,11 +15,11 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 Handles registering the add-on into Blender and drawing properties to the UI.
 
 @author: Demian Wright
-'''
+"""
 
 bl_info = {
     "name": "Export: Blockland Brick (.blb)",
@@ -50,11 +50,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
     bl_idname = "export_scene.blb"
     bl_label = "Export BLB"
-    bl_options = {'REGISTER', 'PRESET'}
+    bl_options = {"REGISTER", "PRESET"}
 
     filename_ext = const.BLB_EXT
     logfile_ext = const.LOG_EXT
-    filter_glob = StringProperty(default="*" + const.BLB_EXT, options={'HIDDEN'})
+    filter_glob = StringProperty(default="*" + const.BLB_EXT, options={"HIDDEN"})
 
     # ==========
     # Properties
@@ -153,7 +153,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     export_scale = FloatProperty(
         name="Scale",
         description="The scale to export the brick at. A 1x1x1 brick at 100% scale is defined as being 1.0x1.0x1.2 Blender units in size on the XYZ axes.",
-        subtype='PERCENTAGE',
+        subtype="PERCENTAGE",
         precision=3,
         step=1,
         default=100.0,
@@ -499,12 +499,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # The absolute path to the directory user has specified in the export dialog.
         export_dir = os.path.split(self.filepath)[0] + os.sep
 
-        if export_dir == '\\':
+        if export_dir == "\\":
             # Export was probably initiated from a script, use the absolute path of the location where the script was executed.
             export_dir = bpy.path.abspath("//")
 
         # The name of the BLB file to export.
-        if props.brick_name_source == 'FILE':
+        if props.brick_name_source == "FILE":
             export_file = file_name
         else:
             export_file = None
@@ -516,12 +516,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             logger.error(message)
 
             # Show an error popup in the UI.
-            self.report({'ERROR'}, message)
+            self.report({"ERROR"}, message)
         # Else: No error message, everything is OK.
 
         logger.clear_log()
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
     # ==============
     # User Interface
@@ -542,11 +542,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         row = layout.row()
         row.prop(self, "export_count", expand=True)
 
-        multi_export = self.export_count == 'MULTIPLE'
+        multi_export = self.export_count == "MULTIPLE"
 
         # When doing multi-brick export, swap the brick name and objects properties and add in the brick definition property.
         if multi_export:
-            brickgroups = self.brick_definition == 'GROUPS'
+            brickgroups = self.brick_definition == "GROUPS"
 
             # Property: Brick Name Multiple
             row = layout.row()
@@ -561,7 +561,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             if not brickgroups:
                 # If bricks are defined by layers, the brick names must come from bounds objects.
                 # Otherwise you need to put all objects in every layer in their own group to define the name which defeats the purpose.
-                self.brick_name_source_multi = 'BOUNDS'
+                self.brick_name_source_multi = "BOUNDS"
 
             # Property: Brick Definition
             row = layout.row()

@@ -15,20 +15,20 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 Various constants used in multiple modules.
 
 @author: Demian Wright
-'''
+"""
 
 # The BLB file extension.
-BLB_EXT = '.blb'
+BLB_EXT = ".blb"
 
 # The log file extension.
-LOG_EXT = '.log'
+LOG_EXT = ".log"
 
 # One log indent level.
-LOG_INDENT = '  '
+LOG_INDENT = "  "
 
 # Generic.
 X = 0
@@ -49,21 +49,21 @@ QUAD_SECTION_IDX_WEST = 5
 QUAD_SECTION_IDX_OMNI = 6
 
 # The quad sections in the correct order for writing to a BLB file.
-QUAD_SECTION_ORDER = ('TOP', 'BOTTOM', 'NORTH', 'EAST', 'SOUTH', 'WEST', 'OMNI')
+QUAD_SECTION_ORDER = ("TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI")
 
 # A tuple of valid brick textures in alphabetical order-
-VALID_BRICK_TEXTURES = ('BOTTOMEDGE', 'BOTTOMLOOP', 'RAMP', 'SIDE', 'TOP')
+VALID_BRICK_TEXTURES = ("BOTTOMEDGE", "BOTTOMLOOP", "RAMP", "SIDE", "TOP")
 
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
 DEFAULT_COVERAGE = 99999
 
 # Brick grid symbols.
-GRID_INSIDE = 'x'  # Disallow building inside brick.
-GRID_OUTSIDE = '-'  # Allow building in empty space.
-GRID_UP = 'u'  # Allow placing bricks above this plate.
-GRID_DOWN = 'd'  # Allow placing bricks below this plate.
-GRID_BOTH = 'b'  # Allow placing bricks above and below this plate.
+GRID_INSIDE = "x"  # Disallow building inside brick.
+GRID_OUTSIDE = "-"  # Allow building in empty space.
+GRID_UP = "u"  # Allow placing bricks above this plate.
+GRID_DOWN = "d"  # Allow placing bricks below this plate.
+GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
 
 # Maximum number of decimal places to write to file.
 MAX_FP_DECIMALS_TO_WRITE = 16

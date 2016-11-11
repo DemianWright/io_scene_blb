@@ -15,11 +15,11 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 A module for processing Blender data into the BLB file format for writing.
 
 @author: Demian Wright
-'''
+"""
 
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
 from math import ceil, modf
@@ -166,7 +166,7 @@ def __like_int(value):
     Returns:
         True if the specified string is like an integer and has no fractional part.
     """
-    return value.isdigit() or (value.startswith('-') and value[1:].isdigit())
+    return value.isdigit() or (value.startswith("-") and value[1:].isdigit())
 
 
 def __get_world_min(obj):
@@ -569,12 +569,12 @@ def __split_object_name_to_tokens(name, replace_commas=False):
         The name split into a list of strings at whitespace characters.
     """
     if replace_commas:
-        name = name.replace(',', '.')
+        name = name.replace(",", ".")
 
     # If the object name has "." as the fourth last character, it could mean that Blender has added the index (e.g. ".002") to the end of the object name because an object with the same name already exists.
     # Removing the end of the name fixes an issue where for example two grid definition objects exist with identical names (which is very common) "gridx" and "gridx.001".
     # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
-    if len(name) > 4 and name[-4] == '.':
+    if len(name) > 4 and name[-4] == ".":
         # Remove the last 4 characters of from the name before splitting at whitespace.
         tokens = name[:-4].lower().split()
     else:
@@ -686,7 +686,7 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_size=Non
                 # - Blender east   / grid south : last  slice in grid.
                 # - Blender south  / grid west  : first index of every row.
                 # - Blender west   / grid north : first slice in grid.
-                # Coverage only takes into account symbols that are not empty space '-'.
+                # Coverage only takes into account symbols that are not empty space "-".
                 # Calculate the area of the brick grid symbols on each the brick side.
                 if index == const.QUAD_SECTION_IDX_TOP:
                     area = 0
@@ -863,7 +863,7 @@ def __rotate_section_idx(direction, forward_axis):
     # Top and bottom always the same and do not need to be rotated because Z axis remapping is not yet supported.
     # Omni is not planar and does not need to be rotated.
     # The initial values are calculated according to +X forward axis.
-    if direction <= const.QUAD_SECTION_IDX_BOTTOM or direction == const.QUAD_SECTION_IDX_OMNI or forward_axis == 'POSITIVE_X':
+    if direction <= const.QUAD_SECTION_IDX_BOTTOM or direction == const.QUAD_SECTION_IDX_OMNI or forward_axis == "POSITIVE_X":
         return direction
 
     # ========================================================================
@@ -874,17 +874,17 @@ def __rotate_section_idx(direction, forward_axis):
     # 3. Use modulo make direction wrap around 3 -> 0:    dir - 2 + R % 4
     # 4. Add 2 to get back to the correct range [2, 5]:   dir - 2 + R % 4 + 2
     # ========================================================================
-    elif forward_axis == 'POSITIVE_Y':
+    elif forward_axis == "POSITIVE_Y":
         # 90 degrees clockwise.
         # [2] North -> [3] East:  (2 - 2 + 1) % 4 + 2 = 3
         # [5] West  -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
         return (direction - 1) % 4 + 2
-    elif forward_axis == 'NEGATIVE_X':
+    elif forward_axis == "NEGATIVE_X":
         # 180 degrees clockwise.
         # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
         # [4] South -> [2] North
         return direction % 4 + 2
-    elif forward_axis == 'NEGATIVE_Y':
+    elif forward_axis == "NEGATIVE_Y":
         # 270 degrees clockwise.
         # [2] North -> [5] West:  (2 - 2 + 3) % 4 + 2 = 5
         # [5] West  -> [4] South
@@ -929,7 +929,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
 
-    if properties.blendprop.export_count == 'SINGLE' and properties.blendprop.brick_name_source == 'BOUNDS':
+    if properties.blendprop.export_count == "SINGLE" and properties.blendprop.brick_name_source == "BOUNDS":
         if bounds_data.object_name is None:
             logger.warning(
                 "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
@@ -944,20 +944,20 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                 # Brick name follows the bounds definition, spaces are not allowed.
                 blb_data.brick_name = name_elements[name_elements.index(properties.blendprop.deftoken_bounds) + 1]
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
-    elif properties.blendprop.export_count == 'MULTIPLE' and properties.blendprop.brick_name_source_multi == 'BOUNDS':
+    elif properties.blendprop.export_count == "MULTIPLE" and properties.blendprop.brick_name_source_multi == "BOUNDS":
         if bounds_data.object_name is None:
-            if properties.blendprop.brick_definition == 'LAYERS':
-                return 'When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick.'
+            if properties.blendprop.brick_definition == "LAYERS":
+                return "When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick."
             else:
                 logger.warning(
-                    'Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.', 1)
+                    "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
         else:
             # Split the bounds object name at whitespace.
             name_elements = bounds_data.object_name.split()
 
             if len(name_elements) == 1:
-                if properties.blendprop.brick_definition == 'LAYERS':
-                    return 'When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name.'
+                if properties.blendprop.brick_definition == "LAYERS":
+                    return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name."
                 else:
                     logger.warning(
                         "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
@@ -1248,7 +1248,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
 
     # Log messages for brick grid definitions.
     if total_definitions == 0:
-        logger.warning('No brick grid definitions found. Automatically generated brick grid may be undesirable.', 1)
+        logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.", 1)
     elif total_definitions == 1:
         if processed == 0:
             logger.warning(
@@ -1385,9 +1385,9 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
     # Log messages for collision definitions.
     if defcount == 0:
         if properties.blendprop.calculate_collision:
-            logger.warning('No collision definitions found. Calculating full brick collision.', 1)
+            logger.warning("No collision definitions found. Calculating full brick collision.", 1)
         else:
-            logger.warning('No collision definitions found. Brick will have no collision.', 1)
+            logger.warning("No collision definitions found. Brick will have no collision.", 1)
     elif defcount == 1:
         if processed == 0:
             if properties.blendprop.calculate_collision:
@@ -1491,13 +1491,13 @@ def __process_definition_objects(properties, objects):
                     if plates == 0.0:
                         logger.info("Defined brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
                                                                                              blb_data.brick_size[const.Y],
-                                                                                             logger.build_countable_message('', bricks, (' brick', ' bricks'))), 1)
+                                                                                             logger.build_countable_message("", bricks, (" brick", " bricks"))), 1)
                     else:
                         logger.info("Defined brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
                                                                                                 blb_data.brick_size[const.Y],
                                                                                                 logger.build_countable_message(
-                                                                                                    '', bricks, (' brick', ' bricks')),
-                                                                                                logger.build_countable_message('', blb_data.brick_size[const.Z] - bricks * 3, (' plate', ' plates'))), 1)
+                                                                                                    "", bricks, (" brick", " bricks")),
+                                                                                                logger.build_countable_message("", blb_data.brick_size[const.Z] - bricks * 3, (" plate", " plates"))), 1)
             else:
                 logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
                 continue
@@ -1531,7 +1531,7 @@ def __process_definition_objects(properties, objects):
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
-        logger.warning('No brick bounds definition found. Automatically calculated brick size may be undesirable.', 1)
+        logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.", 1)
 
         # ROUND & CAST
         bounds_data = __calculate_bounds(properties.scale, __to_decimals(min_world_coordinates), __to_decimals(max_world_coordinates))
@@ -1549,17 +1549,17 @@ def __process_definition_objects(properties, objects):
         if plates == 0.0:
             logger.info("Calculated brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
                                                                                     blb_data.brick_size[const.Y],
-                                                                                    logger.build_countable_message('', bricks, (' brick', ' bricks'))), 1)
+                                                                                    logger.build_countable_message("", bricks, (" brick", " bricks"))), 1)
         else:
             logger.info("Calculated brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
                                                                                        blb_data.brick_size[const.Y],
-                                                                                       logger.build_countable_message('', bricks, (' brick', ' bricks')),
-                                                                                       logger.build_countable_message('', blb_data.brick_size[const.Z] - bricks * 3, (' plate', ' plates'))), 1)
+                                                                                       logger.build_countable_message("", bricks, (" brick", " bricks")),
+                                                                                       logger.build_countable_message("", blb_data.brick_size[const.Z] - bricks * 3, (" plate", " plates"))), 1)
 
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
         if __sequence_product(blb_data.brick_size) < 1.0:
-            return 'Brick has no volume, brick could not be rendered in-game.'
+            return "Brick has no volume, brick could not be rendered in-game."
         else:
             # Process brick grid and collision definitions now that a bounds definition exists.
             blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects)
@@ -1673,7 +1673,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
 
         # This function creates a new mesh datablock.
         # It needs to be manually deleted later to release the memory, otherwise it will stick around until Blender is closed.
-        mesh = obj.to_mesh(context.scene, properties.blendprop.use_modifiers, 'PREVIEW', False, False)
+        mesh = obj.to_mesh(context.scene, properties.blendprop.use_modifiers, "PREVIEW", False, False)
 
         # PROCESS QUAD DATA
 
@@ -1767,7 +1767,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                     if material is not None:
                         # If the material name is "blank", use the spray can color by not defining any color for this quad.
                         # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
-                        if 'blank' in __split_object_name_to_tokens(material.name):
+                        if "blank" in __split_object_name_to_tokens(material.name):
                             colors = None
                         else:
                             # 4 vertices per quad.
@@ -1796,12 +1796,12 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
+                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(",", "."))
 
                         if vertex_color_alpha is None:
                             if name is None:
                                 vertex_color_alpha = 1.0
-                                logger.warning('No alpha value set in vertex color layer name, using 1.0.', 2)
+                                logger.warning("No alpha value set in vertex color layer name, using 1.0.", 2)
                             else:
                                 vertex_color_alpha = name
                                 logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
@@ -1826,7 +1826,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
 
             if texture_name is None:
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                texture_name = 'SIDE'
+                texture_name = "SIDE"
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
             quads[section_idx].append([positions, normals, uvs, colors, texture_name])
@@ -1846,7 +1846,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     count_quads = sum([len(sec) for sec in quads])
 
     if count_quads == 0:
-        return 'No faces to export.'
+        return "No faces to export."
     else:
         logger.info("Brick quads: {}".format(count_quads), 1)
 
@@ -1917,7 +1917,7 @@ def process_blender_data(context, properties, objects):
     __CALCULATION_FP_PRECISION_STR = properties.precision
 
     if len(objects) > 0:
-        logger.info('Processing definition objects.')
+        logger.info("Processing definition objects.")
 
         # Process the definition objects (collision, brick grid, and bounds) first and separate the visible mesh_objects from the object sequence.
         # This is done in a single function because it is faster: no need to iterate over the same sequence twice.
@@ -1934,7 +1934,7 @@ def process_blender_data(context, properties, objects):
             # Calculate the coverage data based on the brick size.
             blb_data.coverage = __process_coverage(properties, blb_data)
 
-            logger.info('Processing meshes.')
+            logger.info("Processing meshes.")
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
             quads = __process_mesh_data(context, properties, bounds_data, mesh_objects)
@@ -1948,4 +1948,4 @@ def process_blender_data(context, properties, objects):
             # Format and return the data for writing.
             return __format_blb_data(properties.blendprop.axis_blb_forward, blb_data)
     else:
-        return 'No objects to export.'
+        return "No objects to export."
