@@ -10,12 +10,13 @@ The exporter supports all BLB features.
 - [x] Brick size
    - Automatic calculation or manually defined
 - [x] Brick grid
-   - Automatic calculation (cuboid shape only) or manually defined
+   - Automatic calculation (full brick only) or manually defined
 - [x] Coverage
    - Manually define hiding own and adjacent brick quads
    - Automatic area calculation for arbitrary brick grid shapes
    - Automatic and/or manual quad sorting
 - [x] Collision boxes
+   - Automatic calculation (full brick only) or manually defined
 - [x] Textures
    - Automatic (side texture only) or manual brick texture definition
 - [x] Quads

@@ -287,6 +287,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=False,
     )
 
+    # -------------
+    # Calculate Collision
+    # -------------
+    calculate_collision = BoolProperty(
+        name="Calculate Collision",
+        description="Calculate cuboid collision for the brick if nothing is defined manually",
+        default=True,
+    )
+
     # -----------
     # Definitions
     # -----------
@@ -662,6 +671,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_coverage_property("East")
             draw_coverage_property("South")
             draw_coverage_property("West")
+
+        # Properties: Collision
+        layout.prop(self, "calculate_collision")
 
         # Properties: Custom Definition Tokens
         layout.prop(self, "custom_definitions")

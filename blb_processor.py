@@ -1384,18 +1384,30 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
     defcount = len(definition_objects)
     # Log messages for collision definitions.
     if defcount == 0:
-        logger.warning('No collision definitions found. Default generated collision may be undesirable.', 1)
+        if properties.blendprop.calculate_collision:
+            logger.warning('No collision definitions found. Calculating full brick collision.', 1)
+        else:
+            logger.warning('No collision definitions found. Brick will have no collision.', 1)
     elif defcount == 1:
         if processed == 0:
-            logger.warning(
-                "{} collision definition found but was not processed. Default generated collision may be undesirable.".format(defcount), 1)
+            if properties.blendprop.calculate_collision:
+                logger.warning(
+                    "{} collision definition found but was not processed. Calculating full brick collision.".format(defcount), 1)
+            else:
+                logger.warning(
+                    "{} collision definition found but was not processed. Brick will have no collision.".format(defcount), 1)
+
         else:
             logger.info("Processed {} of {} collision definition.".format(processed, defcount), 1)
     else:
         # Found more than one.
         if processed == 0:
-            logger.warning(
-                "{} collision definitions found but were not processed. Default generated collision may be undesirable.".format(defcount), 1)
+            if properties.blendprop.calculate_collision:
+                logger.warning(
+                    "{} collision definitions found but were not processed. Calculating full brick collision.".format(defcount), 1)
+            else:
+                logger.warning(
+                    "{} collision definitions found but were not processed. Brick will have no collision.".format(defcount), 1)
         else:
             logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
 
