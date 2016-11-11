@@ -126,6 +126,15 @@ The scale of the brick in-game. Values outside the the range of 0.001–400.0 ma
 #### Apply Modifiers ####
 Applies any modifiers on the object before exporting. Does not change the modifiers of the objects in the Blender scene. (Default: True)
 
+#### Calculate Collision ####
+If no manual collision definition objects exist, calculates a cuboid collision that is the same size as the brick bounds. If disabled and no collision is defined, brick will have no collision. (Default: True)
+
+#### Coverage ####
+Enable coverage calculations. Shows additional settings when selected. This is pointless unless **Automatic Quad Sorting** is enabled or at least one object has a quad sorting definition. See *Defining Coverage & Quad Sorting* below for more information. (Default: False)
+
+#### Automatic Quad Sorting ####
+Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless **Coverage** is enabled. (Default: False)
+
 #### Use Material Colors ####
 Get object colors from object materials. (Default: True)
 
@@ -134,12 +143,6 @@ Get object colors from vertex color layers. (Default: True)
 
 #### Parse Object Colors ####
 Get object colors from object names. (Default: False)
-
-#### Automatic Quad Sorting ####
-Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless **Coverage** is enabled. (Default: False)
-
-#### Coverage ####
-Enable coverage calculations. Shows additional settings when selected. This is pointless unless **Automatic Quad Sorting** is enabled or at least one object has a quad sorting definition. See *Defining Coverage & Quad Sorting* below for more information. (Default: False)
 
 #### Custom Definition Tokens ####
 Allows you to specify the definition tokens the exporter uses. Shows additional settings when selected. See *Defining Tokens* below for more information. (Default: False)
