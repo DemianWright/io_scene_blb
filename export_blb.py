@@ -51,7 +51,7 @@ class DerivativeProperties(object):
         Args:
             properties (Blender properties object): A Blender object containing user preferences.
         """
-        #===========
+        # ===========
         # Properties
         # ==========
         self.blendprop = properties
@@ -64,25 +64,25 @@ class DerivativeProperties(object):
         if result is None:
             self.error_message = "Two or more brick grid definitions had the same priority."
         else:
-            #===========
+            # ===========
             # Brick Grid
             # ==========
             self.grid_def_obj_token_priority = result[0]
             self.grid_definitions_priority = result[1]
 
-            #=============
+            # =============
             # Quad Sorting
             # ============
             self.quad_sort_definitions = self.__build_quad_sort_definitions(properties)
 
-            #======
+            # ======
             # Scale
             # =====
             # export_scale is a percentage value.
             self.scale = Decimal("{0:.{1}f}".format(properties.export_scale, const.MAX_FP_DECIMALS_TO_WRITE)) * Decimal("0.01")
             logger.info("Export at {} scale.".format(self.scale))
 
-            #===========================
+            # ===========================
             # Plate Height & Human Error
             # ==========================
             if properties.export_scale == 100.0:
@@ -95,7 +95,7 @@ class DerivativeProperties(object):
                 properties.human_error = properties.human_error * self.scale
                 properties.plate_height = properties.plate_heigh * self.scale
 
-            #==========
+            # ==========
             # Precision
             # =========
             prec = properties.float_precision
@@ -183,7 +183,7 @@ def __has_object_in_visible_layer(context, objects):
         for index, layer in enumerate(context.scene.layers):
             # List's first object is in current layer.
             # Current layer is visible.
-            if True == objects[0].layers[index] == layer:
+            if True is objects[0].layers[index] == layer:
                 # List has at least one object in visible layer.
                 return True
     # No objects in visible layers.
@@ -231,7 +231,7 @@ def export(context, properties, export_dir, export_file, file_name):
                 for index in range(len(context.scene.layers)):
                     # If this layer is visible.
                     # And this object is in the layer.
-                    if True == obj.layers[index] == context.scene.layers[index]:
+                    if True is obj.layers[index] == context.scene.layers[index]:
                         # Append to the list of objects.
                         objects.append(obj)
 

@@ -21,6 +21,14 @@ Handles registering the add-on into Blender and drawing properties to the UI.
 @author: Demian Wright
 """
 
+import bpy
+import os
+from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, FloatProperty
+from bpy_extras.io_utils import ExportHelper
+
+# Blender requires imports from "." for self-defined modules.
+from . import export_blb, const, logger
+
 bl_info = {
     "name": "Export: Blockland Brick (.blb)",
     "author": "Demian Wright & Nick Smith",
@@ -32,14 +40,6 @@ bl_info = {
     "wiki_url": "",
     "tracker_url": "",
     "category": "Import-Export"}
-
-import bpy
-import os
-from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, FloatProperty
-from bpy_extras.io_utils import ExportHelper
-
-# Blender requires imports from "." for self-defined modules.
-from . import export_blb, const, logger
 
 # TODO: Importing BLB files.
 # TODO: Render brick preview.

@@ -649,7 +649,7 @@ def __modify_brick_grid(brick_grid, volume, symbol):
                 brick_grid[w][h][d] = symbol
 
 
-def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_size=None,  brick_grid=None, forward_axis=None):
+def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_size=None, brick_grid=None, forward_axis=None):
     """Calculates the BLB coverage data for a brick.
 
     Args:
