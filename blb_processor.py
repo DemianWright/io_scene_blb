@@ -1647,6 +1647,11 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                     logger.info(
                         "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
 
+        # Vertex color layer message.
+        if len(current_data.vertex_colors) > 1:
+            logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
+                object_name, len(current_data.vertex_colors)), 2)
+
         # ===================
         # Manual Quad Sorting
         # ===================
@@ -1793,10 +1798,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
 
                     # Vertex winding order is reversed compared to Blockland.
                     for index in reversed(loop_indices):
-                        if len(current_data.vertex_colors) > 1:
-                            logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
-                                object_name, len(current_data.vertex_colors)), 2)
-
                         # Only use the first color layer.
                         # color_layer.data[index] may contain more than 4 values.
                         loop_color = current_data.vertex_colors[0].data[index]
