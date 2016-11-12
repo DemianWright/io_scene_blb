@@ -298,10 +298,12 @@ Normal vectors | No
 UV coordinates | No
 
 ## Installation ##
-1. Go to [Releases](https://github.com/DemianWright/io_scene_blb/releases) and download the latest add-on source code.
+1. **Do not download** the source code from the releases. Blender cannot handle the `.` character in file names. (Manual installation or renaming works.)
+1. Instead press here to download the latest version of the master branch: [latest version](https://github.com/DemianWright/io_scene_blb/archive/master.zip). Or go to the front page of the repository and press `Clone or download > Download ZIP`.
 1. Open Blender and go to `File > User Preferences > Add-ons`.
 1. Press the `Install from File...` button at the bottom of the dialog and find the downloaded source code.
 1. Press `Install from File...` again.
+1. Enable the add-on in the add-ons list and press `Save User Settings` to keep the add-on enabled the next time you start Blender.
 1. The export option is under `File > Export > Blockland Brick (.blb)`.
 
 ## Contributors ##
