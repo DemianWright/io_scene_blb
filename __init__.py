@@ -448,6 +448,26 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
+    # Colors
+
+    deftoken_color_blank = StringProperty(
+        name="No Color",
+        description="Token for specifying that no color should be written for these faces",
+        default="blank",
+    )
+
+    deftoken_color_add = StringProperty(
+        name="Additive Color",
+        description="Token for specifying that this color is additive",
+        default="cadd",
+    )
+
+    deftoken_color_sub = StringProperty(
+        name="Subtractive Color",
+        description="Token for specifying that this color is subtractive",
+        default="csub",
+    )
+
     # =======
     # Writing
     # =======
@@ -748,6 +768,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_definition_property("South Quads", "deftoken_quad_sort_south")
             draw_definition_property("West Quads", "deftoken_quad_sort_west")
             draw_definition_property("Omni Quads", "deftoken_quad_sort_omni")
+            draw_definition_property("No Color", "deftoken_color_blank")
+            draw_definition_property("Additive Color", "deftoken_color_add")
+            draw_definition_property("Subtractive Color", "deftoken_color_sub")
 
             # Grid definitions.
 

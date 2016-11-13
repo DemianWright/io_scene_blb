@@ -1779,13 +1779,13 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                     tokens = __split_object_name_to_tokens(material.name)
 
                     if material is not None:
-                        if const.TOKEN_ADDITIVE_COLOR in tokens:
+                        if properties.blendprop.deftoken_color_add in tokens:
                             # Negative alpha.
                             colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, -material.alpha)] * 4)
-                        elif const.TOKEN_SUBSTRACTIVE_COLOR in tokens:
+                        elif properties.blendprop.deftoken_color_sub in tokens:
                             # Negative everything.
                             colors = ([(-material.diffuse_color.r, -material.diffuse_color.g, -material.diffuse_color.b, -material.alpha)] * 4)
-                        elif const.TOKEN_BLANK in tokens:
+                        elif properties.blendprop.deftoken_color_blank in tokens:
                             # If the material name is "blank", use the spray can color by not defining any color for this quad.
                             # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
                             colors = None
@@ -1811,13 +1811,13 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                         layer_name = current_data.vertex_colors[0].name.replace(",", ".")
                         tokens = __split_object_name_to_tokens(layer_name)
 
-                        if const.TOKEN_ADDITIVE_COLOR in tokens:
+                        if properties.blendprop.deftoken_color_add in tokens:
                             addsub = 1
                             # Remove the token and only leave the alpha value.
-                            tokens.remove(const.TOKEN_ADDITIVE_COLOR)
-                        elif const.TOKEN_SUBSTRACTIVE_COLOR in tokens:
+                            tokens.remove(properties.blendprop.deftoken_color_add)
+                        elif properties.blendprop.deftoken_color_sub in tokens:
                             addsub = -1
-                            tokens.remove(const.TOKEN_SUBSTRACTIVE_COLOR)
+                            tokens.remove(properties.blendprop.deftoken_color_sub)
                         else:
                             addsub = 0
 

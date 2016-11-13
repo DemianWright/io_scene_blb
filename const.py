@@ -67,9 +67,3 @@ GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
 
 # Maximum number of decimal places to write to file.
 MAX_FP_DECIMALS_TO_WRITE = 16
-
-TOKEN_ADDITIVE_COLOR = "cadd"
-TOKEN_SUBSTRACTIVE_COLOR = "csub"
-
-# Token to put into the material name to ignore the material color.
-TOKEN_BLANK = "blank"
