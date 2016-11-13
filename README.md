@@ -188,6 +188,29 @@ An object may contain other text in addition to definition tokens as long as the
 
 Blender adds a running index (e.g. `.003`) to the end of duplicate object, material, etc. names. This is handled correctly, you need not worry about it. The logic for removing the index simply checks if `.` is the fourth last character in the object name and simply removes it an everything after it.
 
+Below is a full list of all definition tokens. For more information on what each of them do, read the rest of the readme.
+
+Token | Usable In | Description
+------|-----------|------------
+`bounds` | Object name | The bounds object.
+`collision` | Object name | A collision box.
+`c` | Object name | Define object color.
+`qt` | Object name | Sort quads in top section.
+`qb` | Object name | Sort quads in bottom section.
+`qn` | Object name | Sort quads in north section.
+`qe` | Object name | Sort quads in east section.
+`qs` | Object name | Sort quads in south section.
+`qw` | Object name | Sort quads in west section.
+`qo` | Object name | Sort quads in omni section.
+`gridb` | Object name | Write brick grid `b` symbol.
+`gridd` | Object name | Write brick grid `d` symbol.
+`gridu` | Object name | Write brick grid `u` symbol.
+`grid-` | Object name | Write brick grid `-` symbol.
+`gridx` | Object name | Write brick grid `x` symbol.
+`blank` | Material name | Do not write a color.
+`cadd` | Material name, vertex color layer name | Use color as an additive color.
+`csub` | Material name, vertex color layer name | Use color as a subtractive color.
+
 ### Definition Objects ###
 When a definition object token is read in an object's name it is treated as a definition object. Definition objects are never exported as visual 3D models, in fact they are not exported at all. Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
 
