@@ -1776,11 +1776,18 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                 # Object has material slots?
                 if len(obj.material_slots) > 0:
                     material = obj.material_slots[poly.material_index].material
+                    tokens = __split_object_name_to_tokens(material.name)
 
                     if material is not None:
-                        # If the material name is "blank", use the spray can color by not defining any color for this quad.
-                        # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
-                        if "blank" in __split_object_name_to_tokens(material.name):
+                        if const.TOKEN_ADDITIVE_COLOR in tokens:
+                            # Negative alpha.
+                            colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, -material.alpha)] * 4)
+                        elif const.TOKEN_SUBSTRACTIVE_COLOR in tokens:
+                            # Negative everything.
+                            colors = ([(-material.diffuse_color.r, -material.diffuse_color.g, -material.diffuse_color.b, -material.alpha)] * 4)
+                        elif const.TOKEN_BLANK in tokens:
+                            # If the material name is "blank", use the spray can color by not defining any color for this quad.
+                            # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
                             colors = None
                         else:
                             # 4 vertices per quad.
@@ -1801,11 +1808,23 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                         # Only use the first color layer.
                         # color_layer.data[index] may contain more than 4 values.
                         loop_color = current_data.vertex_colors[0].data[index]
+                        layer_name = current_data.vertex_colors[0].name.replace(",", ".")
+                        tokens = __split_object_name_to_tokens(layer_name)
+
+                        if const.TOKEN_ADDITIVE_COLOR in tokens:
+                            addsub = 1
+                            # Remove the token and only leave the alpha value.
+                            tokens.remove(const.TOKEN_ADDITIVE_COLOR)
+                        elif const.TOKEN_SUBSTRACTIVE_COLOR in tokens:
+                            addsub = -1
+                            tokens.remove(const.TOKEN_SUBSTRACTIVE_COLOR)
+                        else:
+                            addsub = 0
 
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(",", "."))
+                        name = common.to_float_or_none(" ".join(tokens))
 
                         if vertex_color_alpha is None:
                             if name is None:
@@ -1815,7 +1834,15 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                                 vertex_color_alpha = name
                                 logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
 
-                        colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
+                        if addsub > 0:
+                            # Negative alpha.
+                            colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, -vertex_color_alpha))
+                        elif addsub < 0:
+                            # Negative everything.
+                            colors.append((-loop_color.color.r, -loop_color.color.g, -loop_color.color.b, -vertex_color_alpha))
+                        else:
+                            # Normal color.
+                            colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
             # ================
             # BLB texture name

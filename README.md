@@ -29,6 +29,7 @@ The exporter supports all BLB features.
    - Multiple ways to define colors: materials, object names, vertex paint
    - Per-vertex coloring
    - Transparency
+   - Additive and subtractive colors
 - [x] Flat and smooth shading
 
 ### Additional Features ###
@@ -253,8 +254,16 @@ The exporter supports three methods for defining vertex colors. To allow faces t
 Method | Overrides | Extent of Coloring | RGB Values | Alpha Value | Notes
 -------|-----------|--------------------|------------|-------------|------
 Object Colors | In-game paint color | Entire object (color & alpha)| In object name after **Color** token **(1)** | In object name after the red, green, and blue values | Implemented only to support legacy 3D brick models, not recommended for use.
-Material Colors **(2)** | Object Colors | Assigned faces (color & alpha) | In `Material` tab as `Diffuse Color` | In `Material` tab under `Transparency` in `Alpha` slider| Recommended method for defining colors. Multiple materials may be used in a single object.
-Vertex Colors | Material Colors | Entire object (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer **(3)** | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
+Material Colors | Object Colors | Assigned faces (color & alpha) | In `Material` tab as `Diffuse Color` | In `Material` tab under `Transparency` in `Alpha` slider| Recommended method for defining colors. Multiple materials may be used in a single object.
+Vertex Colors | Material Colors | Entire object (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer **(2)** | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
+
+There are three definition tokens that are specific to dealing with colors.
+
+Token | Usable In | Description
+------|-----------|------------
+`blank` | Material name | Ignore the material's color and do not write any color for the faces with this material assigned so they can be colored by the spray can in-game. This feature exists because an object that has a material, cannot have faces that do not have a material assigned to them.
+`cadd` | Material name, vertex color layer name | Use this color as an additive color: add the values of this color to the spray can color in-game. For example to make the spray can color a little lighter use a **dark gray** color.
+`csub` | Material name, vertex color layer name | Use this color as a subtractive color: subtract the values of this color from the spray can color in-game. For example to make the spray can color a lot darker use a **light gray** color.
 
 **(1)** The exporter understands two ways of defining an RGBA color using text:
 1. The commonly used method of writing 4 integers that are in the range 0–255, where 0 is black, separated with a whitespace character such as a space. For example `127 255 10 191` for a yellow-green color that is 25% transparent. A full object name could be for example `glass c 240 255 255 128.001`.
@@ -264,9 +273,7 @@ Vertex Colors | Material Colors | Entire object (per-vertex color), entire objec
    - The leading zero may be omitted.
    - Up to 16 decimals are supported.
 
-**(2)** To define faces in an object that can be colored using the spray can tool (even if said object has user-defined colors), assign a material with the name `blank` to the them. This feature exists because an object that has a material, cannot have faces that do not have a material assigned to them.
-
-**(3)** The definition of the alpha color value follows the same rules as described in footnote **(1)**.
+**(2)** The definition of the alpha color value follows the same rules as described in footnote **(1)**.
 
 ### Brick Textures ###
 Defining brick textures is done using Blender materials. To assign a brick texture to a face, assign a material to it containing a valid brick texture name (case insensitive):
