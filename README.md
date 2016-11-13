@@ -5,6 +5,45 @@ A [Blender](https://www.blender.org/) add-on written in Python 3 for exporting [
 
 The add-on does not support importing .BLB files yet. For Blender 2.67 and newer.
 
+## Table of Contents ##
+1. [Features](#features)
+   1. [Additional Features](#additional-features)
+   1. [Planned Features](#planned-features)
+1. [Installation](#installation)
+   1. [Updating](#updating)
+1. [Blender Export Properties](#blender-export-properties)
+   1. [Bricks to Export](#bricks-to-export)
+   1. [Brick Name from (Single Export)](#brick-name-from-single-export)
+   1. [Export Only (Single Export)](#export-only-single-export)
+   1. [Brick Names from (Multiple Export)](#brick-names-from-multiple-export)
+   1. [Bricks Defined by (Multiple Export)](#bricks-defined-by-multiple-export)
+   1. [Export Bricks in (Multiple Export)](#export-bricks-in-multiple-export)
+   1. [Forward Axis](#forward-axis)
+   1. [Scale](#scale)
+   1. [Apply Modifiers](#apply-modifiers)
+   1. [Calculate Collision](#calculate-collision)
+   1. [Coverage](#coverage)
+   1. [Automatic Quad Sorting](#automatic-quad-sorting)
+   1. [Use Material Colors](#use-material-colors)
+   1. [Use Vertex Colors](#use-vertex-colors)
+   1. [Parse Object Colors](#parse-object-colors)
+   1. [Round Normals](#round-normals)
+   1. [Custom Definition Tokens](#custom-definition-tokens)
+   1. [Terse Mode](#terse-mode)
+   1. [Write Log](#write-log)
+   1. [Only on Warnings](#only-on-warnings)
+   1. [Precision](#precision)
+1. [Terminology](#terminology)
+1. [Definition Tokens](#definition-tokens)
+   1. [Definition Objects](#definition-objects)
+      1. [Defining Brick Grid](#defining-brick-grid)
+   1. [Mesh Definition Tokens](#mesh-definition-tokens)
+      1. [Defining Coverage & Quad Sorting](#defining-coverage-quad-sorting)
+      1. [Defining Colors](#defining-colors)
+   1. [Brick Textures](#brick-textures)
+1. [Rounded Values](#rounded-values)
+1. [Contributors](#contributors)
+
 ## Features ##
 The exporter supports all BLB features.
 - [x] Brick size
@@ -52,7 +91,7 @@ The exporter supports all BLB features.
 - [x] Logging with descriptive error and warning messages to help you correct problems with the model
 - [x] Changeable floating point accuracy
 
-## Planned Features ##
+### Planned Features ###
 These features may or may not be implemented at some unspecified time in the future.
 
 - Automatic UV calculation for brick textures
@@ -86,7 +125,7 @@ Value | Description
 Single | Export only one brick. (Default)
 Multiple | Export one or more bricks. Shows additional settings when selected.
 
-#### Brick Name From (Single Export) ####
+#### Brick Name from (Single Export) ####
 Where the .BLB file name is defined.
 
 Value | Description
@@ -103,7 +142,7 @@ Selection | Objects that are selected and have an orange outline. (Default)
 Layers | All objects in the layers that are currently visible, regardless of selection.
 Scene | All objects in the current scene. I.e. all objects in all layers regardless of the layer visibility.
 
-#### Brick Names From (Multiple Export) ####
+#### Brick Names from (Multiple Export) ####
 Where the names of the .BLB files are defined.
 
 Value | Description
@@ -111,7 +150,7 @@ Value | Description
 Bounds | Brick names are defined in the **Bounds** object after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. (Default)
 Groups | Brick names are the same as the names of the groups name. Export file dialog is only used set to directory.
 
-#### Bricks Defined By (Multiple Export) ####
+#### Bricks Defined by (Multiple Export) ####
 How is a single brick defined.
 
 Value | Description
@@ -119,7 +158,7 @@ Value | Description
 Groups | Each brick is in its own group. Objects in multiple groups belong to multiple bricks. (Default)
 Layers | Each brick is in its own layer. Objects in multiple layers belong to multiple bricks. When selected brick names must be defined in the **Bounds** object.
 
-#### Export Bricks In (Multiple Export) ####
+#### Export Bricks in (Multiple Export) ####
 Which bricks to process and export to .BLB files.
 
 Value | Description
@@ -174,7 +213,8 @@ When enabled does not write optional lines to the .BLB file such as the lines ma
 #### Write Log ####
 Write a log file to the same folder as the exported brick detailing the export process. Shows additional settings when selected. (Default: True)
 
-**Only on Warnings:** Write a log file only if warnings or errors occurred during the export process. (Default: True)
+#### Only on Warnings ####
+Write a log file only if warnings or errors occurred during the export process. (Default: True)
 
 #### Precision ####
 Allows you to specify a custom precision for floating point numbers. See *Rounded Values* below for more details. (Default: 0.000001)
