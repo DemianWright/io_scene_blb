@@ -32,7 +32,7 @@ from . import export_blb, const, logger
 bl_info = {
     "name": "Export: Blockland Brick (.blb)",
     "author": "Demian Wright & Nick Smith",
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "blender": (2, 67, 0),
     "location": "File > Export > Blockland Brick (.blb)",
     "description": "Export Blockland brick format",
@@ -43,7 +43,6 @@ bl_info = {
 
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
-# TODO: README installation instructions.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
@@ -81,7 +80,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     brick_definition = EnumProperty(
         items=[("GROUPS", "Groups", "Bricks are in different groups"),
                ("LAYERS", "Layers", "Bricks are in different layers")],
-        name="Bricks Defined By",
+        name="Bricks Defined by",
         description="The method for defining multiple bricks in a file",
         default="GROUPS"
     )
@@ -92,7 +91,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     brick_name_source = EnumProperty(
         items=[("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (directory set in export file dialog)"),
                ("FILE", "File", "Brick name is the same as this .blend file name (can be changed manually in the file dialog)")],
-        name="Brick Name From:",
+        name="Brick Name from:",
         description="Where to get the name of the exported brick",
         default="BOUNDS"
     )
@@ -103,7 +102,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     brick_name_source_multi = EnumProperty(
         items=[("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (directory set in export file dialog)"),
                ("GROUPS", "Groups", "Brick name is the group name (directory set in export file dialog)")],
-        name="Brick Names From:",
+        name="Brick Names from:",
         description="Where to get the name of the exported bricks",
         default="BOUNDS"
     )
@@ -126,7 +125,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     export_objects_multi = EnumProperty(
         items=[("LAYERS", "Layers", "Export all bricks in the visible layers"),
                ("SCENE", "Scene", "Export all bricks in the active scene")],
-        name="Export Bricks In:",
+        name="Export Bricks in:",
         description="Only export the specified bricks",
         default="LAYERS"
     )
@@ -274,7 +273,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -------------
     use_materials = BoolProperty(
         name="Use Material Colors",
-        description="Read quad colors from materials (preferred method, overrides object colors)",
+        description="Read quad colors from materials (recommended method, overrides object colors)",
         default=True,
     )
 
@@ -294,6 +293,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         name="Parse Object Colors",
         description="Parse quad colors from object names using the definition token (intended as legacy support)",
         default=False,
+    )
+
+    # -------------
+    # Round Normals
+    # -------------
+    round_normals = BoolProperty(
+        name="Round Normals",
+        description="Round vertex normal values to the precision defined below, if disabled normals will be written using up to 16 decimals whenever possible",
+        default=True,
     )
 
     # -----------
@@ -439,6 +447,26 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
+    # Colors
+
+    deftoken_color_blank = StringProperty(
+        name="No Color",
+        description="Token for specifying that no color should be written for these faces",
+        default="blank",
+    )
+
+    deftoken_color_add = StringProperty(
+        name="Additive Color",
+        description="Token for specifying that this color is additive",
+        default="cadd",
+    )
+
+    deftoken_color_sub = StringProperty(
+        name="Subtractive Color",
+        description="Token for specifying that this color is subtractive",
+        default="csub",
+    )
+
     # =======
     # Writing
     # =======
@@ -551,7 +579,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             # Property: Brick Name Multiple
             row = layout.row()
             row.active = multi_export
-            row.label("Brick Names From:")
+            row.label("Brick Names from:")
 
             row = layout.row()
             # Disable selecting values when bricks are in layers.
@@ -566,7 +594,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             # Property: Brick Definition
             row = layout.row()
             row.active = multi_export
-            row.label("Bricks Defined By:")
+            row.label("Bricks Defined by:")
 
             row = layout.row()
             row.active = multi_export
@@ -574,7 +602,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
             # Property: Export Objects Multi
             row = layout.row()
-            row.label("Export Bricks In:")
+            row.label("Export Bricks in:")
 
             row = layout.row()
             row.enabled = multi_export
@@ -685,6 +713,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Property: Use Object Colors
         layout.prop(self, "use_object_colors")
 
+        # Property: Round Normals
+        layout.prop(self, "round_normals")
+
         # Properties: Custom Definition Tokens
         layout.prop(self, "custom_definitions")
 
@@ -736,6 +767,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_definition_property("South Quads", "deftoken_quad_sort_south")
             draw_definition_property("West Quads", "deftoken_quad_sort_west")
             draw_definition_property("Omni Quads", "deftoken_quad_sort_omni")
+            draw_definition_property("No Color", "deftoken_color_blank")
+            draw_definition_property("Additive Color", "deftoken_color_add")
+            draw_definition_property("Subtractive Color", "deftoken_color_sub")
 
             # Grid definitions.
 
