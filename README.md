@@ -31,6 +31,8 @@ The exporter supports all BLB features.
    - Transparency
    - Additive and subtractive colors
 - [x] Flat and smooth shading
+- [ ] DTS collision is intentionally not a part of this add-on as it an entirely different file format.
+   - See Nick Smith's [io_scene_dts](https://github.com/portify/io_scene_dts) for a Blender DTS importer/exporter.
 
 ### Additional Features ###
 - [x] Save and load export settings
