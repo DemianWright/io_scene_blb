@@ -323,8 +323,8 @@ Visible mesh vertex coordinates | Yes
 Bounds object vertex coordinates | Yes
 Collision object vertex coordinates | Yes
 Brick grid object vertex coordinates | Yes
+Normal vectors | Optional
 RGBA color values | No
-Normal vectors | No
 UV coordinates | No
 
 ## Installation ##
