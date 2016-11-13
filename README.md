@@ -60,6 +60,21 @@ These features may or may not be implemented at some unspecified time in the fut
 - Export-time brick rotation on the Z-axis
 - Automatic rendering of the brick preview icon
 
+## Installation ##
+1. **Do not download** the source code from the releases. Blender cannot handle the `.` character in file names. (Manual installation or renaming works.)
+1. Instead click this link to download the latest version of the master branch: [latest version](https://github.com/DemianWright/io_scene_blb/archive/master.zip). Or go to the front page of the repository and press `Clone or download > Download ZIP`.
+1. Open Blender and go to `File > User Preferences > Add-ons`.
+1. Press the `Install from File...` button at the bottom of the dialog and find the downloaded source code.
+1. Press `Install from File...` again.
+1. Enable the add-on in the add-ons list and press `Save User Settings` to keep the add-on enabled the next time you start Blender.
+1. The export option is under `File > Export > Blockland Brick (.blb)`.
+
+### Updating ###
+1. Open Blender and go to `File > User Preferences > Add-ons`.
+1. Quickly find the add-on by typing `blb` into the search field.
+1. Expand the add-on by clicking the white triangle on the left, press the `Remove` button, and confirm the removal.
+1. Follow the installation instructions above.
+
 ## Blender Export Properties ##
 The following properties are present in the current version of the exporter.
 
@@ -328,15 +343,6 @@ Brick grid object vertex coordinates | Yes
 Normal vectors | Optional
 RGBA color values | No
 UV coordinates | No
-
-## Installation ##
-1. **Do not download** the source code from the releases. Blender cannot handle the `.` character in file names. (Manual installation or renaming works.)
-1. Instead press here to download the latest version of the master branch: [latest version](https://github.com/DemianWright/io_scene_blb/archive/master.zip). Or go to the front page of the repository and press `Clone or download > Download ZIP`.
-1. Open Blender and go to `File > User Preferences > Add-ons`.
-1. Press the `Install from File...` button at the bottom of the dialog and find the downloaded source code.
-1. Press `Install from File...` again.
-1. Enable the add-on in the add-ons list and press `Save User Settings` to keep the add-on enabled the next time you start Blender.
-1. The export option is under `File > Export > Blockland Brick (.blb)`.
 
 ## Contributors ##
 - [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.
