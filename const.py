@@ -52,7 +52,7 @@ QUAD_SECTION_IDX_OMNI = 6
 QUAD_SECTION_ORDER = ('TOP', 'BOTTOM', 'NORTH', 'EAST', 'SOUTH', 'WEST', 'OMNI')
 
 # A tuple of valid brick textures in alphabetical order.
-VALID_BRICK_TEXTURES = ('bottomedge', 'bottomloop', 'ramp', 'side', 'top')
+VALID_BRICK_TEXTURES = ('bottomedge', 'bottomloop', 'print', 'ramp', 'side', 'top')
 
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.

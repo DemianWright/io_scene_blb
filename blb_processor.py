@@ -73,7 +73,8 @@ class BrickBounds(object):
         self.world_coords_max = []
 
     def __repr__(self):
-        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
+        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(
+            self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
 
 
 # =============
@@ -1206,7 +1207,11 @@ def __calculate_uvs(section_idx, texture_name, brick_size):
                 (y - 1, 0),
                 (0, 0),
                 (0, x - 1))
-
+    elif texture_name == "PRINT":
+        return ((1, 1),
+                (0, 1),
+                (0, 0),
+                (1, 0))
     # Else: Return default UVs.
     return const.DEFAULT_UV_COORDINATES
 
@@ -1545,7 +1550,8 @@ def __process_definition_objects(properties, objects):
                                                                                        logger.build_countable_message('', blb_data.brick_size[const.Z] - bricks * 3, (' plate', ' plates'))), 1)
 
     # Bounds have been defined, check that brick size is within the limits.
-    if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
+    if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
+            const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
 
         if __sequence_product(blb_data.brick_size) < 1.0:
             return 'Brick has no volume, brick could not be rendered in-game.'
@@ -1643,7 +1649,7 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
         # Manual Quad Sorting
         # ===================
         # Manual sorting is per-object.
-
+        section_idx = None
         quad_sections = __get_tokens_from_object_name(object_name, properties.quad_sort_definitions)
         section_count = len(quad_sections)
 
