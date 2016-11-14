@@ -51,8 +51,8 @@ QUAD_SECTION_IDX_OMNI = 6
 # The quad sections in the correct order for writing to a BLB file.
 QUAD_SECTION_ORDER = ("TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI")
 
-# A tuple of valid brick textures in alphabetical order-
-VALID_BRICK_TEXTURES = ("BOTTOMEDGE", "BOTTOMLOOP", "RAMP", "SIDE", "TOP")
+# A tuple of valid brick textures in alphabetical order.
+VALID_BRICK_TEXTURES = ("BOTTOMEDGE", "BOTTOMLOOP", "PRINT", "RAMP", "SIDE", "TOP")
 
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
