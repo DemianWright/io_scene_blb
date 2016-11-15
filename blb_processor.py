@@ -278,18 +278,21 @@ def __record_world_min_max(sequence_min, sequence_max, obj):
             sequence_max[i] = max(sequence_max[i], coordinates[i])
 
 
-def __vert_index_to_world_coord(obj, mesh, index):
-    """Calculates the world coordinates for the vertex at the specified index in the specified Blender object.
+def __get_vert_world_coord(obj, mesh, loop_index):
+    """Calculates the world coordinates for the vertex at the specified index in the specified mesh's polygon loop.
 
     Args:
         obj (Blender object): The Blender object that is the parent of the mesh.
         mesh (Blender mesh): The Blender mesh where the vertex is stored.
-        index (int): The index of the vertex in the specified mesh's vertex data sequence.
+        index (int): The index of the vertex in the specified mesh's polygon loop.
 
     Returns:
         A Vector of the world coordinates of the vertex.
     """
-    return obj.matrix_world * mesh.vertices[index].co
+    # Get the vertex index in the loop.
+    # Get the vertex coordinates in object space.
+    # Convert object space to world space.
+    return obj.matrix_world * mesh.vertices[mesh.loops[loop_index].vertex_index].co
 
 
 def __loop_index_to_normal_vector(obj, mesh, index):
@@ -1720,13 +1723,10 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
 
             # Reverse the loop_indices tuple. (Blender seems to keep opposite winding order.)
             for loop_index in reversed(loop_indices):
-                # Get the vertex index in the mesh from the loop.
-                vert_index = mesh.loops[loop_index].vertex_index
-
-                # Get the vertex world position from the vertex index.
-                # Center the position to the current bounds object: coordinates are now in local object space.
                 # ROUND & CAST
-                coords = __multiply_sequence(properties.scale, __to_decimals(__vert_index_to_world_coord(obj, mesh, vert_index)))
+                coords = __multiply_sequence(properties.scale, __to_decimals(__get_vert_world_coord(obj, mesh, loop_index)))
+
+                # Center the position to the current bounds object: coordinates are now in local object space.
                 positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center), properties.plate_height))
 
             # ======================
