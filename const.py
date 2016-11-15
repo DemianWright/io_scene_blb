@@ -21,6 +21,8 @@ Various constants used in multiple modules.
 @author: Demian Wright
 '''
 
+from decimal import Decimal
+
 # The BLB file extension.
 BLB_EXT = '.blb'
 
@@ -74,3 +76,5 @@ BRICK_TEXTURE_RESOLUTION = 512
 # The UV coordinates are a single point in the middle of the image = no uv coordinates.
 # The middle of the image is used instead of (0,0) due to the way Blockland brick textures are designed.
 DEFAULT_UV_COORDINATES = ((0.5, 0.5),) * 4
+
+DECIMAL_ZERO = Decimal("0.0")

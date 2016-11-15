@@ -1156,65 +1156,91 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         raise OutOfBoundsException()
 
 
-def __calculate_uvs(section_idx, texture_name, brick_size):
-    """Calculates the UV coordinates for a quad in the specified section, using the specified texture name, in a brick of the specified size.
+def __calculate_best_width_height(coords):
+    """Calculates the average width or height of a quad with the specified coordinates.
+    If one quad side has zero length, in other words the quad has degenerated into a triangle, the length of the opposing side is used instead.
 
+    Args:
+        coords (sequence of Vectors): A sequence Vectors of the quad's vertex positions.
+
+    Returns:
+        The width of height of the quad depending on the order of the values in the specified coordinates as a Decimal.
+    """
+    # Get lengths of opposing sides.
+    # ROUND & CAST: length using user specified precision.
+    len0 = __to_decimal((coords[0] - coords[1]).length)
+    len1 = __to_decimal((coords[2] - coords[3]).length)
+
+    # If zero, return the other length.
+    if len0 == const.DECIMAL_ZERO:
+        return len1
+
+    if len1 == const.DECIMAL_ZERO:
+        return len0
+
+    # Return the average of the two lengths.
+    return (len0 + len1) * Decimal("0.5")
+
+
+def __calculate_uvs(texture_name, w, h):
+    """Calculates the UV coordinates for a quad of the specified width and height using the specified texture.
     Not all combinations of sections and texture names are supported. In unsupported cases, default UVs are returned.
 
     Args:
-        section_idx (int): The index of the section in const.QUAD_SECTION_ORDER this quad in in.
         texture_name (string): A value from const.VALID_BRICK_TEXTURES.
-        brick_size (sequence of ints): The brick size in plates on the X, Y, and Z axes.
+        w (Decimal): The width of the quad.
+        h (Decimal): The height of the quad.
 
     Returns:
-            A tuple containing 4 sets of UV coordinates, one for each vertex in the quad.
+        A tuple containing 4 sets of UV coordinates, one for each vertex in the quad.
     """
-    def get_uv(xy, z):
-        """Calculates the UV coordinate array for the specified values.
+    def get_side_uv(val):
+        """Calculates the U or V component for the specified value to use with the SIDE texture.
 
         Args:
-            xy (int): The brick size in the X or Y axis, depending on which side these UV coordinates are being calculated for.
-            z (int): The brick height in plates.
+            val (number): A numerical value to calculate the U or V component for.
 
         Returns:
-            A tuple containing 4 sets of UV coordinates, one for each vertex in a quad.
+            The U or V component to use with SIDE texture UVs.
         """
         # The UV coordinate calculation equations were created by a Blockland Forums user BlackDragonIV about 5 years ago.
-        # How he came up with these is anyone's guess.
-        u = (11 - 11 / xy * 2) / const.BRICK_TEXTURE_RESOLUTION
-        v = (11 - 11 / z * 5) / const.BRICK_TEXTURE_RESOLUTION
+        # How he came up with it is anyone's guess.
+        # The original equation uses a multiplier of 5 for the height, but I believe that is because it was designed to be used with brick sizes where the height is the height of the brick in number of plates.
+        # The values used here are derived from vertex coordinates which means I can use the same equation for both U and V components.
+        return (11 - 11 / val * 2) / const.BRICK_TEXTURE_RESOLUTION
+
+    # Subtracting from 1 comes from the fact that Blockland treats the top
+    # left corner as the origin for UV coordinates. (The origin is in the bottom left in Blender.)
+    # Vertex order:
+    # bottom right
+    # bottom left
+    # top left
+    # top right
+    if texture_name == "TOP":
+        return ((w, h),
+                (0, h),
+                (0, 0),
+                (w, 0))
+    elif texture_name == "SIDE":
+        u = get_side_uv(w)
+        v = get_side_uv(h)
 
         return ((1 - u, 1 - v),
                 (u, 1 - v),
                 (u, v),
                 (1 - u, v))
-
-    # For clarity.
-    x = brick_size[const.X]
-    y = brick_size[const.Y]
-    z = brick_size[const.Z]
-
-    if texture_name == 'TOP':
-        return ((y, x),
-                (0, x),
+    elif texture_name == "BOTTOMLOOP":
+        return ((h - 1, w - 1),
+                (h - 1, 0),
                 (0, 0),
-                (y, 0))
-    elif texture_name == 'SIDE':
-        if section_idx in (const.QUAD_SECTION_IDX_NORTH, const.QUAD_SECTION_IDX_SOUTH):
-            return get_uv(y, z)
-        elif section_idx in (const.QUAD_SECTION_IDX_EAST, const.QUAD_SECTION_IDX_WEST):
-            return get_uv(x, z)
-        # TODO: Top, bottom, omni.
-    elif texture_name == 'BOTTOMLOOP':
-        return ((y - 1, x - 1),
-                (y - 1, 0),
-                (0, 0),
-                (0, x - 1))
+                (0, w - 1))
     elif texture_name == "PRINT":
         return ((1, 1),
                 (0, 1),
                 (0, 0),
                 (1, 0))
+    # TODO: Ramp, bottomedge.
+
     # Else: Return default UVs.
     return const.DEFAULT_UV_COORDINATES
 
@@ -1764,17 +1790,32 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
             # ===
             # UVs
             # ===
-            # TODO: Print texture.
             # TODO: Generate mesh data for the brick bottom if 'bottom' material is used.
             if uv_data:
                 # Get the UV coordinate for every vertex in the face loop.
                 uvs = [uv_data[index].uv for index in reversed(loop_indices)]
             else:
                 if properties.blendprop.calculate_uvs:
-                    # TODO: Quad must be sorted before this. Automatic sorting is done at the end!
-                    uvs = __calculate_uvs(section_idx, texture_name, brick_size)
+                    # Vertex coordinate vectors.
+                    coords = [__get_vert_world_coord(obj, mesh, loop_indices[idx]) for idx in range(4)]
+
+                    # Determine the width and height of the quad.
+                    # TODO: UVs for non-rectangular quads.
+                    # Blender vertex order:
+                    # 0: top right
+                    # 1: top left
+                    # 2: bottom left
+                    # 3: bottom right
+
+                    # Calculates widths: top left-top right, bottom left-bottom right (indices: 1,0,2,3)
+                    width = __calculate_best_width_height(common.swizzle(coords, "bacd"))
+
+                    # Calculates heights: bottom right-top right, bottom left-top left (indices: 3,0,2,1)
+                    height = __calculate_best_width_height(common.swizzle(coords, "dacb"))
+
+                    uvs = __calculate_uvs(texture_name, width, height)
                 else:
-                    # No UVs present, use the defaults.
+                    # No UVs present, no calculation: use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
                     uvs = const.DEFAULT_UV_COORDINATES
 
@@ -1782,7 +1823,6 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
             # Material Colors
             # ===============
             # Material colors override objects colors since they are better and easier to use.
-
             if properties.blendprop.use_materials:
                 # Object has material slots?
                 if len(obj.material_slots) > 0:
