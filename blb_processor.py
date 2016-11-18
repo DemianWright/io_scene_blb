@@ -279,7 +279,7 @@ def __all_within_bounds(local_coordinates, bounding_dimensions):
         True if all values are within the bounding dimensions.
     """
     # Divide all dimension values by 2.
-    halved_dimensions = [value / Decimal("2.0") for value in bounding_dimensions]
+    halved_dimensions = [value * const.DECIMAL_HALF for value in bounding_dimensions]
 
     # Check if any values in the given local_coordinates are beyond the given bounding_dimensions.
     # bounding_dimensions / 2 = max value
@@ -308,9 +308,9 @@ def __calculate_center(object_minimum_coordinates, object_dimensions):
     Returns:
         A tuple of Decimal type XYZ coordinates.
     """
-    return (object_minimum_coordinates[const.X] + (object_dimensions[const.X] / Decimal("2.0")),
-            object_minimum_coordinates[const.Y] + (object_dimensions[const.Y] / Decimal("2.0")),
-            object_minimum_coordinates[const.Z] + (object_dimensions[const.Z] / Decimal("2.0")))
+    return (object_minimum_coordinates[const.X] + (object_dimensions[const.X] * const.DECIMAL_HALF),
+            object_minimum_coordinates[const.Y] + (object_dimensions[const.Y] * const.DECIMAL_HALF),
+            object_minimum_coordinates[const.Z] + (object_dimensions[const.Z] * const.DECIMAL_HALF))
 
 
 def __world_to_local(coordinates, new_origin):
@@ -537,7 +537,7 @@ def __round_to_plate_coordinates(local_coordinates, brick_dimensions, plate_heig
         result.append(__to_decimal(local_coordinates[const.Z], plate_height))
     else:
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Z], (plate_height / Decimal("2.0"))))
+        result.append(__to_decimal(local_coordinates[const.Z], (plate_height * const.DECIMAL_HALF)))
 
     return result
 
@@ -788,7 +788,7 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
     # ROUND & CAST
     # Divide all dimension values by 2 to get the local bounding plane values.
     # The dimensions are in Blender units so Z height needs to be converted to plates.
-    local_bounds = __sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions], plate_height)
+    local_bounds = __sequence_z_to_plates([value * const.DECIMAL_HALF for value in bounds_dimensions], plate_height)
 
     # Assume omni direction until otherwise proven.
     direction = 6
@@ -1046,7 +1046,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
     Returns:
         A tuple in the following format: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
     """
-    halved_dimensions = [value / Decimal("2.0") for value in bounds_data.dimensions]
+    halved_dimensions = [value * const.DECIMAL_HALF for value in bounds_data.dimensions]
 
     # Find the minimum and maximum coordinates for the brick grid object.
     grid_min, grid_max = __get_world_min_max(grid_obj)
@@ -1249,7 +1249,7 @@ def __calculate_best_width_height(coords):
         return len0
 
     # Return the average of the two lengths.
-    return (len0 + len1) * Decimal("0.5")
+    return (len0 + len1) * const.DECIMAL_HALF
 
 
 def __get_longest_vector_length(points):
@@ -1370,7 +1370,7 @@ def __calculate_uvs(texture_name, coords):
         return ((w - 1, 0.5),
                 (0, 0.5),
                 (-0.5, 0),
-                (w - Decimal("0.5"), 0))
+                (w - const.DECIMAL_HALF, 0))
     elif texture_name == "bottomloop":
         return ((h, w),
                 (h, 0),
@@ -1561,7 +1561,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
 
             # Find the center coordinates and dimensions of the cuboid.
             for index, value in enumerate(col_max):
-                center.append((value + col_min[index]) / Decimal("2.0"))
+                center.append((value + col_min[index]) * const.DECIMAL_HALF)
                 dimensions.append(value - col_min[index])
 
             processed += 1

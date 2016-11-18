@@ -77,4 +77,6 @@ BRICK_TEXTURE_RESOLUTION = 512
 # The middle of the image is used instead of (0,0) due to the way Blockland brick textures are designed.
 DEFAULT_UV_COORDINATES = ((0.5, 0.5),) * 4
 
+# Often used Decimal values.
 DECIMAL_ZERO = Decimal("0.0")
+DECIMAL_HALF = Decimal("0.5")
