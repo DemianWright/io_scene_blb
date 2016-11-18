@@ -1252,18 +1252,28 @@ def __calculate_best_width_height(coords):
     return (len0 + len1) * Decimal("0.5")
 
 
-def __get_longest_vector_length(sequence):
-    count = len(sequence)
+def __get_longest_vector_length(points):
+    """Gets the length of the longest vector in the specified sequence of points.
+
+    Args:
+        points (sequence of Vectors): A sequence of points in n-dimensional space where two successive points make a vector.
+                                      Must have an even number of elements.
+
+    Returns:
+        The length of the longest vector or None if a sequence with an odd number of elements was provided.
+    """
+    count = len(points)
     longest = 0
 
     if __is_even(count):
         for idx in range(0, count, 2):
-            length = __vector_length(sequence[idx], sequence[idx + 1])
+            length = __vector_length(points[idx], points[idx + 1])
 
             if length > longest:
                 longest = length
 
-        return longest
+        # ROUND & CAST
+        return __to_decimal(longest)
     else:
         return None
 
@@ -1287,14 +1297,15 @@ def __calculate_uvs(texture_name, coords):
             val (number): A numerical value to calculate the U or V component for.
 
         Returns:
-            The U or V component to use with SIDE texture UVs.
+            The U or V component to use with SIDE texture UVs as a Decimal.
         """
         # The UV coordinate calculation equations were created by a Blockland Forums user BlackDragonIV about 5 years ago.
         # How he came up with it is anyone's guess.
         # The original equation uses a multiplier of 5 for the height, but I believe that is because it was designed to be used with brick sizes where the height is the height of the brick in number of plates.
         # The values used here are derived from vertex coordinates which means I can use the same equation for both U and V components.
         # Alternatively: (11 - (11 / val) * 2) / const.BRICK_TEXTURE_RESOLUTION
-        return (11 - 22 / val) / const.BRICK_TEXTURE_RESOLUTION
+        # ROUND & CAST
+        return __to_decimal((11 - 22 / val) / const.BRICK_TEXTURE_RESOLUTION)
 
     # Determine the width and height of the quad.
     # Blender vertex order:
@@ -1353,8 +1364,8 @@ def __calculate_uvs(texture_name, coords):
     elif texture_name == "bottomedge":
         # Bottom edge is a special case where the average width/height does not work.
         # We need the length of the longer edge as that is the edge that should align to the brick grid.
-        w = __to_decimal(__get_longest_vector_length(width_vectors))
-        h = __to_decimal(__get_longest_vector_length(height_vectors))
+        w = __get_longest_vector_length(width_vectors)
+        h = __get_longest_vector_length(height_vectors)
 
         return ((w - 1, 0.5),
                 (0, 0.5),
