@@ -27,6 +27,8 @@ import bpy
 
 from mathutils import Vector
 
+import bmesh
+
 from . import logger, common, const
 
 
@@ -1156,6 +1158,19 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         raise OutOfBoundsException()
 
 
+def __vector_length(va, vb):
+    """Calculates the length of the vector starting at va and ending at vb.
+
+    Args:
+        va (Vector): Vector A.
+        vb (Vector): Vector B.
+
+    Returns:
+        The length of the vector AB.
+    """
+    return (vb - va).length
+
+
 def __calculate_best_width_height(coords):
     """Calculates the average width or height of a quad with the specified coordinates.
     If one quad side has zero length, in other words the quad has degenerated into a triangle, the length of the opposing side is used instead.
@@ -1168,8 +1183,8 @@ def __calculate_best_width_height(coords):
     """
     # Get lengths of opposing sides.
     # ROUND & CAST: length using user specified precision.
-    len0 = __to_decimal((coords[0] - coords[1]).length)
-    len1 = __to_decimal((coords[2] - coords[3]).length)
+    len0 = __to_decimal(__vector_length(coords[0], coords[1]))
+    len1 = __to_decimal(__vector_length(coords[3], coords[2]))
 
     # If zero, return the other length.
     if len0 == const.DECIMAL_ZERO:
@@ -1182,7 +1197,7 @@ def __calculate_best_width_height(coords):
     return (len0 + len1) * Decimal("0.5")
 
 
-def __calculate_uvs(texture_name, w, h):
+def __calculate_uvs(texture_name, coords):
     """Calculates the UV coordinates for a quad of the specified width and height using the specified texture.
     Not all combinations of sections and texture names are supported. In unsupported cases, default UVs are returned.
 
@@ -1207,28 +1222,59 @@ def __calculate_uvs(texture_name, w, h):
         # How he came up with it is anyone's guess.
         # The original equation uses a multiplier of 5 for the height, but I believe that is because it was designed to be used with brick sizes where the height is the height of the brick in number of plates.
         # The values used here are derived from vertex coordinates which means I can use the same equation for both U and V components.
-        return (11 - 11 / val * 2) / const.BRICK_TEXTURE_RESOLUTION
+        # Alternatively: (11 - (11 / val) * 2) / const.BRICK_TEXTURE_RESOLUTION
+        return (11 - 22 / val) / const.BRICK_TEXTURE_RESOLUTION
+
+    # Determine the width and height of the quad.
+    # Blender vertex order:
+    # 0: top right
+    # 1: top left
+    # 2: bottom left
+    # 3: bottom right
+
+    # Calculates the width of the quad from vectors: top left-top right, bottom left-bottom right (indices: 1,0,2,3)
+    w = __calculate_best_width_height(common.swizzle(coords, "bacd"))
+
+    # Calculates the height of the quad from vectors: bottom right-top right, bottom left-top left (indices: 3,0,2,1)
+    h = __calculate_best_width_height(common.swizzle(coords, "dacb"))
 
     # Subtracting from 1 comes from the fact that Blockland treats the top
     # left corner as the origin for UV coordinates. (The origin is in the bottom left in Blender.)
-    # Vertex order:
+
+    # BLB vertex order:
     # bottom right
     # bottom left
     # top left
     # top right
+
+    # UV pairs are: (u, v)
+    # Where u is the x axis increasing from left to right.
+    # Where v is the y axis increasing from top to bottom.
     if texture_name == "TOP":
         return ((w, h),
                 (0, h),
                 (0, 0),
                 (w, 0))
     elif texture_name == "SIDE":
-        u = get_side_uv(w)
-        v = get_side_uv(h)
+        # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each vertex.
+        # Calculate the components for top, left, right, and bottom edges of the quad.
+        u_t = get_side_uv(__vector_length(coords[0], coords[1]))
+        v_l = get_side_uv(__vector_length(coords[1], coords[2]))
+        u_b = get_side_uv(__vector_length(coords[2], coords[3]))
+        v_r = get_side_uv(__vector_length(coords[3], coords[0]))
 
-        return ((1 - u, 1 - v),
-                (u, 1 - v),
-                (u, v),
-                (1 - u, v))
+        # If the quad is rectangular then the components of opposing sides are equal.
+
+        return (
+            # bottom right
+            (1 - u_b, 1 - v_r),
+            # bottom left
+            (u_b, 1 - v_l),
+            # top left
+            (u_t, v_l),
+            # top right
+            (1 - u_t, v_r)
+        )
     elif texture_name == "BOTTOMLOOP":
         return ((h - 1, w - 1),
                 (h - 1, 0),
@@ -1243,6 +1289,26 @@ def __calculate_uvs(texture_name, w, h):
 
     # Else: Return default UVs.
     return const.DEFAULT_UV_COORDINATES
+
+
+def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
+    # If no UV layer exists, create onee.
+    if not mesh.uv_layers:
+        mesh.uv_textures.new(layer_name)
+
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+
+    first_uv_layer = bm.loops.layers.uv[0]
+
+    # Blender complains if this isn't done.
+    # Apparently you shouldn't do this in tight loops.
+    bm.faces.ensure_lookup_table()
+
+    for vert_idx, uv_pair in enumerate(uvs):
+        bm.faces[poly_index].loops[vert_idx][first_uv_layer].uv = (uv_pair[0], uv_pair[1])
+
+    bm.to_mesh(mesh)
 
 
 def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
@@ -1625,7 +1691,7 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
 
     for obj in mesh_objects:
         object_name = obj.name
-        current_data = obj.data
+        current_mesh = obj.data
 
         # Alpha is per-object.
         vertex_color_alpha = None
@@ -1633,12 +1699,12 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
         logger.info("Exporting object: {}".format(object_name), 1)
 
         # Do UV layers exist?
-        if current_data.uv_layers:
+        if current_mesh.uv_layers:
             # Is there more than one UV layer?
-            if len(current_data.uv_layers) > 1:
-                logger.warning("Object '{}' has {} UV layers, only using the first.".format(object_name, len(current_data.uv_layers)), 2)
+            if len(current_mesh.uv_layers) > 1:
+                logger.warning("Object '{}' has {} UV layers, only using the first.".format(object_name, len(current_mesh.uv_layers)), 2)
 
-            uv_data = current_data.uv_layers[0].data
+            uv_data = current_mesh.uv_layers[0].data
         else:
             uv_data = None
 
@@ -1711,8 +1777,8 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
             texture_name = None
 
             # TODO: Make the use of lower() and upper() consistent.
-            if current_data.materials and current_data.materials[poly.material_index] is not None:
-                matname = current_data.materials[poly.material_index].name.upper()
+            if current_mesh.materials and current_mesh.materials[poly.material_index] is not None:
+                matname = current_mesh.materials[poly.material_index].name.upper()
                 texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
                 texcount = len(texnames)
 
@@ -1797,23 +1863,11 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
             else:
                 if properties.blendprop.calculate_uvs:
                     # Vertex coordinate vectors.
-                    coords = [__get_vert_world_coord(obj, mesh, loop_indices[idx]) for idx in range(4)]
+                    coords = [__get_vert_world_coord(obj, mesh, loop_indices[vert_idx]) for vert_idx in range(4)]
+                    uvs = __calculate_uvs(texture_name, coords)
 
-                    # Determine the width and height of the quad.
-                    # TODO: UVs for non-rectangular quads.
-                    # Blender vertex order:
-                    # 0: top right
-                    # 1: top left
-                    # 2: bottom left
-                    # 3: bottom right
-
-                    # Calculates widths: top left-top right, bottom left-bottom right (indices: 1,0,2,3)
-                    width = __calculate_best_width_height(common.swizzle(coords, "bacd"))
-
-                    # Calculates heights: bottom right-top right, bottom left-top left (indices: 3,0,2,1)
-                    height = __calculate_best_width_height(common.swizzle(coords, "dacb"))
-
-                    uvs = __calculate_uvs(texture_name, width, height)
+                    # Put the calculated UVs into the Blender mesh.
+                    # __store_uvs_in_mesh(poly.index, current_mesh, uvs, texture_name)
                 else:
                     # No UVs present, no calculation: use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
@@ -1844,23 +1898,23 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
 
             if properties.blendprop.use_vertex_colors:
                 # A vertex color layer exists.
-                if len(current_data.vertex_colors) != 0:
+                if len(current_mesh.vertex_colors) != 0:
                     colors = []
 
                     # Vertex winding order is reversed compared to Blockland.
                     for index in reversed(loop_indices):
-                        if len(current_data.vertex_colors) > 1:
+                        if len(current_mesh.vertex_colors) > 1:
                             logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
-                                object_name, len(current_data.vertex_colors)), 2)
+                                object_name, len(current_mesh.vertex_colors)), 2)
 
                         # Only use the first color layer.
                         # color_layer.data[index] may contain more than 4 values.
-                        loop_color = current_data.vertex_colors[0].data[index]
+                        loop_color = current_mesh.vertex_colors[0].data[index]
 
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(',', '.'))
+                        name = common.to_float_or_none(current_mesh.vertex_colors[0].name.replace(',', '.'))
 
                         if vertex_color_alpha is None:
                             if name is None:
