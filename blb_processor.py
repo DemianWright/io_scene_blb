@@ -1252,6 +1252,22 @@ def __calculate_best_width_height(coords):
     return (len0 + len1) * Decimal("0.5")
 
 
+def __get_longest_vector_length(sequence):
+    count = len(sequence)
+    longest = 0
+
+    if __is_even(count):
+        for idx in range(0, count, 2):
+            length = __vector_length(sequence[idx], sequence[idx + 1])
+
+            if length > longest:
+                longest = length
+
+        return longest
+    else:
+        return None
+
+
 def __calculate_uvs(texture_name, coords):
     """Calculates the UV coordinates for a quad of the specified width and height using the specified texture.
     Not all combinations of sections and texture names are supported. In unsupported cases, default UVs are returned.
@@ -1287,14 +1303,17 @@ def __calculate_uvs(texture_name, coords):
     # 2: bottom left
     # 3: bottom right
 
-    # Calculates the width of the quad from vectors: top left-top right, bottom left-bottom right (indices: 1,0,2,3)
-    w = __calculate_best_width_height(common.swizzle(coords, "bacd"))
+    # Order: top left-top right, bottom left-bottom right (indices: 1,0,2,3)
+    width_vectors = common.swizzle(coords, "bacd")
 
-    # Calculates the height of the quad from vectors: bottom right-top right, bottom left-top left (indices: 3,0,2,1)
-    h = __calculate_best_width_height(common.swizzle(coords, "dacb"))
+    # Order: bottom right-top right, bottom left-top left (indices: 3,0,2,1)
+    height_vectors = common.swizzle(coords, "dacb")
 
-    # Subtracting from 1 comes from the fact that Blockland treats the top
-    # left corner as the origin for UV coordinates. (The origin is in the bottom left in Blender.)
+    # Calculates the average width of the quad.
+    w = __calculate_best_width_height(width_vectors)
+
+    # Calculates the average height of the quad.
+    h = __calculate_best_width_height(height_vectors)
 
     # BLB vertex order:
     # bottom right
@@ -1319,7 +1338,8 @@ def __calculate_uvs(texture_name, coords):
         v_r = get_side_uv(__vector_length(coords[3], coords[0]))
 
         # If the quad is rectangular then the components of opposing sides are equal.
-
+        # Subtracting from 1 comes from the fact that Blockland treats the top
+        # left corner as the origin for UV coordinates. (The origin is in the bottom left in Blender.)
         return (
             # bottom right
             (1 - u_b, 1 - v_r),
@@ -1330,17 +1350,27 @@ def __calculate_uvs(texture_name, coords):
             # top right
             (1 - u_t, v_r)
         )
+    elif texture_name == "bottomedge":
+        # Bottom edge is a special case where the average width/height does not work.
+        # We need the length of the longer edge as that is the edge that should align to the brick grid.
+        w = __to_decimal(__get_longest_vector_length(width_vectors))
+        h = __to_decimal(__get_longest_vector_length(height_vectors))
+
+        return ((w - 1, 0.5),
+                (0, 0.5),
+                (-0.5, 0),
+                (w - Decimal("0.5"), 0))
     elif texture_name == "bottomloop":
-        return ((h - 1, w - 1),
-                (h - 1, 0),
+        return ((h, w),
+                (h, 0),
                 (0, 0),
-                (0, w - 1))
+                (0, w))
     elif texture_name == "print":
         return ((1, 1),
                 (0, 1),
                 (0, 0),
                 (1, 0))
-    # TODO: Ramp, bottomedge.
+    # TODO: Ramp.
 
     # Else: Return default UVs.
     return const.DEFAULT_UV_COORDINATES
