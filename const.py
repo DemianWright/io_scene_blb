@@ -22,6 +22,8 @@ Various constants used in multiple modules.
 """
 
 from decimal import Decimal
+from math import pi
+from mathutils import Vector
 
 # The BLB file extension.
 BLB_EXT = ".blb"

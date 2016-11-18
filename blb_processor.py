@@ -22,10 +22,10 @@ A module for processing Blender data into the BLB file format for writing.
 """
 
 from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
-from math import ceil, modf
+from math import ceil, modf, radians
 import bpy
 
-from mathutils import Vector
+from mathutils import Vector, Euler
 
 import bmesh
 
@@ -1278,6 +1278,68 @@ def __get_longest_vector_length(points):
         return None
 
 
+def __get_quad_dir_idx_top_tex(coords):
+    """Gets an index representing the direction the top edge of the quad is pointing for UV mapping the TOP brick texture.
+
+    Args:
+        coords (sequence of Vectors): A sequence of 4 vectors representing the 3D positions of the vertices of a quad.
+
+    Returns:
+        An integer representing a 90 degree sector where sector index:
+        0 is from ]315, 45] degrees
+        1 is from ]45, 135] degrees
+        2 is from ]135, 225] degrees
+        3 is from ]225, 315] degrees
+    """
+    # A vector pointing to the right of the quad.
+    vec_right = coords[0] - coords[3]
+
+    horizontal = __to_decimal(vec_right[const.Z], "1.0") == const.DECIMAL_ZERO
+
+    # There are 4 sectors of 90 degrees.
+    # Sector 0 is from 315 degrees to 45 degrees.
+    # Sector 1 is from 45 degrees to 135 degrees and so on.
+    # However, by rotating the brick right vector by +45 degrees and assuming the sectors are:
+    # 0: 0 to 90
+    # 1: 90 to 180 etc.
+    # I'm doing the exact same thing as with the non-axis aligned sectors but the math is much simpler.
+
+    if horizontal:
+        # +45 degree rotation around the Z axis.
+        vec_right.rotate(Euler((0.0, 0.0, radians(45.0)), 'XYZ'))
+
+        posx = __to_decimal(vec_right[const.X]) >= 0
+        posy = __to_decimal(vec_right[const.Y]) >= 0
+
+        if posx and posy:
+            return 0
+        elif not posx and posy:
+            return 1
+        elif not posx and not posy:
+            return 2
+        else:
+            # posx and not posy
+            return 3
+    else:
+        # +45 degree rotation around the Y axis.
+        vec_right.rotate(Euler((0.0, radians(45.0), 0.0), 'XYZ'))
+
+        posx = __to_decimal(vec_right[const.X]) > 0
+        posz = __to_decimal(vec_right[const.Y]) > 0
+
+        # You cannot win with vertical TOP texture.
+        # This order is best I could find.
+        if posx and posz:
+            return 2
+        elif not posx and posz:
+            return 3
+        elif not posx and not posz:
+            return 0
+        else:
+            # posx and not posz
+            return 1
+
+
 def __calculate_uvs(texture_name, coords):
     """Calculates the UV coordinates for a quad of the specified width and height using the specified texture.
     Not all combinations of sections and texture names are supported. In unsupported cases, default UVs are returned.
@@ -1336,10 +1398,32 @@ def __calculate_uvs(texture_name, coords):
     # Where u is the x axis increasing from left to right.
     # Where v is the y axis increasing from top to bottom.
     if texture_name == "top":
-        return ((0, w),
-                (0, 0),
-                (h, 0),
-                (h, w))
+        direction = __get_quad_dir_idx_top_tex(coords)
+        # Works well for axis aligned faces horizontal faces.
+        # Works well enough for axis aligned faces vertical faces.
+        # Doesn't look bad for all other face orientations.
+
+        if direction == 0:
+            return ((w, h),
+                    (0, h),
+                    (0, 0),
+                    (w, 0))
+        elif direction == 1:
+            return ((h, 0),
+                    (h, w),
+                    (0, w),
+                    (0, 0))
+        elif direction == 2:
+            return ((0, 0),
+                    (w, 0),
+                    (w, h),
+                    (0, h))
+        else:
+            # Direction = 3
+            return ((0, w),
+                    (0, 0),
+                    (h, 0),
+                    (h, w))
     elif texture_name == "side":
         # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each vertex.
         # Calculate the components for top, left, right, and bottom edges of the quad.
