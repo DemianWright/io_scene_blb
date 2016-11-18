@@ -1381,7 +1381,11 @@ def __calculate_uvs(texture_name, coords):
                 (0, 1),
                 (0, 0),
                 (1, 0))
-    # TODO: Ramp.
+    elif texture_name == "ramp":
+        return ((h, 0),
+                (h, w),
+                (0, w),
+                (0, 0))
 
     # Else: Return default UVs.
     return const.DEFAULT_UV_COORDINATES
