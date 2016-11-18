@@ -15,11 +15,11 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 A module for printing messages to the console and optionally writing the messages to a log file.
 
 @author: Demian Wright
-'''
+"""
 
 from . import const
 

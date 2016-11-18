@@ -15,11 +15,11 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 Various functions and collections used in multiple classes.
 
 @author: Demian Wright
-'''
+"""
 from math import isnan
 from string import ascii_lowercase
 from . import const

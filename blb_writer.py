@@ -15,11 +15,11 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-'''
+"""
 A module for writing data into a BLB file.
 
 @author: Demian Wright
-'''
+"""
 
 # Blender requires imports from ".".
 from . import const
@@ -46,9 +46,9 @@ def __write_sequence(file, sequence, new_line=True, decimal_digits=const.MAX_FP_
         else:
             # Format the value into string, remove all zeros from the end (if any), then remove all periods from the end (if any).
             if decimal_digits is None:
-                file.write("{}".format(value).rstrip('0').rstrip('.'))
+                file.write("{}".format(value).rstrip("0").rstrip("."))
             else:
-                file.write("{0:.{1}f}".format(value, decimal_digits).rstrip('0').rstrip('.'))
+                file.write("{0:.{1}f}".format(value, decimal_digits).rstrip("0").rstrip("."))
     if new_line:
         # Write a new line after all values.
         file.write("\n")
@@ -88,12 +88,16 @@ def write_file(properties, filepath, blb_data):
         # Collision
         # ---------
         if len(blb_data.collision) == 0:
-            # Write default collision.
-            # Center of the cuboid is at the middle of the brick.
-            file.write("1\n\n0 0 0\n")
+            if properties.blendprop.calculate_collision:
+                # Write default collision.
+                # Center of the cuboid is at the middle of the brick.
+                file.write("1\n\n0 0 0\n")
 
-            # The size of the cuboid is the size of the bounds.
-            __write_sequence(file, blb_data.brick_size)
+                # The size of the cuboid is the size of the bounds.
+                __write_sequence(file, blb_data.brick_size)
+            else:
+                # No collision.
+                file.write("0\n")
         else:
             # Write defined collisions.
 
