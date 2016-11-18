@@ -1305,12 +1305,12 @@ def __calculate_uvs(texture_name, coords):
     # UV pairs are: (u, v)
     # Where u is the x axis increasing from left to right.
     # Where v is the y axis increasing from top to bottom.
-    if texture_name == "TOP":
+    if texture_name == "top":
         return ((w, h),
                 (0, h),
                 (0, 0),
                 (w, 0))
-    elif texture_name == "SIDE":
+    elif texture_name == "side":
         # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each vertex.
         # Calculate the components for top, left, right, and bottom edges of the quad.
         u_t = get_side_uv(__vector_length(coords[0], coords[1]))
@@ -1330,12 +1330,12 @@ def __calculate_uvs(texture_name, coords):
             # top right
             (1 - u_t, v_r)
         )
-    elif texture_name == "BOTTOMLOOP":
+    elif texture_name == "bottomloop":
         return ((h - 1, w - 1),
                 (h - 1, 0),
                 (0, 0),
                 (0, w - 1))
-    elif texture_name == "PRINT":
+    elif texture_name == "print":
         return ((1, 1),
                 (0, 1),
                 (0, 0),
@@ -1868,7 +1868,7 @@ def __process_mesh_data(context, properties, brick_size, bounds_data, mesh_objec
 
             if texture_name is None:
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                texture_name = "SIDE"
+                texture_name = "side"
 
             # ===================
             # Vertex loop indices
@@ -2121,6 +2121,9 @@ def __format_blb_data(forward_axis, blb_data):
             # Normals also need to be rotated.
             for index, normal in enumerate(quad_data[1]):
                 quad_data[1][index] = common.rotate(normal, forward_axis)
+
+            # The texture name does not have to be all uppercase but it makes the output look more consistent.
+            quad_data[4] = quad_data[4].upper()
 
     return blb_data
 
