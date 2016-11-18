@@ -1325,10 +1325,10 @@ def __calculate_uvs(texture_name, coords):
     # Where u is the x axis increasing from left to right.
     # Where v is the y axis increasing from top to bottom.
     if texture_name == "top":
-        return ((w, h),
-                (0, h),
+        return ((0, w),
                 (0, 0),
-                (w, 0))
+                (h, 0),
+                (h, w))
     elif texture_name == "side":
         # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each vertex.
         # Calculate the components for top, left, right, and bottom edges of the quad.
