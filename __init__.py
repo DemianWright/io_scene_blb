@@ -302,7 +302,16 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # -------------
     calculate_uvs = BoolProperty(
         name="Calculate UVs",
-        description="Calculate correct UV coordinates based on the brick texture name (face material name)",
+        description="Calculate correct UV coordinates based on the brick texture name specified in the material name",
+        default=True,
+    )
+
+    # ---------
+    # Store UVs
+    # ---------
+    store_uvs = BoolProperty(
+        name="Store",
+        description="Write calculated UVs into Blender objects (data in existing generated UV layers will be overwritten)",
         default=True,
     )
 
@@ -724,8 +733,18 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Property: Use Object Colors
         layout.prop(self, "use_object_colors")
 
-        # Properties: UVs
-        layout.prop(self, "calculate_uvs")
+        # Property: UVs
+        row = layout.row()
+        split = row.split(percentage=0.53)
+        col = split.column()
+        col.prop(self, "calculate_uvs")
+
+        # Property: Store UVs
+        if self.calculate_uvs:
+            split = split.split()
+            split.active = self.calculate_uvs
+            col = split.column()
+            col.prop(self, "store_uvs")
 
         # Property: Round Normals
         layout.prop(self, "round_normals")
