@@ -22,8 +22,8 @@ Various constants used in multiple modules.
 """
 
 from decimal import Decimal
+from enum import Enum
 from math import pi
-from mathutils import Vector
 
 # The BLB file extension.
 BLB_EXT = ".blb"
@@ -51,6 +51,8 @@ QUAD_SECTION_IDX_EAST = 3
 QUAD_SECTION_IDX_SOUTH = 4
 QUAD_SECTION_IDX_WEST = 5
 QUAD_SECTION_IDX_OMNI = 6
+
+# FIXME: Use more enums.
 
 # The quad sections in the correct order for writing to a BLB file.
 QUAD_SECTION_ORDER = ("TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI")
@@ -82,3 +84,60 @@ DEFAULT_UV_COORDINATES = ((0.5, 0.5),) * 4
 # Often used Decimal values.
 DECIMAL_ZERO = Decimal("0.0")
 DECIMAL_HALF = Decimal("0.5")
+
+# Useful angles in radians.
+RAD_45_DEG = pi * 0.25
+RAD_135_DEG = pi - RAD_45_DEG
+RAD_225_DEG = pi + RAD_45_DEG
+RAD_315_DEG = pi + RAD_135_DEG
+
+TWO_PI = 2.0 * pi
+
+
+class Axis3D(Enum):
+    """An enum with values representing each axis in three-dimensional space, indexed as follows:
+           0: POS_X
+           1: NEG_X
+           2: POS_Y
+           3: NEG_Y
+           4: POS_Z
+           5: NEG_Z
+    """
+    POS_X = 0
+    NEG_X = 1
+    POS_Y = 2
+    NEG_Y = 3
+    POS_Z = 4
+    NEG_Z = 5
+
+    def index(self):
+        """Determines the index of this three-dimensional axis.
+
+        Returns:
+            The index 0, 1, or 2 for the axes X, Y, and Z respectively.
+        """
+        if self == Axis3D.POS_X or self == Axis3D.NEG_X:
+            return X
+        elif self == Axis3D.POS_Y or self == Axis3D.NEG_Y:
+            return Y
+        else:
+            return Z
+
+    def positive(self):
+        """Determines if this three-dimensional axis is positive or negative.
+
+        Returns:
+            True if this value represents a positive axis.
+        """
+        return self == Axis3D.POS_X or self == Axis3D.POS_Y or self == Axis3D.POS_Z
+
+
+class AxisPlane3D(Enum):
+    """An enum with values representing each axis-aligned plane in three-dimensional space, indexed as follows:
+           0: XY-plane
+           1: XZ-plane
+           2: YZ-plane
+    """
+    XY = 0
+    XZ = 1
+    YZ = 2

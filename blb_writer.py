@@ -140,8 +140,8 @@ def write_file(properties, filepath, blb_data):
 
                 # Face UV coordinates.
                 file.write("{}\n".format("" if properties.blendprop.terse_mode else "UV COORDS:"))
-                for uv_vector in uvs:
-                    __write_sequence(file, uv_vector)
+                for uv_pair in uvs:
+                    __write_sequence(file, uv_pair)
 
                 # Vertex colors, if any.
                 if colors is not None:
