@@ -1605,7 +1605,7 @@ def __calc_quad_max_edge_len_idx(sorted_verts):
     return (max_len, max_len_idx)
 
 
-def __calculate_uvs(texture_name, vert_coords, normal):
+def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
     """Calculates the UV coordinates for the specified texture and quad containing the specified vertices.
     In unsupported cases, default UVs are returned.
 
@@ -1614,9 +1614,12 @@ def __calculate_uvs(texture_name, vert_coords, normal):
         vert_coords (sequence of coordinates): A sequence of 4 local space coordinates of a face in CW order.
                                               The vertex order must be the same that is written to the BLB file.
         normal (sequence of numbers): The normal vector of the quad.
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
 
     Returns:
-        A tuple containing 4 sets of UV coordinates (One pair for each vertex in the quad.) as tuples for the BLB file.
+        A tuple with two elements.
+        The first element is a tuple containing 4 sets of UV coordinates (One pair for each vertex in the quad.) as tuples for the BLB file.
+        The second element is a tuple containing the UV coordinates to be stored in the Blender mesh, or None if the coordinates are the same as the BLB ones.
     """
     def get_side_uv(length):
         """Calculates the U and V component for an edge of the specified length to use with the SIDE texture.
@@ -1704,9 +1707,8 @@ def __calculate_uvs(texture_name, vert_coords, normal):
 
     # Initialize with default UVs.
     uvs_sorted = const.DEFAULT_UV_COORDINATES
-
-    # uvs_blender may be assigned a value later
-    # uvs_blender = None
+    # May be assigned a value later.
+    uvs_blender = None
 
     # UV tuples are in order: (u, v)
     # Where u is the x axis increasing from left to right.
@@ -1717,12 +1719,29 @@ def __calculate_uvs(texture_name, vert_coords, normal):
         # Doesn't look bad for all other face orientations.
         # direction = __get_quad_dir_idx_top_tex(sorted_verts)
 
-        # TODO: Take the custom forward axis into account: light side towards custom forward axis.
-        # uvs_blender = ...
         uvs_sorted = ((w, h),
                       (0, h),
                       (0, 0),
                       (w, 0))
+
+        # By default top texture light side points towards -X.
+        if forward_axis == "POSITIVE_X":
+            uvs_blender = ((0, 0),
+                           (w, 0),
+                           (w, h),
+                           (0, h))
+        elif forward_axis == "POSITIVE_Y":
+            uvs_blender = ((0, w),
+                           (0, 0),
+                           (h, 0),
+                           (h, w))
+        elif forward_axis == "NEGATIVE_Y":
+            uvs_blender = ((h, 0),
+                           (h, w),
+                           (0, w),
+                           (0, 0))
+        else:
+            uvs_blender = uvs_sorted
 
     elif texture_name == "side":
         # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each side.
@@ -1786,9 +1805,9 @@ def __calculate_uvs(texture_name, vert_coords, normal):
                       (h, 0),
                       (h, w))
 
-    # print("__calculate_uvs | uvs_sorted:")
+    #print("__calculate_uvs | uvs_sorted:")
     # for uv in uvs_sorted:
-    #     print("\t", uv)
+    #    print("\t", uv)
 
     # Calculate the offset.
     # Index 0 is always the first element in the input vertex order by definition.
@@ -1806,10 +1825,14 @@ def __calculate_uvs(texture_name, vert_coords, normal):
         # To map the calculated BLB UV coordinates into something usable in Blender, we need to swizzle the UV pairs back into the old order.
         uvs_blb = common.offset_sequence(uvs_sorted, blb_to_blender_offset)
 
+        if uvs_blender is not None:
+            uvs_blender = common.offset_sequence(uvs_blender, blb_to_blender_offset)
+
         # print("__calculate_uvs | uvs_blb:")
         # for uv in uvs_blb:
         #     print("\t", uv)
-    return uvs_blb
+
+    return (uvs_blb, uvs_blender)
 
 
 def __bl_blender_uv_origin_swap(uvs):
@@ -1894,6 +1917,7 @@ def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
     for vert_idx, uv_pair in enumerate(uvs):
         bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uv_pair
 
+    # TODO: Throws ValueError if mesh is in edit mode.
     bm.to_mesh(mesh)
 
 
@@ -2264,7 +2288,7 @@ def __process_definition_objects(properties, objects):
         return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
-def __process_mesh_data(context, properties, bounds_data, mesh_objects):
+def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_axis):
     """Gets all the necessary data from the specified Blender objects and sorts all the quads of the mesh_objects into sections for brick coverage to work.
 
     Args:
@@ -2272,6 +2296,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         properties (DerivateProperties): An object containing user properties.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         mesh_objects (sequence of Blender objects): Meshes to be processed.
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
 
     Returns:
         A sequence of mesh data sorted into sections or a string containing an error message to display to the user.
@@ -2526,11 +2551,17 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
 
             if uvs is None:
                 if properties.blendprop.calculate_uvs:
-                    uvs = __calculate_uvs(texture_name, poly_vertex_obj_coords, poly_normal_normalized)
+                    uvs = __calculate_uvs(texture_name, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
 
                     if properties.blendprop.store_uvs:
-                        # Put the calculated UVs into the Blender mesh.
-                        __store_uvs_in_mesh(poly.index, current_mesh, uvs, __string_to_uv_layer_name(texture_name))
+                        if uvs[1] is not None:
+                            # Put the special Blender UVs into the Blender mesh.
+                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(texture_name))
+                        else:
+                            # Put the calculated UVs into the Blender mesh.
+                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[0], __string_to_uv_layer_name(texture_name))
+
+                    uvs = uvs[0]
                 else:
                     # No UVs present, no calculation: use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
@@ -2734,7 +2765,7 @@ def process_blender_data(context, properties, objects):
             logger.info("Processing meshes.")
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects)
+            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects, properties.blendprop.axis_blb_forward)
 
             if isinstance(quads, str):
                 # Something went wrong.
