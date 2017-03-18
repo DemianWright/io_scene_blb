@@ -27,6 +27,8 @@ The add-on does not support importing .BLB files yet. For Blender 2.67 and newer
    1. [Use Material Colors](#use-material-colors)
    1. [Use Vertex Colors](#use-vertex-colors)
    1. [Parse Object Colors](#parse-object-colors)
+   1. [Calculate UVs](#calculate-uvs)
+   1. [Store UVs](#store-uvs)
    1. [Round Normals](#round-normals)
    1. [Custom Definition Tokens](#custom-definition-tokens)
    1. [Terse Mode](#terse-mode)
@@ -41,7 +43,12 @@ The add-on does not support importing .BLB files yet. For Blender 2.67 and newer
       1. [Defining Coverage & Quad Sorting](#defining-coverage--quad-sorting)
       1. [Defining Colors](#defining-colors)
    1. [Brick Textures](#brick-textures)
+1. [UV Mapping](#uv-mapping)
+	1. [The TOP Brick Texture](the-top-brick-texture)
 1. [Rounded Values](#rounded-values)
+1. [Troubleshooting](#troubleshooting)
+	1. [Automatically calculated UV coordinates for brick textures are distorted](#automatically-calculated-uv-coordinates-for-brick-textures-are-distorted)
+	1. [Automatically calculated UV coordinates for brick textures are rotated incorrectly](#automatically-calculated-uv-coordinates-for-brick-textures-are-rotated-incorrectly)
 1. [Contributors](#contributors)
 
 ## Features ##
@@ -61,9 +68,9 @@ The exporter supports all BLB features.
 - [x] Quads
    - Triangles are automatically converted to quads
    - N-gons are ignored
-- [ ] UV coordinates
+- [x] UV coordinates
    - Manually define UV coordinates
-   - No automatic UV calculation for brick textures, textureless faces are default
+   - Automatic UV calculation for all brick textures.
 - [x] Colors
    - Multiple ways to define colors: materials, object names, vertex paint
    - Per-vertex coloring
@@ -94,7 +101,6 @@ The exporter supports all BLB features.
 ### Planned Features ###
 These features may or may not be implemented at some unspecified time in the future.
 
-- Automatic UV calculation for brick textures
 - Importing .BLB files
 - Export-time brick rotation on the Z-axis
 - Automatic rendering of the brick preview icon
@@ -200,6 +206,12 @@ Get object colors from vertex color layers. (Default: True)
 
 #### Parse Object Colors ####
 Get object colors from object names. (Default: False)
+
+#### Calculate UVs ####
+Automatically calculate correct UV coordinates based on the brick texture name specified in the material name. See [UV Mapping](#uv-mapping) for more information. (Default: True)
+
+#### Store UVs ####
+Write calculated UVs into Blender objects. Data in existing generated UV layers will be overwritten. See [UV Mapping](#uv-mapping) for a list of generated UV layer names. (Default: True)
 
 #### Round Normals ####
 Round vertex normals to the user-defined floating point value precision. If disabled normals will be written as accurately as possible but extraneous zeros will still be removed. (Default: False)
@@ -357,22 +369,38 @@ Token | Usable In | Description
 
 ### Brick Textures ###
 Defining brick textures is done using Blender materials. To assign a brick texture to a face, assign a material to it containing a valid brick texture name (case insensitive):
-- `top`
-- `side`
-- `ramp`
 - `bottomedge`
 - `bottomloop`
+- `print`
+- `ramp`
+- `side`
+- `top`
 
-If no brick texture is defined, `side` is used. Material name may contain other words as long as the brick texture name is separated from them with one whitespace character such as a space.
+If no brick texture is defined, `side` is used. Material name may contain other words as long as the brick texture name is separated from them with one whitespace character such as a space. A common combination is to define a brick texture name and the definition token `blank` (e.g. `blank ramp` or `ramp blank`) to allow the player to recolor the face in-game using the spray can. See [Defining Colors](#defining-colors) for information about the `blank` token.
 
-:exclamation: Note that the current version of the exporter does not automatically calculate the correct UV coordinates for brick textures, however, correct UV coordinates can be assigned manually.
+#### UV Mapping ####
+Manually defined UV coordinates must be stored in one or more UV layers that do not share a name with one of the automatically generated UV layers:
+- `TEX:BOTTOMEDGE`
+- `TEX:BOTTOMLOOP`
+- `TEX:PRINT`
+- `TEX:RAMP`
+- `TEX:TOP`
+
+Any data in UV layers with one the names above will the overwritten during automatic UV calculation.
+
+:exclamation: Note that BLB files only support storing quads. As such, any tris with UV coordinates will have their last UV coordinate duplicated to transform it into a quad. This may or may not cause visual distortion in the UV mapping.
+
+If the [Calculate UVs](#calculate-uvs) property is enabled, UV coordinates will be automatically calculated based on the dimensions of the quad and the name of the material assigned to it. (See [Brick Textures](#brick-textures) to learn how to define brick textures with materials.) The generated coordinates are only guaranteed to be correct for strictly rectangular quads, for any other shapes the results may not be satisfactory. If using brick textures on non-rectangular quads it is recommended to manually define the UV coordinates for best results.
+
+### The TOP Brick Texture ###
+Blockland automatically performs rotations on the UV coordinates of the TOP brick texture during runtime so that the lightest side of the texture is always facing towards the sun. Because of this there is no correct way of representing the TOP brick texture in Blender. As a compromise the exporter will rotate the lightest side of the TOP brick texture to face towards the axis select in the [Forward Axis](#forward-axis) property. This means the UV coordinates of the TOP brick texture in Blender may not match those in the written BLB file.
 
 ## Rounded Values ##
 Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems). For example when exporting a 1x1x1 brick model at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`. This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should. The only way to get rid of this error is to round the number (vertex coordinates). Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game. The floating point errors are effectively 0. The only real benefit that comes from the rounding is nicer looking .BLB files.
 
 The default value of `0.000001` was chosen through manual testing. Rest assured that the rounding will cause no visual oddities whatsoever because the value is so small. This was manually confirmed with a sphere brick made from 524288 quads. Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
 
-The exporter will only ever write 16 decimal places regardless of the precision of the value.
+:exclamation: The exporter will only ever write 16 decimal places regardless of the precision of the value.
 
 Floating Point Value | Rounded
 ---------------------|:------:
@@ -380,9 +408,18 @@ Visible mesh vertex coordinates | Yes
 Bounds object vertex coordinates | Yes
 Collision object vertex coordinates | Yes
 Brick grid object vertex coordinates | Yes
-Normal vectors | Optional
+Normal vectors | [Optional](#round-normals)
 RGBA color values | No
 UV coordinates | No
+
+## Troubleshooting ##
+Solutions to common issues with the BLB Exporter. If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again. The log file may contain warnings or errors describing the issue with the model.
+
+### Automatically calculated UV coordinates for brick textures are distorted ###
+The automatic UV calculation is only designed to work with rectangular quads. Manually define UV coordinates for non-rectangular quads.
+
+### Automatically calculated UV coordinates for brick textures are rotated incorrectly ###
+The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the SIDE texture pointing sideways instead of up) is not a perfect rectangle. Even one vertex being off by some minuscule, visually indistinguishable amount from a perfectly rectangular shape can cause the automatic UV calculation to incorrectly determine the rotation of the quad. Double check all 4 coordinates of the quad and manually correct any floating point errors. If working on axis-aligned quads or if the vertices should be on grid points snapping the coordinates of the problem quad to grid coordinates using `Mesh > Snap > Snap Selection to Grid` usually fixes floating point errors.
 
 ## Contributors ##
 - [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.

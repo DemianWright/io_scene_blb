@@ -312,7 +312,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # Store UVs
     # ---------
     store_uvs = BoolProperty(
-        name="Store",
+        name="Store UVs",
         description="Write calculated UVs into Blender objects (data in existing generated UV layers will be overwritten)",
         default=True,
     )

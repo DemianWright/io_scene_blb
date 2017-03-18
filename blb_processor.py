@@ -1640,6 +1640,7 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
 
     normal_axis = __get_normal_axis(normal)
 
+    # Sanity check.
     if len(vert_coords) < 4:
         raise RuntimeError("__calculate_uvs(texture_name, vert_coords, normal) function expects a quad, input polygon was not a quad.")
 
@@ -1794,16 +1795,21 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
                       (0, 0),
                       (h, 0),
                       (h, w))
+
     elif texture_name == "print":
         uvs_sorted = ((0, 0),
                       (1, 0),
                       (1, 1),
                       (0, 1))
+
     elif texture_name == "ramp":
         uvs_sorted = ((0, w),
                       (0, 0),
                       (h, 0),
                       (h, w))
+
+    else:
+        raise RuntimeError("Unknown texture name '{}'".format(texture_name))
 
     #print("__calculate_uvs | uvs_sorted:")
     # for uv in uvs_sorted:
@@ -2395,26 +2401,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             if properties.blendprop.auto_sort_quads:
                 section_idx = None
 
-            # ================
-            # BLB texture name
-            # ================
-            texture_name = None
-
-            if current_mesh.materials and current_mesh.materials[poly.material_index] is not None:
-                matname = current_mesh.materials[poly.material_index].name
-                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
-                texcount = len(texnames)
-
-                if texcount > 0:
-                    texture_name = texnames[0]
-
-                    if texcount > 1:
-                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
-
-            if texture_name is None:
-                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                texture_name = "side"
-
             # ===================
             # Vertex loop indices
             # ===================
@@ -2508,10 +2494,31 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 else:
                     normals = [poly_normal_normalized, ] * 4
 
+            # ================
+            # BLB texture name
+            # ================
+            texture_name = None
+
+            if current_mesh.materials and current_mesh.materials[poly.material_index] is not None:
+                matname = current_mesh.materials[poly.material_index].name
+                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
+                texcount = len(texnames)
+
+                if texcount > 0:
+                    texture_name = texnames[0]
+
+                    if texcount > 1:
+                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
+
+            if texture_name is None:
+                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
+                texture_name = "side"
+
             # ===
             # UVs
             # ===
             # TODO: Generate mesh data for the brick bottom if 'bottom' material is used.
+            uvs = None
 
             # Join all material names into one string.
             generated_uv_layer_names = " ".join(current_mesh.materials.keys())
@@ -2520,7 +2527,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             # List of possible layer names based on the materials of this mesh.
             generated_uv_layer_names = [__string_to_uv_layer_name(texnames) for texnames in generated_uv_layer_names]
 
-            uvs = None
             # Sort UV layers by name.
             uv_dict = {key: value for key, value in mesh.uv_layers.items()}
             sorted_uv_layers = OrderedDict(sorted(uv_dict.items()))
