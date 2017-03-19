@@ -1721,24 +1721,26 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (0, 0),
                       (w, 0))
 
-        # By default top texture light side points towards -X.
         if forward_axis == "POSITIVE_X":
-            uvs_blender = ((0, 0),
-                           (w, 0),
-                           (w, h),
-                           (0, h))
-        elif forward_axis == "POSITIVE_Y":
-            uvs_blender = ((0, w),
+            uvs_blender = ((0, h),
                            (0, 0),
-                           (h, 0),
-                           (h, w))
-        elif forward_axis == "NEGATIVE_Y":
-            uvs_blender = ((h, 0),
-                           (h, w),
-                           (0, w),
+                           (w, 0),
+                           (w, h))
+        elif forward_axis == "NEGATIVE_X":
+            uvs_blender = ((w, 0),
+                           (w, h),
+                           (0, h),
                            (0, 0))
-        else:
-            uvs_blender = uvs_sorted
+        elif forward_axis == "POSITIVE_Y":
+            uvs_blender = ((h, w),
+                           (0, w),
+                           (0, 0),
+                           (h, 0))
+        else:  # NEGATIVE_Y
+            uvs_blender = ((0, 0),
+                           (h, 0),
+                           (h, w),
+                           (0, w))
 
     elif brick_texture is const.BrickTexture.SIDE:
         # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each side.
@@ -1761,8 +1763,6 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (1 - u_b, 1 - v_r),
                       (u_b, 1 - v_l))
     elif brick_texture is const.BrickTexture.BOTTOMEDGE:
-        # FIXME: Blender uvs broken. Widths are swapped + has Y offset. BLB uvs OK.
-
         # Bottom edge is a special case where the average width/height does not work and the top left may not be what was determined by the sorting algorithm above.
         # We need the length of the longest edge in the quad, the direction it is pointing, and the index of the first vertex of the longest edge (CW order).
         edge_info = __calc_quad_max_edge_len_idx(sorted_verts)
@@ -1777,6 +1777,8 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (max_len - const.DECIMAL_HALF, 0),
                       (max_len - 1, 0.5),
                       (0, 0.5))
+
+        uvs_blender = __bl_blender_uv_origin_swap(uvs_sorted)
 
         if top_left_offset != 0:
             # Move each element in sorted_order forwards by top_left_offset and wrap around.
@@ -1829,12 +1831,13 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
         # To map the calculated BLB UV coordinates into something usable in Blender, we need to swizzle the UV pairs back into the old order.
         uvs_blb = common.offset_sequence(uvs_sorted, blb_to_blender_offset)
 
-        if uvs_blender is not None:
-            uvs_blender = common.offset_sequence(uvs_blender, blb_to_blender_offset)
-
-        # print("__calculate_uvs | uvs_blb:")
-        # for uv in uvs_blb:
-        #     print("\t", uv)
+    #print("__calculate_uvs | uvs_blb:")
+    # for uv in uvs_blb:
+    #    print("\t", uv)
+    # if uvs_blender:
+    #    print("__calculate_uvs | uvs_blender:")
+    #    for uv in uvs_blender:
+    #        print("\t", uv)
 
     return (uvs_blb, uvs_blender)
 
@@ -2533,6 +2536,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     if properties.blendprop.store_uvs:
                         if uvs[1] is not None:
                             # Put the special Blender UVs into the Blender mesh.
+                            print("special blender uvs")
                             __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(brick_texture.name))
                         else:
                             # Put the calculated UVs into the Blender mesh.
