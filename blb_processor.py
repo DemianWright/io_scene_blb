@@ -1545,7 +1545,7 @@ def __get_normal_axis(normal):
 
 
 def __string_to_uv_layer_name(string):
-    """Gets the UV layer name for automatically calculated UVs for the specified string.
+    """Creates the UV layer name for automatically calculated UVs from the specified string.
 
     Args:
         string (string): A string.
@@ -1553,8 +1553,7 @@ def __string_to_uv_layer_name(string):
     Returns:
         A UV layer name.
     """
-    # TODO: Const the prefix.
-    return "TEX:{}".format(string.upper())
+    return "{}{}".format(const.BLB_PREFIX_TEXTURE, string.upper())
 
 
 def __calc_quad_max_edge_len_idx(sorted_verts):
@@ -1568,7 +1567,6 @@ def __calc_quad_max_edge_len_idx(sorted_verts):
         Element 0: The length of the longest edge in the specified quad.
         Element 1: The index of the first vertex in CW order of the longest edge in the specified quad.
     """
-    # TODO: Const.
     max_len = Decimal("-1")
     max_len_idx = -1
     #quad_center = Vector((0, 0))

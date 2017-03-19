@@ -60,6 +60,16 @@ QUAD_SECTION_ORDER = ("TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI")
 # A tuple of valid brick textures in alphabetical order.
 VALID_BRICK_TEXTURES = ("bottomedge", "bottomloop", "print", "ramp", "side", "top")
 
+# BLB file strings.
+BLB_BRICK_TYPE_SPECIAL = "SPECIAL"
+BLB_SECTION_SEPARATOR = "---------------- {} QUADS ----------------"
+BLB_HEADER_COVERAGE = "COVERAGE:"
+BLB_PREFIX_TEXTURE = "TEX:"
+BLB_HEADER_POSITION = "POSITION:"
+BLB_HEADER_UV = "UV COORDS:"
+BLB_HEADER_COLORS = "COLORS:"
+BLB_HEADER_NORMALS = "NORMALS:"
+
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
 DEFAULT_COVERAGE = 99999

@@ -71,7 +71,7 @@ def write_file(properties, filepath, blb_data):
         # ----------
         # Brick Type
         # ----------
-        file.write("SPECIAL\n\n")
+        file.write("{}\n\n".format(const.BLB_BRICK_TYPE_SPECIAL))
 
         # ----------
         # Brick Grid
@@ -88,6 +88,7 @@ def write_file(properties, filepath, blb_data):
         # Collision
         # ---------
         if len(blb_data.collision) == 0:
+            # TODO: Move to blb_processor.
             if properties.blendprop.calculate_collision:
                 # Write default collision.
                 # Center of the cuboid is at the middle of the brick.
@@ -114,7 +115,7 @@ def write_file(properties, filepath, blb_data):
         # --------
         # Only skip writing coverage if terse mode is True and coverage is False.
         if not (properties.blendprop.terse_mode and not properties.blendprop.calculate_coverage):
-            file.write("COVERAGE:\n")
+            file.write("{}\n".format(const.BLB_HEADER_COVERAGE))
             for (hide_adjacent, plate_count) in blb_data.coverage:
                 file.write("{} : {}\n".format(str(int(hide_adjacent)), str(plate_count)))
 
@@ -123,33 +124,33 @@ def write_file(properties, filepath, blb_data):
         # -----
         for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
             # Write section name.
-            file.write("{}\n".format("" if properties.blendprop.terse_mode else "---------------- {} QUADS ----------------".format(section_name)))
+            file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_SECTION_SEPARATOR.format(section_name)))
 
             # Write section length.
             file.write("{}\n".format(str(len(blb_data.quads[index]))))
 
             for (positions, normals, uvs, colors, texture_name) in blb_data.quads[index]:
                 # Face texture name.
-                file.write("\nTEX:{}\n".format(texture_name))
+                file.write("\n{}{}\n".format(const.BLB_PREFIX_TEXTURE, texture_name))
 
                 # Vertex positions.
-                file.write("{}\n".format("" if properties.blendprop.terse_mode else "POSITION:"))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_POSITION))
 
                 for position in positions:
                     __write_sequence(file, position)
 
                 # Face UV coordinates.
-                file.write("{}\n".format("" if properties.blendprop.terse_mode else "UV COORDS:"))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_UV))
                 for uv_pair in uvs:
                     __write_sequence(file, uv_pair)
 
                 # Vertex colors, if any.
                 if colors is not None:
-                    file.write("{}\n".format("" if properties.blendprop.terse_mode else "COLORS:"))
+                    file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_COLORS))
                     for color in colors:
                         __write_sequence(file, color)
 
                 # Vertex normals.
-                file.write("{}\n".format("" if properties.blendprop.terse_mode else "NORMALS:"))
+                file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_NORMALS))
                 for normal in normals:
                     __write_sequence(file, normal)
