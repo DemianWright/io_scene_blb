@@ -92,7 +92,6 @@ BRICK_TEXTURE_RESOLUTION = 512
 DEFAULT_UV_COORDINATES = ((0.5, 0.5),) * 4
 
 # Often used Decimal values.
-DECIMAL_ZERO = Decimal("0.0")
 DECIMAL_HALF = Decimal("0.5")
 
 # Useful angles in radians.
@@ -133,7 +132,7 @@ class Axis3D(Enum):
         else:
             return Z
 
-    def positive(self):
+    def is_positive(self):
         """Determines if this three-dimensional axis is positive or negative.
 
         Returns:

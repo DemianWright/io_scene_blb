@@ -1261,18 +1261,18 @@ def __calculate_quad_width_height(len_top, len_right, len_bottom, len_left):
         A tuple (width, height) containing the width and height of the quad as Decimals.
     """
     # If zero, return the other length.
-    if len_top == const.DECIMAL_ZERO:
+    if Decimal.is_zero(len_top):
         # If len_bottom is zero, quad width is zero as both sides are points.
         width = len_bottom
-    elif len_bottom == const.DECIMAL_ZERO:
+    elif Decimal.is_zero(len_bottom):
         width = len_top
     else:
         width = (len_top + len_bottom) * const.DECIMAL_HALF
 
-    if len_left == const.DECIMAL_ZERO:
+    if Decimal.is_zero(len_left):
         # If len_bottom is zero, quad width is zero as both sides are points.
         height = len_right
-    elif len_right == const.DECIMAL_ZERO:
+    elif Decimal.is_zero(len_right):
         height = len_left
     else:
         height = (len_left + len_right) * const.DECIMAL_HALF
@@ -1323,7 +1323,7 @@ def __get_quad_dir_idx_top_tex(coords):
     # A vector pointing to the right of the quad.
     vec_right = coords[0] - coords[3]
 
-    horizontal = __to_decimal(vec_right[Z], "1.0") == const.DECIMAL_ZERO
+    horizontal = Decimal.is_zero(__to_decimal(vec_right[Z], "1.0"))
 
     # There are 4 sectors of 90 degrees.
     # Sector 0 is from 315 degrees to 45 degrees.
@@ -1663,13 +1663,13 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
         # Sort sequence by Y coordinates.
         # If facing positive X axis, sort coordinates from -Y to +Y = not reversed.
         # Break ties by sorting by index.
-        top_left_candidates = sorted(max_z_coords, key=lambda k: [k[1][Y], k[0]], reverse=not normal_axis.positive())
+        top_left_candidates = sorted(max_z_coords, key=lambda k: [k[1][Y], k[0]], reverse=not normal_axis.is_positive())
     elif normal_axis.index() is Y:
         # Quad aligned with Y axis.
         # Sort sequence by X coordinates.
         # If facing positive Y axis, sort coordinates from +X to -X = reversed.
         # Break ties by sorting by index.
-        top_left_candidates = sorted(max_z_coords, key=lambda k: [k[1][X], k[0]], reverse=normal_axis.positive())
+        top_left_candidates = sorted(max_z_coords, key=lambda k: [k[1][X], k[0]], reverse=normal_axis.is_positive())
     else:  # normal_axis.index() is Z:
         # Quad aligned with Z axis.
         # Sort sequence by X coordinates.
