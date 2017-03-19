@@ -46,6 +46,35 @@ def swizzle(sequence, order):
     return [sequence[ascii_lowercase.index(letter)] for letter in order]
 
 
+def swizzle_by_index(sequence, order):
+    """Changes the order of the elements in the specified sequence.
+
+    Args:
+        sequence (sequence): A sequence of objects.
+        order (sequence of integers): The new order of the specified sequence as sequence of indices.
+                                      Duplicating elements is possible by specifying the the same index multiple times.
+    Returns:
+        A new list of objects shallowly copied from the specified sequence in the specified order.
+        The new sequence will only contain the elements specified in the order, elements not specified in the new order are discarded.
+    """
+    return [sequence[idx] for idx in order]
+
+
+def offset_sequence(sequence, offset):
+    """Moves every element in the sequence by the specified offset, looping the elements around when they are pushed off either end of the sequence.
+
+    Args:
+        sequence (sequence): A sequence of objects.
+        offset (integer): The number of slots to move each element forwards (positive) or backwards (negative).
+
+    Returns:
+        A new list of objects shallowly copied from the specified sequence with each element's position offset by the specified amount.
+    """
+    length = len(sequence)
+
+    return [sequence[(i - offset) % length] for i in range(0, length)]
+
+
 def rotate(xyz, forward_axis):
     """Rotates the specified XYZ coordinate sequence according to the specified forward axis so the coordinates will be correctly represented in the game.
     By default Blockland assumes that coordinates are relative to +X axis being the brick forward axis pointing away from the player.

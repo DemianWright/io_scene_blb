@@ -20,19 +20,25 @@ A module for processing Blender data into the BLB file format for writing.
 
 @author: Demian Wright
 """
-
-from decimal import Decimal, Context, setcontext, ROUND_HALF_UP
-from math import ceil, modf
-import bpy
-
-from mathutils import Vector
-
-from . import logger, common, const
-
-
 # Set the Decimal number context for operations: 0.5 is rounded up. (Precision can be whatever.)
 # NOTE: prec=n limits the number of digits for the whole number.
 # E.g. 1234.56 has a precision of 6, not 2.
+
+
+from collections import OrderedDict
+from decimal import Context, Decimal, ROUND_HALF_UP, setcontext
+from math import atan, ceil, modf, pi, radians, sqrt
+import bpy
+
+from mathutils import Euler, Vector
+import numpy
+
+import bmesh
+
+from . import common, const, logger
+from .const import Axis3D, AxisPlane3D, X, Y, Z
+
+
 setcontext(Context(rounding=ROUND_HALF_UP))
 
 # Globals.
@@ -42,7 +48,6 @@ setcontext(Context(rounding=ROUND_HALF_UP))
 # have the side effect of quantizing the positions of all vertices to
 # multiples of the value since everything is rounded using this precision.
 __CALCULATION_FP_PRECISION_STR = None
-
 
 # ==============
 # Math Functions
@@ -222,18 +227,21 @@ def __get_world_min_max(obj, min_coords=None, max_coords=None):
     return min_coords, max_coords
 
 
-def __vert_index_to_world_coord(obj, mesh, index):
-    """Calculates the world coordinates for the vertex at the specified index in the specified Blender object.
+def __get_vert_world_coord(obj, mesh, vert_idx):
+    """Calculates the world coordinates for the vertex at the specified index in the specified mesh's polygon loop.
 
     Args:
         obj (Blender object): The Blender object that is the parent of the mesh.
         mesh (Blender mesh): The Blender mesh where the vertex is stored.
-        index (int): The index of the vertex in the specified mesh's vertex data sequence.
+        vert_idx (int): The index of the vertex in the specified mesh's polygon loop.
 
     Returns:
         A Vector of the world coordinates of the vertex.
     """
-    return obj.matrix_world * mesh.vertices[index].co
+    # Get the vertex index in the loop.
+    # Get the vertex coordinates in object space.
+    # Convert object space to world space.
+    return obj.matrix_world * mesh.vertices[mesh.loops[vert_idx].vertex_index].co
 
 
 def __loop_index_to_normal_vector(obj, mesh, index):
@@ -260,6 +268,7 @@ def __normalize_vector(obj, normal):
     Returns:
         A normalized normal vector.
     """
+    # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
     return (obj.matrix_world.to_3x3() * normal).normalized()
 
 
@@ -275,7 +284,7 @@ def __all_within_bounds(local_coordinates, bounding_dimensions):
         True if all values are within the bounding dimensions.
     """
     # Divide all dimension values by 2.
-    halved_dimensions = [value / Decimal("2.0") for value in bounding_dimensions]
+    halved_dimensions = [value * const.DECIMAL_HALF for value in bounding_dimensions]
 
     # Check if any values in the given local_coordinates are beyond the given bounding_dimensions.
     # bounding_dimensions / 2 = max value
@@ -304,9 +313,9 @@ def __calculate_center(object_minimum_coordinates, object_dimensions):
     Returns:
         A tuple of Decimal type XYZ coordinates.
     """
-    return (object_minimum_coordinates[const.X] + (object_dimensions[const.X] / Decimal("2.0")),
-            object_minimum_coordinates[const.Y] + (object_dimensions[const.Y] / Decimal("2.0")),
-            object_minimum_coordinates[const.Z] + (object_dimensions[const.Z] / Decimal("2.0")))
+    return (object_minimum_coordinates[X] + (object_dimensions[X] * const.DECIMAL_HALF),
+            object_minimum_coordinates[Y] + (object_dimensions[Y] * const.DECIMAL_HALF),
+            object_minimum_coordinates[Z] + (object_dimensions[Z] * const.DECIMAL_HALF))
 
 
 def __world_to_local(coordinates, new_origin):
@@ -347,9 +356,9 @@ def __mirror(xyz, forward_axis):
     mirrored = xyz
 
     if forward_axis == "POSITIVE_X" or forward_axis == "NEGATIVE_X":
-        mirrored[const.Y] = -mirrored[const.Y]
+        mirrored[Y] = -mirrored[Y]
     else:
-        mirrored[const.X] = -mirrored[const.X]
+        mirrored[X] = -mirrored[X]
 
     return mirrored
 
@@ -513,27 +522,27 @@ def __round_to_plate_coordinates(local_coordinates, brick_dimensions, plate_heig
     # 1 plate is 1.0 Blender units wide and deep.
     # Plates can only be 1.0 units long on the X and Y axes.
     # Valid plate positions exist every 0.5 units on odd sized bricks and every 1.0 units on even sized bricks.
-    if __is_even(brick_dimensions[const.X]):
+    if __is_even(brick_dimensions[X]):
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.X], "1.0"))
+        result.append(__to_decimal(local_coordinates[X], "1.0"))
     else:
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.X], "0.5"))
+        result.append(__to_decimal(local_coordinates[X], "0.5"))
 
-    if __is_even(brick_dimensions[const.Y]):
+    if __is_even(brick_dimensions[Y]):
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Y], "1.0"))
+        result.append(__to_decimal(local_coordinates[Y], "1.0"))
     else:
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Y], "0.5"))
+        result.append(__to_decimal(local_coordinates[Y], "0.5"))
 
     # Round to the nearest full plate height. (Half is rounded up)
-    if __is_even(brick_dimensions[const.Z] / plate_height):
+    if __is_even(brick_dimensions[Z] / plate_height):
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Z], plate_height))
+        result.append(__to_decimal(local_coordinates[Z], plate_height))
     else:
         # ROUND & CAST
-        result.append(__to_decimal(local_coordinates[const.Z], (plate_height / Decimal("2.0"))))
+        result.append(__to_decimal(local_coordinates[Z], (plate_height * const.DECIMAL_HALF)))
 
     return result
 
@@ -552,7 +561,7 @@ def __sequence_z_to_plates(xyz, plate_height):
     if len(xyz) == 3:
         # ROUND & CAST
         sequence = __to_decimals(xyz)
-        sequence[const.Z] /= plate_height
+        sequence[Z] /= plate_height
         return sequence
     else:
         return xyz
@@ -620,9 +629,9 @@ def __modify_brick_grid(brick_grid, volume, symbol):
         symbol (string): A valid brick grid symbol to place in the elements specified by the volume.
     """
     # Ranges are exclusive [min, max[ index ranges.
-    width_range = volume[const.X]
-    depth_range = volume[const.Y]
-    height_range = volume[const.Z]
+    width_range = volume[X]
+    depth_range = volume[Y]
+    height_range = volume[Z]
 
     # Example data for a cuboid brick that is:
     # - 2 plates wide
@@ -784,7 +793,7 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
     # ROUND & CAST
     # Divide all dimension values by 2 to get the local bounding plane values.
     # The dimensions are in Blender units so Z height needs to be converted to plates.
-    local_bounds = __sequence_z_to_plates([value / Decimal("2.0") for value in bounds_dimensions], plate_height)
+    local_bounds = __sequence_z_to_plates([value * const.DECIMAL_HALF for value in bounds_dimensions], plate_height)
 
     # Assume omni direction until otherwise proven.
     direction = 6
@@ -809,11 +818,11 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
             # Positive values.
             if positions[0][axis] == local_bounds[axis]:
                 # +X = East
-                if axis == const.X:
+                if axis == X:
                     direction = const.QUAD_SECTION_IDX_EAST
                     break
                 # +Y = North
-                elif axis == const.Y:
+                elif axis == Y:
                     direction = const.QUAD_SECTION_IDX_NORTH
                     break
                 # +Z = Top
@@ -824,11 +833,11 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
             # Negative values.
             elif positions[0][axis] == -local_bounds[axis]:
                 # -X = West
-                if axis == const.X:
+                if axis == X:
                     direction = const.QUAD_SECTION_IDX_WEST
                     break
                 # -Y = South
-                elif axis == const.Y:
+                elif axis == Y:
                     direction = const.QUAD_SECTION_IDX_SOUTH
                     break
                 # -Z = Bottom
@@ -908,17 +917,17 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     # Are the dimensions of the bounds object not integers?
     if not __are_ints(bounds_size):
         if bounds_data.object_name is None:
-            logger.warning("Calculated bounds have a non-integer size {} {} {}, rounding up.".format(bounds_size[const.X],
-                                                                                                     bounds_size[const.Y],
-                                                                                                     bounds_size[const.Z]), 1)
+            logger.warning("Calculated bounds have a non-integer size {} {} {}, rounding up.".format(bounds_size[X],
+                                                                                                     bounds_size[Y],
+                                                                                                     bounds_size[Z]), 1)
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
             for index, value in enumerate(bounds_size):
                 bounds_size[index] = ceil(value)
         else:
-            logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[const.X],
-                                                                                                                    bounds_size[const.Y],
-                                                                                                                    bounds_size[const.Z],
+            logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[X],
+                                                                                                                    bounds_size[Y],
+                                                                                                                    bounds_size[Z],
                                                                                                                     properties.human_error), 1)
 
             for index, value in enumerate(bounds_size):
@@ -987,9 +996,9 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
 
     # Get the dimensions defined by the vectors.
     # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
-    bounds_size = __to_decimals((max_coord[const.X] - min_coord[const.X],
-                                 max_coord[const.Y] - min_coord[const.Y],
-                                 (max_coord[const.Z] - min_coord[const.Z])))
+    bounds_size = __to_decimals((max_coord[X] - min_coord[X],
+                                 max_coord[Y] - min_coord[Y],
+                                 (max_coord[Z] - min_coord[Z])))
 
     bounds_data.dimensions = bounds_size
 
@@ -1042,7 +1051,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
     Returns:
         A tuple in the following format: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
     """
-    halved_dimensions = [value / Decimal("2.0") for value in bounds_data.dimensions]
+    halved_dimensions = [value * const.DECIMAL_HALF for value in bounds_data.dimensions]
 
     # Find the minimum and maximum coordinates for the brick grid object.
     grid_min, grid_max = __get_world_min_max(grid_obj)
@@ -1068,71 +1077,71 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             # Translate coordinates to negative X axis.
             # -X: Index 0 = front of the brick.
             # -Y: Index 0 = left of the brick.
-            grid_min[const.X] = grid_min[const.X] - halved_dimensions[const.X]
+            grid_min[X] = grid_min[X] - halved_dimensions[X]
         else:
             # Translate coordinates to positive X axis.
             # +X: Index 0 = front of the brick.
             # +Y: Index 0 = left of the brick.
-            grid_min[const.X] = grid_min[const.X] + halved_dimensions[const.X]
+            grid_min[X] = grid_min[X] + halved_dimensions[X]
 
         if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
             # Translate coordinates to negative Y axis.
             # +X: Index 0 = left of the brick.
             # -Y: Index 0 = front of the brick.
-            grid_min[const.Y] = grid_min[const.Y] - halved_dimensions[const.Y]
+            grid_min[Y] = grid_min[Y] - halved_dimensions[Y]
         else:
             # Translate coordinates to positive Y axis.
             # +Y: Index 0 = front of the brick.
             # -X: Index 0 = left of the brick.
-            grid_min[const.Y] = grid_min[const.Y] + halved_dimensions[const.Y]
+            grid_min[Y] = grid_min[Y] + halved_dimensions[Y]
 
         # Translate coordinates to negative Z axis, height to plates.
-        grid_min[const.Z] = (grid_min[const.Z] - halved_dimensions[const.Z]) / properties.plate_height
+        grid_min[Z] = (grid_min[Z] - halved_dimensions[Z]) / properties.plate_height
 
         # Maximum indices.
         if properties.blendprop.axis_blb_forward == "NEGATIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
-            grid_max[const.X] = grid_max[const.X] - halved_dimensions[const.X]
+            grid_max[X] = grid_max[X] - halved_dimensions[X]
         else:
-            grid_max[const.X] = grid_max[const.X] + halved_dimensions[const.X]
+            grid_max[X] = grid_max[X] + halved_dimensions[X]
 
         if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
-            grid_max[const.Y] = grid_max[const.Y] - halved_dimensions[const.Y]
+            grid_max[Y] = grid_max[Y] - halved_dimensions[Y]
         else:
-            grid_max[const.Y] = grid_max[const.Y] + halved_dimensions[const.Y]
+            grid_max[Y] = grid_max[Y] + halved_dimensions[Y]
 
-        grid_max[const.Z] = (grid_max[const.Z] - halved_dimensions[const.Z]) / properties.plate_height
+        grid_max[Z] = (grid_max[Z] - halved_dimensions[Z]) / properties.plate_height
 
         # Swap min/max Z index and make it positive. Index 0 = top of the brick.
-        temp = grid_min[const.Z]
-        grid_min[const.Z] = abs(grid_max[const.Z])
-        grid_max[const.Z] = abs(temp)
+        temp = grid_min[Z]
+        grid_min[Z] = abs(grid_max[Z])
+        grid_max[Z] = abs(temp)
 
         if properties.blendprop.axis_blb_forward == "POSITIVE_X":
             # Swap min/max depth and make it positive.
-            temp = grid_min[const.Y]
-            grid_min[const.Y] = abs(grid_max[const.Y])
-            grid_max[const.Y] = abs(temp)
+            temp = grid_min[Y]
+            grid_min[Y] = abs(grid_max[Y])
+            grid_max[Y] = abs(temp)
 
             grid_min = common.swizzle(grid_min, "bac")
             grid_max = common.swizzle(grid_max, "bac")
         elif properties.blendprop.axis_blb_forward == "NEGATIVE_X":
             # Swap min/max width and make it positive.
-            temp = grid_min[const.X]
-            grid_min[const.X] = abs(grid_max[const.X])
-            grid_max[const.X] = abs(temp)
+            temp = grid_min[X]
+            grid_min[X] = abs(grid_max[X])
+            grid_max[X] = abs(temp)
 
             grid_min = common.swizzle(grid_min, "bac")
             grid_max = common.swizzle(grid_max, "bac")
         elif properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
             # Swap min/max depth and make it positive.
-            temp = grid_min[const.Y]
-            grid_min[const.Y] = abs(grid_max[const.Y])
-            grid_max[const.Y] = abs(temp)
+            temp = grid_min[Y]
+            grid_min[Y] = abs(grid_max[Y])
+            grid_max[Y] = abs(temp)
 
             # Swap min/max width and make it positive.
-            temp = grid_min[const.X]
-            grid_min[const.X] = abs(grid_max[const.X])
-            grid_max[const.X] = abs(temp)
+            temp = grid_min[X]
+            grid_min[X] = abs(grid_max[X])
+            grid_max[X] = abs(temp)
         # Else properties.blendprop.axis_blb_forward == "POSITIVE_Y": do nothing
 
         grid_min = __force_to_ints(grid_min)
@@ -1142,9 +1151,9 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             raise ZeroSizeException()
         else:
             # Return the index ranges as a tuple: ( (min_width, max_width), (min_depth, max_depth), (min_height, max_height) )
-            return ((grid_min[const.X], grid_max[const.X]),
-                    (grid_min[const.Y], grid_max[const.Y]),
-                    (grid_min[const.Z], grid_max[const.Z]))
+            return ((grid_min[X], grid_max[X]),
+                    (grid_min[Y], grid_max[Y]),
+                    (grid_min[Z], grid_max[Z]))
     else:
         raise OutOfBoundsException()
 
@@ -1209,6 +1218,715 @@ def __process_coverage(properties, blb_data):
         return __calculate_coverage()
 
 
+def __vector_length(va, vb):
+    """Calculates the length of the vector starting at va and ending at vb.
+
+    Args:
+        va (Vector): Vector A.
+        vb (Vector): Vector B.
+
+    Returns:
+        The length of the vector AB.
+    """
+    return (vb - va).length
+
+
+def __distance(a, b):
+    """Calculates the Euclidean distance between the specified coordinates A and B in three-dimensional space.
+
+    Args:
+        a (sequence of numbers): Coordinates of point A.
+        b (sequence of numbers): Coordinates of point B.
+
+    Returns:
+        The distance between points A and B.
+    """
+    return sqrt((b[X] - a[X]) ** 2 +
+                (b[Y] - a[Y]) ** 2 +
+                (b[Z] - a[Z]) ** 2)
+
+
+def __calculate_quad_width_height(len_top, len_right, len_bottom, len_left):
+    """Calculates the best width and height of a quad with the specified coordinates.
+    If one quad side has zero length, in other words the quad has degenerated into a triangle, the length of the opposing side is used instead.
+    If neither side has zero length, the average of the two is returned.
+
+    Args:
+        len_top (Decimal): The length of the top edge of the quad.
+        len_right (Decimal): The length of the right edge of the quad.
+        len_bottom (Decimal): The length of the bottom edge of the quad.
+        len_left (Decimal): The length of the left edge of the quad.
+
+    Returns:
+        A tuple (width, height) containing the width and height of the quad as Decimals.
+    """
+    # If zero, return the other length.
+    if len_top == const.DECIMAL_ZERO:
+        # If len_bottom is zero, quad width is zero as both sides are points.
+        width = len_bottom
+    elif len_bottom == const.DECIMAL_ZERO:
+        width = len_top
+    else:
+        width = (len_top + len_bottom) * const.DECIMAL_HALF
+
+    if len_left == const.DECIMAL_ZERO:
+        # If len_bottom is zero, quad width is zero as both sides are points.
+        height = len_right
+    elif len_right == const.DECIMAL_ZERO:
+        height = len_left
+    else:
+        height = (len_left + len_right) * const.DECIMAL_HALF
+
+    return (width, height)
+
+
+def __get_longest_vector_length(points):
+    """Gets the length of the longest vector in the specified sequence of points.
+
+    Args:
+        points (sequence of Vectors): A sequence of points in n-dimensional space where two successive points make a vector.
+                                      Must have an even number of elements.
+
+    Returns:
+        The length of the longest vector or None if a sequence with an odd number of elements was provided.
+    """
+    count = len(points)
+    longest = 0
+
+    if __is_even(count):
+        for idx in range(0, count, 2):
+            length = __vector_length(points[idx], points[idx + 1])
+
+            if length > longest:
+                longest = length
+
+        # ROUND & CAST
+        return __to_decimal(longest)
+    else:
+        return None
+
+
+def __get_quad_dir_idx_top_tex(coords):
+    """Gets an index representing the direction the top edge of the quad is pointing for UV mapping the TOP brick texture.
+
+    Args:
+        coords (sequence of Vectors): A sequence of 4 vectors representing the 3D positions of the vertices of a quad.
+
+    Returns:
+        An integer representing a 90 degree sector where sector index:
+        0 is from ]315, 45] degrees
+        1 is from ]45, 135] degrees
+        2 is from ]135, 225] degrees
+        3 is from ]225, 315] degrees
+    """
+    # TODO: Make this better. Why is the start of the sector exclusive?
+    # A vector pointing to the right of the quad.
+    vec_right = coords[0] - coords[3]
+
+    horizontal = __to_decimal(vec_right[Z], "1.0") == const.DECIMAL_ZERO
+
+    # There are 4 sectors of 90 degrees.
+    # Sector 0 is from 315 degrees to 45 degrees.
+    # Sector 1 is from 45 degrees to 135 degrees and so on.
+    # However, by rotating the brick right vector by +45 degrees and assuming the sectors are:
+    # 0: 0 to 90
+    # 1: 90 to 180 etc.
+    # I'm doing the exact same thing as with the non-axis aligned sectors but the math is much simpler.
+
+    if horizontal:
+        # +45 degree rotation around the Z axis.
+        vec_right.rotate(Euler((0.0, 0.0, radians(45.0)), 'XYZ'))
+
+        posx = __to_decimal(vec_right[X]) >= 0
+        posy = __to_decimal(vec_right[Y]) >= 0
+
+        if posx and posy:
+            return 0
+        elif not posx and posy:
+            return 1
+        elif not posx and not posy:
+            return 2
+        else:
+            # posx and not posy
+            return 3
+    else:
+        # +45 degree rotation around the Y axis.
+        vec_right.rotate(Euler((0.0, radians(45.0), 0.0), 'XYZ'))
+
+        posx = __to_decimal(vec_right[X]) > 0
+        posz = __to_decimal(vec_right[Y]) > 0
+
+        # You cannot win with vertical TOP texture.
+        # This order is the best I could find.
+        if posx and posz:
+            return 2
+        elif not posx and posz:
+            return 3
+        elif not posx and not posz:
+            return 0
+        else:
+            # posx and not posz
+            return 1
+
+
+def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
+    """Gets an enum value representing the axis that is the closest to the specified angle.
+
+    Args:
+        angle (Number): An angle in radians in the range [0,2pi].
+        plane (AxisPlane3D): The AB-plane the angle is aligned on. XY-plane by default.
+
+    Returns:
+        An Axis3D value representing a 90 degree sector on the specified AB-plane.
+        Angles are CCW from the +A-axis.
+           +A axis, sector [315, 45[ degrees.
+           +B axis, sector [45, 135[ degrees.
+           -A axis, sector [135, 225[ degrees.
+           -B axis, sector [225, 315[ degrees.
+    """
+    # The angle could easily be normalized here, but doing this has helped me track a couple of mistakes in the code.
+    if angle < 0 or angle > const.TWO_PI:
+        raise RuntimeError("__get_2d_angle_axis(angle) expects angle to be normalized to range [0,2pi], value was:", angle)
+
+    if angle >= const.RAD_315_DEG or angle >= 0 and angle < const.RAD_45_DEG:
+        if plane == AxisPlane3D.XY:
+            return Axis3D.POS_X
+        elif plane == AxisPlane3D.XZ:
+            return Axis3D.POS_X
+        else:  # plane == AxisPlane3D.YZ
+            return Axis3D.POS_Y
+
+    # angle >= 45 and
+    elif angle < const.RAD_135_DEG:
+        if plane == AxisPlane3D.XY:
+            return Axis3D.POS_Y
+        elif plane == AxisPlane3D.XZ:
+            return Axis3D.POS_Z
+        else:  # plane == AxisPlane3D.YZ
+            return Axis3D.POS_Z
+
+    # angle >= 135 and
+    elif angle < const.RAD_225_DEG:
+        if plane == AxisPlane3D.XY:
+            return Axis3D.NEG_X
+        elif plane == AxisPlane3D.XZ:
+            return Axis3D.NEG_X
+        else:  # plane == AxisPlane3D.YZ
+            return Axis3D.NEG_Y
+
+    # angle >= 225 and angle < 315
+    else:
+        if plane == AxisPlane3D.XY:
+            return Axis3D.NEG_Y
+        elif plane == AxisPlane3D.XZ:
+            return Axis3D.NEG_Z
+        else:  # plane == AxisPlane3D.YZ
+            return Axis3D.NEG_Z
+
+
+def __get_normal_axis(normal):
+    """Determines the closes axis of the specified normal vector.
+
+    Args:
+        normal (Vector): A normal vector in XYZ-space.
+
+    Returns:
+        An Axis3D value.
+    """
+    sign_x = numpy.sign(normal[X])
+    sign_y = numpy.sign(normal[Y])
+    sign_z = numpy.sign(normal[Z])
+    point = False
+
+    # atan(a/b) output is in range ]-pi/2,pi/2[
+    # We need the angle in range [0,2pi] (or [0,2pi[, doesn't actually matter) for __get_2d_angle_axis(angle)
+    # if a > 0 and b > 0: angle > 0: angle       is in range [0,2pi[
+    # if a > 0 and b < 0: angle < 0: angle + pi  is in range [0,2pi[
+    # if a < 0 and b > 0: angle < 0: 2pi + angle is in range [0,2pi[
+    # if a < 0 and b < 0: angle > 0: angle + pi  is in range [0,2pi[
+
+    # Check for axis-aligned cases.
+    # Determine the plane the normal lies on (if any).
+    # Calculate the angle of the normal on that plane with atan.
+
+    # Normal in XYZ-space.
+    if sign_x == 0:
+
+        # Normal on YZ-plane.
+        if sign_y == 0:
+
+            # Normal on Z-axis.
+            if sign_z == 0:
+                # Normal is a point.
+                point = True
+            elif sign_z > 0:
+                # Normal on +Z-axis.
+                return Axis3D.POS_Z
+            else:
+                # Normal on -Z-axis.
+                return Axis3D.NEG_Z
+
+        elif sign_z == 0:
+
+            # Normal on Y-axis.
+            if sign_y > 0:
+                # Normal on +Y-axis.
+                return Axis3D.POS_Y
+            else:
+                # Normal on -Y-axis.
+                return Axis3D.NEG_Y
+
+        else:
+            # Normal on YZ-plane, Y != 0.
+            plane = AxisPlane3D.YZ
+            angle = atan(normal[Z] / normal[Y])
+
+            # Signs must be checked in this order.
+            if sign_y < 0:
+                angle = angle + pi
+            elif sign_z < 0:  # angle < 0
+                angle = const.TWO_PI + angle
+    else:
+
+        # Normal in XYZ-space, X != 0.
+        if sign_y == 0:
+
+            # Normal on XZ-plane.
+            if sign_z == 0:
+
+                # Normal on X-axis.
+                if sign_x > 0:
+                    # Normal on +X-axis.
+                    return Axis3D.POS_X
+                else:
+                    # Normal on -X-axis.
+                    return Axis3D.NEG_X
+
+            else:
+                # Normal on XZ-plane, X != 0, Z != 0.
+                plane = AxisPlane3D.XZ
+                angle = atan(normal[Z] / normal[X])
+
+                if sign_x < 0:
+                    angle = angle + pi
+                elif sign_z < 0:  # angle < 0
+                    angle = const.TWO_PI + angle
+
+        elif sign_z == 0:
+            # Normal in XY-plane, X != 0, Y != 0.
+            plane = AxisPlane3D.XY
+            angle = atan(normal[Y] / normal[X])
+
+            if sign_x < 0:
+                angle = angle + pi
+            elif sign_y < 0:  # angle < 0
+                angle = const.TWO_PI + angle
+
+        else:
+            # Normal in XYZ-space, X != 0, Y != 0, Z != 0.
+            angle = None
+            plane = None
+
+    if point:
+        logger.error("Normal vector is point and has no direction. Returning +X axis by default.")
+        return Axis3D.POS_X
+
+    if plane is None:
+        # TODO: Z-axis is ignored for now. Assume XY-plane.
+        plane = AxisPlane3D.XY
+        angle = atan(normal[Y] / normal[X])
+
+        if sign_x < 0:
+            angle = angle + pi
+        elif sign_y < 0:  # angle < 0
+            angle = const.TWO_PI + angle
+
+    return __get_2d_angle_axis(angle, plane)
+
+
+def __string_to_uv_layer_name(string):
+    """Gets the UV layer name for automatically calculated UVs for the specified string.
+
+    Args:
+        string (string): A string.
+
+    Returns:
+        A UV layer name.
+    """
+    # TODO: Const the prefix.
+    return "TEX:{}".format(string.upper())
+
+
+def __calc_quad_max_edge_len_idx(sorted_verts):
+    """Gets an index representing the axis that is the closest to the specified angle.
+
+    Args:
+        sorted_verts (2D matrix of Numbers): A sequence of 4 sequences, where each sequence contains the (X, Y, Z) coordinates of a vertex in a quad in CW order.
+
+    Returns:
+        A tuple containing two elements.
+        Element 0: The length of the longest edge in the specified quad.
+        Element 1: The index of the first vertex in CW order of the longest edge in the specified quad.
+    """
+    # TODO: Const.
+    max_len = Decimal("-1")
+    max_len_idx = -1
+    #quad_center = Vector((0, 0))
+
+    for idx in range(0, 4):
+        this_vert = sorted_verts[idx]
+        # Length of edge from this vertex to the next one.
+        length = __to_decimal(__distance(this_vert, sorted_verts[(idx + 1) % 4]))
+
+        if length > max_len:
+            max_len = length
+            max_len_idx = idx
+
+        #quad_center.x += this_vert[X]
+        #quad_center.y += this_vert[Y]
+
+    #quad_center.x /= 4.0
+    #quad_center.y /= 4.0
+
+    #v0 = sorted_verts[max_len_idx]
+    #v1 = sorted_verts[(max_len_idx + 1) % 4]
+
+    #max_len_center = Vector(((v0[X] + v1[X]) * 0.5, (v0[Y] + v1[Y]) * 0.5))
+
+    #dx = max_len_center[X] - quad_center[X]
+    #dy = max_len_center[Y] - quad_center[Y]
+
+    # Angle in range [-pi, pi] from the positive X-axis.
+    #max_len_angle = atan2(dy, dx)
+    # Convert to range [0,2pi]
+    #max_len_angle = 2 * pi + max_len_angle if max_len_angle < 0 else max_len_angle
+
+    #angle_idx = __get_angle_axis_idx(max_len_angle)
+    return (max_len, max_len_idx)
+
+
+def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
+    """Calculates the UV coordinates for the specified texture and quad containing the specified vertices.
+    In unsupported cases, default UVs are returned.
+
+    Args:
+        texture_name (string): A value from const.VALID_BRICK_TEXTURES.
+        vert_coords (sequence of coordinates): A sequence of 4 local space coordinates of a face in CW order.
+                                              The vertex order must be the same that is written to the BLB file.
+        normal (sequence of numbers): The normal vector of the quad.
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+
+    Returns:
+        A tuple with two elements.
+        The first element is a tuple containing 4 sets of UV coordinates (One pair for each vertex in the quad.) as tuples for the BLB file.
+        The second element is a tuple containing the UV coordinates to be stored in the Blender mesh, or None if the coordinates are the same as the BLB ones.
+    """
+    def get_side_uv(length):
+        """Calculates the U and V component for an edge of the specified length to use with the SIDE texture.
+
+        Args:
+            length (number): The length of an edge.
+
+        Returns:
+            The U or V component to use with SIDE texture UVs as a Decimal.
+        """
+        # The UV coordinate calculation equations were created by a Blockland Forums user BlackDragonIV about 5 years ago.
+        # How he came up with it is anyone's guess.
+        # The original equation uses a multiplier of 5 for the height, but I believe that is because it was designed to be used with brick sizes where the height is the height of the brick in number of plates.
+        # The values used here are derived from vertex coordinates which means I can use the same equation for both U and V components.
+        # Alternatively: (11 - (11 / length) * 2) / const.BRICK_TEXTURE_RESOLUTION
+        # ROUND & CAST
+        return __to_decimal((11 - 22 / length) / const.BRICK_TEXTURE_RESOLUTION)
+
+    normal_axis = __get_normal_axis(normal)
+
+    # Sanity check.
+    if len(vert_coords) < 4:
+        raise RuntimeError("__calculate_uvs(texture_name, vert_coords, normal) function expects a quad, input polygon was not a quad.")
+
+    idx_coord = [(idx, coord) for idx, coord in enumerate(vert_coords)]
+
+    # Find the top left vertex of an arbitrary quad.
+
+    # Sort sequence by Z coordinates high to low.
+    max_z_coords = sorted(idx_coord, key=lambda k: [k[1][Z]], reverse=True)
+
+    # Get maximum Z coordinate.
+    max_z = max_z_coords[0][1][Z]
+
+    # Remove coordinates from the sequence that are not on the same height with the highest vert.
+    max_z_coords = [idx_coord for idx_coord in max_z_coords if idx_coord[1][Z] == max_z]
+
+    # max_z_coords now contains all topmost vertices in the quad.
+    # Now determine what "left" means according to the normal of the quad.
+
+    if normal_axis.index() is X:
+        # Quad aligned with X axis.
+        # Sort sequence by Y coordinates.
+        # If facing positive X axis, sort coordinates from -Y to +Y = not reversed.
+        # Break ties by sorting by index.
+        top_left_candidates = sorted(max_z_coords, key=lambda k: [k[1][Y], k[0]], reverse=not normal_axis.positive())
+    elif normal_axis.index() is Y:
+        # Quad aligned with Y axis.
+        # Sort sequence by X coordinates.
+        # If facing positive Y axis, sort coordinates from +X to -X = reversed.
+        # Break ties by sorting by index.
+        top_left_candidates = sorted(max_z_coords, key=lambda k: [k[1][X], k[0]], reverse=normal_axis.positive())
+    else:  # normal_axis.index() is Z:
+        # Quad aligned with Z axis.
+        # Sort sequence by X coordinates.
+        # Regardless if facing positive or negative Z axis, sort coordinates from -X to +X = not reversed.
+        # Break ties by sorting by index.
+        top_left_candidates = sorted(max_z_coords, key=lambda k: [k[1][X], k[0]], reverse=False)
+
+    # top_left_candidates[0] is the vertex with the largest Z coordinate and smallest/largest coordinate on the appropriate axis.
+    # Thus it is the top left corner of the quad in its local space.
+    top_left_idx = top_left_candidates[0][0]
+
+    sorted_idx_coord = idx_coord[top_left_idx:] + idx_coord[:top_left_idx]
+    # Split the sorted sequence of (idx, coord) tuples into separate lists for ease of use.
+    sorted_verts_idxs, sorted_verts = zip(*sorted_idx_coord)
+
+    # print("__calculate_uvs | Sorted quad:")
+    # for icoord in sorted_idx_coord:
+    #    print("\t", icoord)
+
+    # sorted_verts must be in CW order with element 0 being the top left corner.
+    # ROUND & CAST: length using user specified precision.
+    len_top = __to_decimal(__distance(sorted_verts[0], sorted_verts[1]))
+    len_right = __to_decimal(__distance(sorted_verts[1], sorted_verts[2]))
+    len_bottom = __to_decimal(__distance(sorted_verts[2], sorted_verts[3]))
+    len_left = __to_decimal(__distance(sorted_verts[3], sorted_verts[0]))
+
+    best_quad_size = __calculate_quad_width_height(len_top, len_right, len_bottom, len_left)
+
+    # For clarity.
+    # Width.
+    w = best_quad_size[0]
+    # Height.
+    h = best_quad_size[1]
+
+    # Initialize with default UVs.
+    uvs_sorted = const.DEFAULT_UV_COORDINATES
+    # May be assigned a value later.
+    uvs_blender = None
+
+    # UV tuples are in order: (u, v)
+    # Where u is the x axis increasing from left to right.
+    # Where v is the y axis increasing from top to bottom.
+    if texture_name == "top":
+        # Works well for axis aligned faces horizontal faces.
+        # Works well enough for axis aligned faces vertical faces.
+        # Doesn't look bad for all other face orientations.
+        # direction = __get_quad_dir_idx_top_tex(sorted_verts)
+
+        uvs_sorted = ((w, h),
+                      (0, h),
+                      (0, 0),
+                      (w, 0))
+
+        # By default top texture light side points towards -X.
+        if forward_axis == "POSITIVE_X":
+            uvs_blender = ((0, 0),
+                           (w, 0),
+                           (w, h),
+                           (0, h))
+        elif forward_axis == "POSITIVE_Y":
+            uvs_blender = ((0, w),
+                           (0, 0),
+                           (h, 0),
+                           (h, w))
+        elif forward_axis == "NEGATIVE_Y":
+            uvs_blender = ((h, 0),
+                           (h, w),
+                           (0, w),
+                           (0, 0))
+        else:
+            uvs_blender = uvs_sorted
+
+    elif texture_name == "side":
+        # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each side.
+        # Calculate the UV components for top, left, right, and bottom edges of the quad.
+        # If the quad is rectangular then the components of opposing sides are equal.
+        u_t = get_side_uv(len_top)
+        v_r = get_side_uv(len_right)
+        u_b = get_side_uv(len_bottom)
+        v_l = get_side_uv(len_left)
+
+        # print("__calculate_uvs | Lengths:")
+        # print("\tt", u_t, len_top)
+        # print("\tr", v_r, len_right)
+        # print("\tb", u_b, len_bottom)
+        # print("\tl", v_l, len_left)
+
+        # Subtracting from 1 mirrors the coordinate.
+        uvs_sorted = ((u_t, v_l),
+                      (1 - u_t, v_r),
+                      (1 - u_b, 1 - v_r),
+                      (u_b, 1 - v_l))
+    elif texture_name == "bottomedge":
+        # Bottom edge is a special case where the average width/height does not work and the top left may not be what was determined by the sorting algorithm above.
+        # We need the length of the longest edge in the quad, the direction it is pointing, and the index of the first vertex of the longest edge (CW order).
+        edge_info = __calc_quad_max_edge_len_idx(sorted_verts)
+        max_len = edge_info[0]
+        # This is the index of the new top left corner.
+        top_left_offset = edge_info[1]
+
+        # print("__calculate_uvs | bottomedge, first vertex of longest edge (CW):", top_left_offset)
+        # print("__calculate_uvs | bottomedge, longest edge length:", max_len)
+
+        uvs_sorted = ((-0.5, 0),
+                      (max_len - const.DECIMAL_HALF, 0),
+                      (max_len - 1, 0.5),
+                      (0, 0.5))
+
+        if top_left_offset != 0:
+            # Move each element in sorted_order forwards by top_left_offset and wrap around.
+            # This maps element 0 = first vertex of longest edge in uvs_sorted to element 0 = first vertex in sorted_verts.
+            # The UVs are later swizzled from sorted_verts order back to the BLB/Blender order for use in Blender.
+            uvs_sorted = common.offset_sequence(uvs_sorted, top_left_offset)
+
+            # print("__calculate_uvs | uvs_sorted after bottomedge swizzle:")
+            # for uv in uvs_sorted:
+            #     print("\t", uv)
+
+    elif texture_name == "bottomloop":
+        uvs_sorted = ((0, w),
+                      (0, 0),
+                      (h, 0),
+                      (h, w))
+
+    elif texture_name == "print":
+        uvs_sorted = ((0, 0),
+                      (1, 0),
+                      (1, 1),
+                      (0, 1))
+
+    elif texture_name == "ramp":
+        uvs_sorted = ((0, w),
+                      (0, 0),
+                      (h, 0),
+                      (h, w))
+
+    else:
+        raise RuntimeError("Unknown texture name '{}'".format(texture_name))
+
+    #print("__calculate_uvs | uvs_sorted:")
+    # for uv in uvs_sorted:
+    #    print("\t", uv)
+
+    # Calculate the offset.
+    # Index 0 is always the first element in the input vertex order by definition.
+    # Negate because we are doing the transformation backwards: we want 0 back to the start of the list.
+    blb_to_blender_offset = -sorted_verts_idxs.index(0)
+    # print("__calculate_uvs | Index offset:", blb_to_blender_offset)
+
+    if blb_to_blender_offset == 0:
+        uvs_blb = uvs_sorted
+    else:
+        # The vertices in Blender are in the order stored in idx_coord.
+        # To calculate the UVs the vertices had to be sorted into sorted_verts.
+        # sorted_verts are not necessarily in the same order as the vertices in idx_coord.
+        # sorted_verts sequence contains 4 tuples where the first element of each tuple is the old index of that vertex (or UV coordinate).
+        # To map the calculated BLB UV coordinates into something usable in Blender, we need to swizzle the UV pairs back into the old order.
+        uvs_blb = common.offset_sequence(uvs_sorted, blb_to_blender_offset)
+
+        if uvs_blender is not None:
+            uvs_blender = common.offset_sequence(uvs_blender, blb_to_blender_offset)
+
+        # print("__calculate_uvs | uvs_blb:")
+        # for uv in uvs_blb:
+        #     print("\t", uv)
+
+    return (uvs_blb, uvs_blender)
+
+
+def __bl_blender_uv_origin_swap(uvs):
+    """Converts Blockland (origin is top left) to Blender (origin is bottom left) UV coordinates and the other way around.
+
+    Args:
+        uvs (sequence): A sequence of sequences containing UV pairs.
+
+    Returns:
+        A new tuple of transformed coordinate tuples.
+    """
+    return tuple([(uv[X], 1 - uv[Y]) for uv in uvs])
+
+
+def __get_first_uv_data(uv_layers, mesh_loops, loop_indices, generated_uv_layer_names=None):
+    """Finds the alphabetically first UV layer that contains UV coordinates other than (0.0, 0.0) for at least one vertex in the specified loop in the specified mesh.
+
+    Args:
+        uv_layers (OrderedDict): An ordered dictionary containing the UV layer name as key, and the UV layer data as value, alphabetically ordered by UV layer name.
+        mesh_loops (sequence of MeshLoop): A Blender collection of MeshLoop objects.
+        loop_indices (sequence of numbers): The sequence of indices of this loop (polygon) in the specified mesh.
+        generated_uv_layer_names (sequence of strings): A sequence of UV layer names that are generated in code.
+                                                        If not None, only manually created UV data (not in any of the generated layers) is checked for.
+
+    Returns:
+        A tuple containing the UV layer name in the first element and the sequence of UV coordinates in the second element.
+        None if the specified polygon had no UV data in any of the UV layers.
+    """
+    uv_key = None
+
+    # Loop through loop indices (vertices).
+    for loop_idx in loop_indices:
+        current_loop = mesh_loops[loop_idx]
+
+        # Check UV coordinates for each vertex on every UV layer.
+        for name, uv_loop in uv_layers.items():
+            if generated_uv_layer_names is not None and name in generated_uv_layer_names:
+                # Skip generated UV layers.
+                continue
+            vertex_uv = uv_loop.data[current_loop.index].uv
+            # By default all UV coordinates in a layer are (0.0, 0.0).
+            # If either UV coordinate is not zero, this UV layer is the first that has some data.
+            if not Decimal.is_zero(__to_decimal(vertex_uv[X])) or not Decimal.is_zero(__to_decimal(vertex_uv[Y])):
+                uv_key = name
+                break
+        # Did we find a name?
+        if uv_key is not None:
+            break
+
+    if uv_key is None:
+        return None
+    else:
+        uv_loop_data = uv_layers[uv_key].data
+        return (uv_key, [uv_loop_data[mesh_loops[loop_idx].index].uv for loop_idx in loop_indices])
+
+
+def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
+    """Stores the specified UV coordinates in a UV layer.
+    A new UV layer is created if it does not exist, data in an existing UV layer with the same name will be overwritten.
+
+    Args:
+        poly_index (int): Index of the polygon in the mesh.
+        mesh (Blender Mesh): The mesh to store the UVs in.
+        uvs (sequence of sequences): A sequence containing UV pairs.
+        layer_name (string): Name to give the UV layer.
+    """
+    # If no UV layer exists, create one.
+    if layer_name not in mesh.uv_layers.keys():
+        mesh.uv_textures.new(layer_name)
+
+    # You need BMesh to modify the UV layers.
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+
+    # Blender complains if this isn't done.
+    # Apparently you shouldn't do this in tight loops.
+    bm.faces.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+
+    # Get the UV layer in BMesh format.
+    bm_uv_layer = bm.loops.layers.uv.get(layer_name)
+    for vert_idx, uv_pair in enumerate(uvs):
+        bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uv_pair
+
+    # TODO: Throws ValueError if mesh is in edit mode.
+    bm.to_mesh(mesh)
+
+
 def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
     """Processes the specified brick grid definitions.
 
@@ -1263,13 +1981,13 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
 
     # Take the custom forward axis into account.
     if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_X":
-        grid_width = blb_data.brick_size[const.X]
-        grid_depth = blb_data.brick_size[const.Y]
+        grid_width = blb_data.brick_size[X]
+        grid_depth = blb_data.brick_size[Y]
     else:
-        grid_width = blb_data.brick_size[const.Y]
-        grid_depth = blb_data.brick_size[const.X]
+        grid_width = blb_data.brick_size[Y]
+        grid_depth = blb_data.brick_size[X]
 
-    grid_height = blb_data.brick_size[const.Z]
+    grid_height = blb_data.brick_size[Z]
 
     # Initialize the brick grid with the empty symbol with the dimensions of the brick.
     brick_grid = [[[const.GRID_OUTSIDE for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
@@ -1363,7 +2081,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
 
             # Find the center coordinates and dimensions of the cuboid.
             for index, value in enumerate(col_max):
-                center.append((value + col_min[index]) / Decimal("2.0"))
+                center.append((value + col_min[index]) * const.DECIMAL_HALF)
                 dimensions.append(value - col_min[index])
 
             processed += 1
@@ -1483,19 +2201,19 @@ def __process_definition_objects(properties, objects):
                     # Got an error message.
                     return blb_data
                 else:
-                    plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
+                    plates, bricks = modf(blb_data.brick_size[Z] / 3)
                     bricks = int(bricks)
 
                     if plates == 0.0:
-                        logger.info("Defined brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
-                                                                                             blb_data.brick_size[const.Y],
+                        logger.info("Defined brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[X],
+                                                                                             blb_data.brick_size[Y],
                                                                                              logger.build_countable_message("", bricks, (" brick", " bricks"))), 1)
                     else:
-                        logger.info("Defined brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
-                                                                                                blb_data.brick_size[const.Y],
+                        logger.info("Defined brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[X],
+                                                                                                blb_data.brick_size[Y],
                                                                                                 logger.build_countable_message(
                                                                                                     "", bricks, (" brick", " bricks")),
-                                                                                                logger.build_countable_message("", blb_data.brick_size[const.Z] - bricks * 3, (" plate", " plates"))), 1)
+                                                                                                logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
             else:
                 logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
                 continue
@@ -1540,23 +2258,23 @@ def __process_definition_objects(properties, objects):
             # Got an error message.
             return blb_data
         else:
-            plates, bricks = modf(blb_data.brick_size[const.Z] / 3)
+            plates, bricks = modf(blb_data.brick_size[Z] / 3)
 
         bricks = int(bricks)
 
         if plates == 0.0:
-            logger.info("Calculated brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[const.X],
-                                                                                    blb_data.brick_size[const.Y],
+            logger.info("Calculated brick size: {} wide {} deep and {} tall".format(blb_data.brick_size[X],
+                                                                                    blb_data.brick_size[Y],
                                                                                     logger.build_countable_message("", bricks, (" brick", " bricks"))), 1)
         else:
-            logger.info("Calculated brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[const.X],
-                                                                                       blb_data.brick_size[const.Y],
+            logger.info("Calculated brick size: {} wide {} deep {} and {} tall".format(blb_data.brick_size[X],
+                                                                                       blb_data.brick_size[Y],
                                                                                        logger.build_countable_message("", bricks, (" brick", " bricks")),
-                                                                                       logger.build_countable_message("", blb_data.brick_size[const.Z] - bricks * 3, (" plate", " plates"))), 1)
+                                                                                       logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
 
     # Bounds have been defined, check that brick size is within the limits.
-    if blb_data.brick_size[const.X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
-            const.Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[const.Z] <= const.MAX_BRICK_VERTICAL_PLATES:
+    if blb_data.brick_size[X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
+            Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[Z] <= const.MAX_BRICK_VERTICAL_PLATES:
         if __sequence_product(blb_data.brick_size) < 1.0:
             return "Brick has no volume, brick could not be rendered in-game."
         else:
@@ -1568,15 +2286,15 @@ def __process_definition_objects(properties, objects):
             return (blb_data, bounds_data, mesh_objects)
     else:
         # The formatter fails miserably if this return is on one line so I've broken it in two.
-        msg = "Brick size ({0}x{1}x{2}) exceeds the maximum brick size of {3} wide {3} deep and {4} plates tall.".format(blb_data.brick_size[const.X],
-                                                                                                                         blb_data.brick_size[const.Y],
-                                                                                                                         blb_data.brick_size[const.Z],
+        msg = "Brick size ({0}x{1}x{2}) exceeds the maximum brick size of {3} wide {3} deep and {4} plates tall.".format(blb_data.brick_size[X],
+                                                                                                                         blb_data.brick_size[Y],
+                                                                                                                         blb_data.brick_size[Z],
                                                                                                                          const.MAX_BRICK_HORIZONTAL_PLATES,
                                                                                                                          const.MAX_BRICK_VERTICAL_PLATES)
         return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
-def __process_mesh_data(context, properties, bounds_data, mesh_objects):
+def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_axis):
     """Gets all the necessary data from the specified Blender objects and sorts all the quads of the mesh_objects into sections for brick coverage to work.
 
     Args:
@@ -1584,6 +2302,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         properties (DerivateProperties): An object containing user properties.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         mesh_objects (sequence of Blender objects): Meshes to be processed.
+        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
 
     Returns:
         A sequence of mesh data sorted into sections or a string containing an error message to display to the user.
@@ -1594,26 +2313,22 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
     # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
     quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
 
+    # Create an empty list for each quad section_idx.
+    # This is my workaround to making a sort of dictionary where the keys are in insertion order.
+    # The quads must be written in a specific order.
+    # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
+    quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
+
     for obj in mesh_objects:
         count_tris = 0
         count_ngon = 0
         object_name = obj.name
-        current_data = obj.data
+        current_mesh = obj.data
 
         # Alpha is per-object.
         vertex_color_alpha = None
 
         logger.info("Exporting object: {}".format(object_name), 1)
-
-        # Do UV layers exist?
-        if current_data.uv_layers:
-            # Is there more than one UV layer?
-            if len(current_data.uv_layers) > 1:
-                logger.warning("Object '{}' has {} UV layers, only using the first.".format(object_name, len(current_data.uv_layers)), 2)
-
-            uv_data = current_data.uv_layers[0].data
-        else:
-            uv_data = None
 
         # PROCESS TOKENS
 
@@ -1648,9 +2363,9 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                         "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
 
         # Vertex color layer message.
-        if len(current_data.vertex_colors) > 1:
+        if len(current_mesh.vertex_colors) > 1:
             logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
-                object_name, len(current_data.vertex_colors)), 2)
+                object_name, len(current_mesh.vertex_colors)), 2)
 
         # ===================
         # Manual Quad Sorting
@@ -1682,15 +2397,20 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
         # PROCESS QUAD DATA
 
         for poly in mesh.polygons:
+            # If automatically sorting, reset variable to None because it is initially defined before the loop.
+            if properties.blendprop.auto_sort_quads:
+                section_idx = None
+
             # ===================
             # Vertex loop indices
             # ===================
+            # Reverse the loop_vert_idxs tuple to CW order. (Blender has a CCW winding order in regards to the face normal.)
             if poly.loop_total == 4:
                 # Quad.
-                loop_indices = tuple(poly.loop_indices)
+                loop_vert_idxs = tuple(reversed(poly.loop_indices))
             elif poly.loop_total == 3:
                 # Tri.
-                loop_indices = tuple(poly.loop_indices) + (poly.loop_start,)
+                loop_vert_idxs = tuple(reversed(poly.loop_indices)) + (poly.loop_start,)
                 count_tris += 1
             else:
                 # N-gon.
@@ -1701,18 +2421,36 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             # ================
             # Vertex positions
             # ================
+            poly_vertex_obj_coords = []
             positions = []
 
-            # Reverse the loop_indices tuple. (Blender seems to keep opposite winding order.)
-            for loop_index in reversed(loop_indices):
-                # Get the vertex index in the mesh from the loop.
-                vert_index = mesh.loops[loop_index].vertex_index
-
-                # Get the vertex world position from the vertex index.
-                # Center the position to the current bounds object: coordinates are now in local object space.
+            for vert_idx in loop_vert_idxs:
                 # ROUND & CAST
-                coords = __multiply_sequence(properties.scale, __to_decimals(__vert_index_to_world_coord(obj, mesh, vert_index)))
-                positions.append(__sequence_z_to_plates(__world_to_local(coords, bounds_data.world_center), properties.plate_height))
+                # Center the position to the current bounds object: coordinates are now in local object space.
+                coords = __world_to_local(__to_decimals(__get_vert_world_coord(obj, mesh, vert_idx)), bounds_data.world_center)
+                poly_vertex_obj_coords.append(coords)
+
+                # Scale local coordinates according to user-specified scale.
+                # Scale local coordinates to brick grid: adjust Z-coordinate.
+                # Append to the list of coordinates.
+                # USER SCALE: Multiply by user defined scale.
+                positions.append(__sequence_z_to_plates(__multiply_sequence(properties.scale, coords), properties.plate_height))
+
+            # ======================
+            # Automatic Quad Sorting
+            # ======================
+            # And the current object does not have a manual definition?
+            if section_idx is None:
+                # Does user want to automatically sort quads?
+                if properties.blendprop.auto_sort_quads:
+                    # Calculate the section name the quad belongs to.
+                    # Get the index of that section name in the QUAD_SECTION_ORDER list.
+                    section_idx = __sort_quad(positions, bounds_data.dimensions, properties.plate_height)
+                    section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
+                else:
+                    # No auto sort, no definition, use omni.
+                    section_idx = const.QUAD_SECTION_IDX_OMNI
+            # Else: The quad had a manual sort, in which case there is no point in calculating the section per quad.
 
             # ======================
             # Automatic Quad Sorting
@@ -1733,45 +2471,112 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             # =======
             # Normals
             # =======
+            poly_normal_normalized = __normalize_vector(obj, poly.normal)
+
             if poly.use_smooth:
                 # Smooth shading.
-                # For every loop index in the loop_indices, calculate the vertex normal and add it to the list.
+                # For every loop index in the loop_vert_idxs, calculate the vertex normal and add it to the list.
 
                 # Does the user want to round normals?
                 if properties.blendprop.round_normals:
-                    normals = [__to_decimals(__loop_index_to_normal_vector(obj, mesh, loop_index)) for loop_index in reversed(loop_indices)]
+                    normals = [__to_decimals(__loop_index_to_normal_vector(obj, mesh, vert_idx)) for vert_idx in reversed(loop_vert_idxs)]
                 else:
-                    normals = [__loop_index_to_normal_vector(obj, mesh, loop_index) for loop_index in reversed(loop_indices)]
+                    normals = [__loop_index_to_normal_vector(obj, mesh, vert_idx) for vert_idx in reversed(loop_vert_idxs)]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
-                # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
 
                 # Does the user want to round normals?
                 if properties.blendprop.round_normals:
-                    normals = [__to_decimals(__normalize_vector(obj, poly.normal)), ] * 4
+                    normals = [__to_decimals(poly_normal_normalized), ] * 4
                 else:
-                    normals = [__normalize_vector(obj, poly.normal), ] * 4
+                    normals = [poly_normal_normalized, ] * 4
+
+            # ================
+            # BLB texture name
+            # ================
+            texture_name = None
+
+            if current_mesh.materials and current_mesh.materials[poly.material_index] is not None:
+                matname = current_mesh.materials[poly.material_index].name
+                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
+                texcount = len(texnames)
+
+                if texcount > 0:
+                    texture_name = texnames[0]
+
+                    if texcount > 1:
+                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
+
+            if texture_name is None:
+                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
+                texture_name = "side"
 
             # ===
             # UVs
             # ===
+            # TODO: Generate mesh data for the brick bottom if 'bottom' material is used.
+            uvs = None
+
+            # Join all material names into one string.
+            generated_uv_layer_names = " ".join(current_mesh.materials.keys())
+            # Get only the brick texture names.
+            generated_uv_layer_names = __get_tokens_from_object_name(generated_uv_layer_names, const.VALID_BRICK_TEXTURES)
+            # List of possible layer names based on the materials of this mesh.
+            generated_uv_layer_names = [__string_to_uv_layer_name(texnames) for texnames in generated_uv_layer_names]
+
+            # Sort UV layers by name.
+            uv_dict = {key: value for key, value in mesh.uv_layers.items()}
+            sorted_uv_layers = OrderedDict(sorted(uv_dict.items()))
+
+            # Get the UV data from the first UV layer that contains non (0.0, 0.0) coordinates for this polygon and doesn't have a generated name.
+            uv_data = __get_first_uv_data(sorted_uv_layers, current_mesh.loops, poly.loop_indices, generated_uv_layer_names)
+
+            if uv_data is None:
+                # Get the UV data from the first UV layer that contains non (0.0, 0.0) coordinates for this polygon.
+                uv_data = __get_first_uv_data(sorted_uv_layers, current_mesh.loops, poly.loop_indices)
+
+            # Does UV data exist for this polygon?
             if uv_data:
-                # Get the UV coordinate for every vertex in the face loop.
-                uvs = [uv_data[index].uv for index in reversed(loop_indices)]
-            else:
-                # No UVs present, use the defaults.
-                # These UV coordinates with the SIDE texture lead to a blank textureless face.
-                # TODO: Correct UV calculation according to the texture name.
-                uvs = (Vector((0.5, 0.5)),) * 4
+                uv_data_generated = uv_data[0] in generated_uv_layer_names
+
+                # Is the UV data manually created?
+                if not uv_data_generated:
+                    # Swap UV coordinate origin from bottom left to top left.
+                    # Blender UV (and vertex) coordinates are in reverse order compared to Blockland so their order needs to be reversed.
+                    uvs = __bl_blender_uv_origin_swap(uv_data[1])[::-1]
+
+                    # Do we have UV coordinates for a tri?
+                    if len(uvs) == 3:
+                        # Repeat last coordinate.
+                        uvs = uvs + [uvs[2]]
+                # else: UV data is generated, overwrite data.
+            # else: No UV data, generate or use defaults.
+
+            if uvs is None:
+                if properties.blendprop.calculate_uvs:
+                    uvs = __calculate_uvs(texture_name, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
+
+                    if properties.blendprop.store_uvs:
+                        if uvs[1] is not None:
+                            # Put the special Blender UVs into the Blender mesh.
+                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(texture_name))
+                        else:
+                            # Put the calculated UVs into the Blender mesh.
+                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[0], __string_to_uv_layer_name(texture_name))
+
+                    uvs = uvs[0]
+                else:
+                    # No UVs present, no calculation: use the defaults.
+                    # These UV coordinates with the SIDE texture lead to a blank textureless face.
+                    uvs = const.DEFAULT_UV_COORDINATES
 
             # ===============
             # Material Colors
             # ===============
             # Material colors override objects colors since they are better and easier to use.
-
             if properties.blendprop.use_materials:
                 # Object has material slots?
                 if len(obj.material_slots) > 0:
@@ -1800,15 +2605,15 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
 
             if properties.blendprop.use_vertex_colors:
                 # A vertex color layer exists.
-                if len(current_data.vertex_colors) != 0:
+                if len(current_mesh.vertex_colors) != 0:
                     colors = []
 
-                    # Vertex winding order is reversed compared to Blockland.
-                    for index in reversed(loop_indices):
+                    # Blender vertex winding order (CCW) is reversed compared to Blockland.
+                    for index in reversed(loop_vert_idxs):
                         # Only use the first color layer.
                         # color_layer.data[index] may contain more than 4 values.
-                        loop_color = current_data.vertex_colors[0].data[index]
-                        layer_name = current_data.vertex_colors[0].name.replace(",", ".")
+                        loop_color = current_mesh.vertex_colors[0].data[index]
+                        layer_name = current_mesh.vertex_colors[0].name.replace(",", ".")
                         tokens = __split_object_name_to_tokens(layer_name)
 
                         if properties.blendprop.deftoken_color_add in tokens:
@@ -1844,25 +2649,15 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                             # Normal color.
                             colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
-            # ================
-            # BLB texture name
-            # ================
-            texture_name = None
-
-            if current_data.materials and current_data.materials[poly.material_index] is not None:
-                matname = current_data.materials[poly.material_index].name
-                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
-                texcount = len(texnames)
-
-                if texcount > 0:
-                    texture_name = texnames[0]
-
-                    if texcount > 1:
-                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
-
-            if texture_name is None:
-                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                texture_name = "SIDE"
+            # Sanity check.
+            if not len(positions) is len(normals) is len(uvs) is 4:
+                raise RuntimeError(
+                    "Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
+                        len(positions),
+                        len(normals),
+                        len(uvs)))
+            if colors is not None and len(colors) is not 4:
+                raise RuntimeError("Quad color data only defined for {} vertices, 4 required.".format(len(colors)))
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
             quads[section_idx].append([positions, normals, uvs, colors, texture_name])
@@ -1934,6 +2729,9 @@ def __format_blb_data(forward_axis, blb_data):
             for index, normal in enumerate(quad_data[1]):
                 quad_data[1][index] = common.rotate(normal, forward_axis)
 
+            # The texture name does not have to be all uppercase but it makes the output look more consistent.
+            quad_data[4] = quad_data[4].upper()
+
     return blb_data
 
 
@@ -1973,7 +2771,7 @@ def process_blender_data(context, properties, objects):
             logger.info("Processing meshes.")
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects)
+            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects, properties.blendprop.axis_blb_forward)
 
             if isinstance(quads, str):
                 # Something went wrong.

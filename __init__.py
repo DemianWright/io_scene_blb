@@ -43,6 +43,10 @@ bl_info = {
 
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
+# TODO: Panels in the UI?
+# TODO: Brick quad limit?
+# TODO: Double check all round & cast operations, user defined precision is not always honored.
+# TODO: Check that all docstrings and comments are still up to date.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
@@ -293,6 +297,24 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         name="Parse Object Colors",
         description="Parse quad colors from object names using the definition token (intended as legacy support)",
         default=False,
+    )
+
+    # -------------
+    # Calculate UVs
+    # -------------
+    calculate_uvs = BoolProperty(
+        name="Calculate UVs",
+        description="Calculate correct UV coordinates based on the brick texture name specified in the material name",
+        default=True,
+    )
+
+    # ---------
+    # Store UVs
+    # ---------
+    store_uvs = BoolProperty(
+        name="Store UVs",
+        description="Write calculated UVs into Blender objects (data in existing generated UV layers will be overwritten)",
+        default=True,
     )
 
     # -------------
@@ -712,6 +734,19 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Use Object Colors
         layout.prop(self, "use_object_colors")
+
+        # Property: UVs
+        row = layout.row()
+        split = row.split(percentage=0.53)
+        col = split.column()
+        col.prop(self, "calculate_uvs")
+
+        # Property: Store UVs
+        if self.calculate_uvs:
+            split = split.split()
+            split.active = self.calculate_uvs
+            col = split.column()
+            col.prop(self, "store_uvs")
 
         # Property: Round Normals
         layout.prop(self, "round_normals")
