@@ -81,28 +81,28 @@ def rotate(xyz, forward_axis):
 
     Args:
         xyz (sequence of numbers): A sequence of XYZ coordinates. Only the first 3 values are taken into account even if more are specified.
-        forward_axis (string): The name of the enum value representing the user-specified forward axis.
+        forward_axis (Axis3D): A value of the Axis3D enum. The axis that will point forwards in-game.
 
     Returns:
         A new list of XYZ coordinates.
     """
     rotated = []
 
-    if forward_axis == "POSITIVE_X":
+    if forward_axis is const.Axis3D.POS_X:
         # Rotate: 0 degrees clockwise
         return xyz
 
-    elif forward_axis == "POSITIVE_Y":
+    elif forward_axis is const.Axis3D.POS_Y:
         # Rotate: 90 degrees clockwise = X Y Z -> Y -X Z
         rotated.append(xyz[const.Y])
         rotated.append(-xyz[const.X])
 
-    elif forward_axis == "NEGATIVE_X":
+    elif forward_axis is const.Axis3D.NEG_X:
         # Rotate: 180 degrees clockwise = X Y Z -> -X -Y Z
         rotated.append(-xyz[const.X])
         rotated.append(-xyz[const.Y])
 
-    elif forward_axis == "NEGATIVE_Y":
+    elif forward_axis is const.Axis3D.NEG_Y:
         # Rotate: 270 degrees clockwise = X Y Z -> -Y X Z
         rotated.append(-xyz[const.Y])
         rotated.append(xyz[const.X])

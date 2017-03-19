@@ -140,12 +140,35 @@ class Axis3D(Enum):
         Returns:
             The index 0, 1, or 2 for the axes X, Y, and Z respectively.
         """
-        if self == Axis3D.POS_X or self == Axis3D.NEG_X:
+        if self is Axis3D.POS_X or self is Axis3D.NEG_X:
             return X
-        elif self == Axis3D.POS_Y or self == Axis3D.NEG_Y:
+        elif self is Axis3D.POS_Y or self is Axis3D.NEG_Y:
             return Y
         else:
             return Z
+
+    @classmethod
+    def from_property_name(cls, axis_name):
+        """Parses the 3D axis from the specified string.
+
+        Args:
+            axis_name (string): The name of the axis in the same format as the axis_blb_forward Blender property.
+
+        Returns:
+            An Axis3D value corresponding to the specified axis name.
+        """
+        if axis_name == "POSITIVE_X":
+            return Axis3D.POS_X
+        elif axis_name == "NEGATIVE_X":
+            return Axis3D.NEG_X
+        elif axis_name == "POSITIVE_Y":
+            return Axis3D.POS_Y
+        elif axis_name == "NEGATIVE_Y":
+            return Axis3D.NEG_Y
+        elif axis_name == "POSITIVE_Z":
+            return Axis3D.POS_Z
+        else:  # axis_name == "NEGATIVE_Z":
+            return Axis3D.NEG_Z
 
     def is_positive(self):
         """Determines if this three-dimensional axis is positive or negative.
@@ -153,7 +176,7 @@ class Axis3D(Enum):
         Returns:
             True if this value represents a positive axis.
         """
-        return self == Axis3D.POS_X or self == Axis3D.POS_Y or self == Axis3D.POS_Z
+        return self is Axis3D.POS_X or self is Axis3D.POS_Y or self is Axis3D.POS_Z
 
 
 class AxisPlane3D(Enum):

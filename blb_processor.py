@@ -348,14 +348,14 @@ def __mirror(xyz, forward_axis):
 
     Args:
         xyz (sequence): A sequence of elements to be mirrored.
-        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+        forward_axis (Axis3D): A value of the Axis3D enum. The axis that will point forwards in-game.
 
     Returns:
         A new list of XYZ values.
     """
     mirrored = xyz
 
-    if forward_axis == "POSITIVE_X" or forward_axis == "NEGATIVE_X":
+    if forward_axis is Axis3D.POS_X or forward_axis is Axis3D.NEG_X:
         mirrored[Y] = -mirrored[Y]
     else:
         mirrored[X] = -mirrored[X]
@@ -756,7 +756,7 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_grid=Non
         # Technically this is wrong as the order would be different for -Y
         # forward, but since the bricks must be cuboid in shape, the
         # transformations are symmetrical.
-        if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+        if forward_axis is Axis3D.POS_Y or forward_axis is Axis3D.NEG_Y:
             # New North will be +Y.
             # Old North (+X) will be the new East
             coverage = common.swizzle(coverage, "abfcde")
@@ -807,7 +807,7 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
             # Stop searching as soon as the first plane is found because it is impossible for the quad to be on multiple planes at the same time.
             # If the vertex coordinates are equal on more than one axis, it means that the quad is either a line (2 axes) or a point (3 axes).
 
-            # Blockland assumes by default that forward axis is Blender +X ("POSITIVE_X"). (In terms of the algorithm.)
+            # Blockland assumes by default that forward axis is Blender +X. (In terms of the algorithm.)
             # Then in-game the brick north is to the left of the player, which is +Y in Blender.
 
             # All vertex coordinates are the same on this axis, only the first one needs to be checked.
@@ -851,7 +851,7 @@ def __rotate_section_value(section, forward_axis):
     """
     Args:
         section (BLBQuadSection): A value of the BLBQuadSection enum.
-        forward_axis (string): The name of the user-defined BLB forward axis.
+        forward_axis (Axis3D): A value of the Axis3D enum. The axis that will point forwards in-game.
 
     Returns:
         The input section rotated according to the specified forward_axis as a value in the BLBQuadSection.
@@ -869,7 +869,7 @@ def __rotate_section_value(section, forward_axis):
     # Top and bottom always the same and do not need to be rotated because Z axis remapping is not yet supported.
     # Omni is not planar and does not need to be rotated.
     # The initial values are calculated according to +X forward axis.
-    if section <= const.BLBQuadSection.BOTTOM or section == const.BLBQuadSection.OMNI or forward_axis == "POSITIVE_X":
+    if section <= const.BLBQuadSection.BOTTOM or section == const.BLBQuadSection.OMNI or forward_axis is Axis3D.POS_X:
         return section
 
     # ========================================================================
@@ -880,17 +880,17 @@ def __rotate_section_value(section, forward_axis):
     # 3. Use modulo make section wrap around 3 -> 0:    sec - 2 + R % 4
     # 4. Add 2 to get back to the correct range [2, 5]: sec - 2 + R % 4 + 2
     # ========================================================================
-    elif forward_axis == "POSITIVE_Y":
+    elif forward_axis is Axis3D.POS_Y:
         # 90 degrees clockwise.
         # [2] North -> [3] East:  (2 - 2 + 1) % 4 + 2 = 3
         # [5] West  -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
         return const.BLBQuadSection((section - 1) % 4 + 2)
-    elif forward_axis == "NEGATIVE_X":
+    elif forward_axis is Axis3D.NEG_X:
         # 180 degrees clockwise.
         # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
         # [4] South -> [2] North
         return const.BLBQuadSection(section % 4 + 2)
-    elif forward_axis == "NEGATIVE_Y":
+    elif forward_axis is Axis3D.NEG_Y:
         # 270 degrees clockwise.
         # [2] North -> [5] West:  (2 - 2 + 3) % 4 + 2 = 5
         # [5] West  -> [4] South
@@ -1071,7 +1071,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         # Convert the coordinates into brick grid sequence indices.
 
         # Minimum indices.
-        if properties.blendprop.axis_blb_forward == "NEGATIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
+        if properties.forward_axis is Axis3D.NEG_X or properties.forward_axis is Axis3D.NEG_Y:
             # Translate coordinates to negative X axis.
             # -X: Index 0 = front of the brick.
             # -Y: Index 0 = left of the brick.
@@ -1082,7 +1082,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             # +Y: Index 0 = left of the brick.
             grid_min[X] = grid_min[X] + halved_dimensions[X]
 
-        if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
+        if properties.forward_axis is Axis3D.POS_X or properties.forward_axis is Axis3D.NEG_Y:
             # Translate coordinates to negative Y axis.
             # +X: Index 0 = left of the brick.
             # -Y: Index 0 = front of the brick.
@@ -1097,12 +1097,12 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         grid_min[Z] = (grid_min[Z] - halved_dimensions[Z]) / properties.plate_height
 
         # Maximum indices.
-        if properties.blendprop.axis_blb_forward == "NEGATIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
+        if properties.forward_axis is Axis3D.NEG_X or properties.forward_axis is Axis3D.NEG_Y:
             grid_max[X] = grid_max[X] - halved_dimensions[X]
         else:
             grid_max[X] = grid_max[X] + halved_dimensions[X]
 
-        if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
+        if properties.forward_axis is Axis3D.POS_X or properties.forward_axis is Axis3D.NEG_Y:
             grid_max[Y] = grid_max[Y] - halved_dimensions[Y]
         else:
             grid_max[Y] = grid_max[Y] + halved_dimensions[Y]
@@ -1114,7 +1114,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
         grid_min[Z] = abs(grid_max[Z])
         grid_max[Z] = abs(temp)
 
-        if properties.blendprop.axis_blb_forward == "POSITIVE_X":
+        if properties.forward_axis is Axis3D.POS_X:
             # Swap min/max depth and make it positive.
             temp = grid_min[Y]
             grid_min[Y] = abs(grid_max[Y])
@@ -1122,7 +1122,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
 
             grid_min = common.swizzle(grid_min, "bac")
             grid_max = common.swizzle(grid_max, "bac")
-        elif properties.blendprop.axis_blb_forward == "NEGATIVE_X":
+        elif properties.forward_axis is Axis3D.NEG_X:
             # Swap min/max width and make it positive.
             temp = grid_min[X]
             grid_min[X] = abs(grid_max[X])
@@ -1130,7 +1130,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
 
             grid_min = common.swizzle(grid_min, "bac")
             grid_max = common.swizzle(grid_max, "bac")
-        elif properties.blendprop.axis_blb_forward == "NEGATIVE_Y":
+        elif properties.forward_axis is Axis3D.NEG_Y:
             # Swap min/max depth and make it positive.
             temp = grid_min[Y]
             grid_min[Y] = abs(grid_max[Y])
@@ -1140,7 +1140,7 @@ def __grid_object_to_volume(properties, bounds_data, grid_obj):
             temp = grid_min[X]
             grid_min[X] = abs(grid_max[X])
             grid_max[X] = abs(temp)
-        # Else properties.blendprop.axis_blb_forward == "POSITIVE_Y": do nothing
+        # Else properties.forward_axis is Axis3D.POS_Y: do nothing
 
         grid_min = __force_to_ints(grid_min)
         grid_max = __force_to_ints(grid_max)
@@ -1211,7 +1211,7 @@ def __process_coverage(properties, blb_data):
         return __calculate_coverage(calculate_side,
                                     hide_adjacent,
                                     blb_data.brick_grid,
-                                    properties.blendprop.axis_blb_forward)
+                                    properties.forward_axis)
     else:
         return __calculate_coverage()
 
@@ -1610,7 +1610,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
         vert_coords (sequence of coordinates): A sequence of 4 local space coordinates of a face in CW order.
                                               The vertex order must be the same that is written to the BLB file.
         normal (sequence of numbers): The normal vector of the quad.
-        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+        forward_axis (Axis3D): A value of the Axis3D enum. The axis that will point forwards in-game.
 
     Returns:
         A tuple with two elements.
@@ -1721,22 +1721,22 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (0, 0),
                       (w, 0))
 
-        if forward_axis == "POSITIVE_X":
+        if forward_axis is Axis3D.POS_X:
             uvs_blender = ((0, h),
                            (0, 0),
                            (w, 0),
                            (w, h))
-        elif forward_axis == "NEGATIVE_X":
+        elif forward_axis is Axis3D.NEG_X:
             uvs_blender = ((w, 0),
                            (w, h),
                            (0, h),
                            (0, 0))
-        elif forward_axis == "POSITIVE_Y":
+        elif forward_axis is Axis3D.POS_Y:
             uvs_blender = ((h, w),
                            (0, w),
                            (0, 0),
                            (h, 0))
-        else:  # NEGATIVE_Y
+        else:  # NEG_Y
             uvs_blender = ((0, 0),
                            (h, 0),
                            (h, w),
@@ -1981,7 +1981,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
             logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions), 1)
 
     # Take the custom forward axis into account.
-    if properties.blendprop.axis_blb_forward == "POSITIVE_X" or properties.blendprop.axis_blb_forward == "NEGATIVE_X":
+    if properties.forward_axis is Axis3D.POS_X or properties.forward_axis is Axis3D.NEG_X:
         grid_width = blb_data.brick_size[X]
         grid_depth = blb_data.brick_size[Y]
     else:
@@ -2303,7 +2303,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         properties (DerivateProperties): An object containing user properties.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         mesh_objects (sequence of Blender objects): Meshes to be processed.
-        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
+        forward_axis (Axis3D): A value of the Axis3D enum. The axis that will point forwards in-game.
 
     Returns:
         A sequence of mesh data sorted into sections or a string containing an error message to display to the user.
@@ -2380,7 +2380,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
             # TODO: Do forward axis rotation of section in the format_blb_data function?
             # The section needs to rotated according to the forward axis.
-            section = __rotate_section_value(section, properties.blendprop.axis_blb_forward)
+            section = __rotate_section_value(section, properties.forward_axis)
             reset_section = False
         # Else: No manual sort.
 
@@ -2436,7 +2436,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 if properties.blendprop.auto_sort_quads:
                     # Calculate the section name the quad belongs to.
                     section = __sort_quad(positions, bounds_data.dimensions, properties.plate_height)
-                    section = __rotate_section_value(section, properties.blendprop.axis_blb_forward)
+                    section = __rotate_section_value(section, properties.forward_axis)
                 else:
                     # No auto sort, no definition, use omni.
                     section = const.BLBQuadSection.OMNI
@@ -2536,7 +2536,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     if properties.blendprop.store_uvs:
                         if uvs[1] is not None:
                             # Put the special Blender UVs into the Blender mesh.
-                            print("special blender uvs")
                             __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(brick_texture.name))
                         else:
                             # Put the calculated UVs into the Blender mesh.
@@ -2659,12 +2658,12 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         return quads
 
 
-def __format_blb_data(forward_axis, blb_data):
+def __format_blb_data(blb_data, forward_axis):
     """Formats the specified BLB data into the format required by the game and rotates the brick according to the specified forward axis.
 
     Args:
-        forward_axis (string): The name of the Blender axis (enum value as string) that will point forwards in-game.
         blb_data (BLBData): A BLBData object containing the data to be written.
+        forward_axis (Axis3D): A value of the Axis3D enum. The axis that will point forwards in-game.
 
     Returns:
         The formatted and rotated BLB data ready for writing.
@@ -2672,7 +2671,7 @@ def __format_blb_data(forward_axis, blb_data):
     # Size
 
     # Swizzle the values according to the forward axis.
-    if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+    if forward_axis is Axis3D.POS_Y or forward_axis is Axis3D.NEG_Y:
         blb_data.brick_size = common.swizzle(blb_data.brick_size, "bac")
     # Else: Do nothing.
 
@@ -2681,7 +2680,7 @@ def __format_blb_data(forward_axis, blb_data):
     for index, (center, dimensions) in enumerate(blb_data.collision):
         # Mirror center according to the forward axis. No idea why, but it works.
         # Swizzle the values according to the forward axis.
-        if forward_axis == "POSITIVE_Y" or forward_axis == "NEGATIVE_Y":
+        if forward_axis is Axis3D.POS_Y or forward_axis is Axis3D.NEG_Y:
             blb_data.collision[index] = (common.swizzle(__mirror(center, forward_axis), "bac"), common.swizzle(dimensions, "bac"))
         else:
             blb_data.collision[index] = (__mirror(center, forward_axis), dimensions)
@@ -2746,7 +2745,7 @@ def process_blender_data(context, properties, objects):
             logger.info("Processing meshes.")
 
             # Processes the visible mesh data into the correct format for writing into a BLB file.
-            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects, properties.blendprop.axis_blb_forward)
+            quads = __process_mesh_data(context, properties, bounds_data, mesh_objects, properties.forward_axis)
 
             if isinstance(quads, str):
                 # Something went wrong.
@@ -2755,6 +2754,6 @@ def process_blender_data(context, properties, objects):
                 blb_data.quads = quads
 
             # Format and return the data for writing.
-            return __format_blb_data(properties.blendprop.axis_blb_forward, blb_data)
+            return __format_blb_data(blb_data, properties.forward_axis)
     else:
         return "No objects to export."

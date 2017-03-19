@@ -51,12 +51,20 @@ class DerivativeProperties(object):
         Args:
             properties (Blender properties object): A Blender object containing user preferences.
         """
-        # ===========
+        # ==========
         # Properties
         # ==========
         self.blendprop = properties
         self.error_message = None
 
+        # ============
+        # Forward Axis
+        # ============
+        self.forward_axis = const.Axis3D.from_property_name(properties.axis_blb_forward)
+
+        # ==========
+        # Brick Grid
+        # ==========
         # Build the brick grid definition tokens and symbol priority tuple.
         # Contains the brick grid definition object name tokens in reverse priority order.
         result = self.__build_grid_priority_tuples(properties)
@@ -64,25 +72,22 @@ class DerivativeProperties(object):
         if result is None:
             self.error_message = "Two or more brick grid definitions had the same priority."
         else:
-            # ===========
-            # Brick Grid
-            # ==========
             self.grid_def_obj_token_priority = result[0]
             self.grid_definitions_priority = result[1]
 
-            # =============
+            # ============
             # Quad Sorting
             # ============
             self.quad_sort_definitions = self.__build_quad_sort_definitions(properties)
 
-            # ======
+            # =====
             # Scale
             # =====
             # export_scale is a percentage value.
             self.scale = Decimal("{0:.{1}f}".format(properties.export_scale, const.MAX_FP_DECIMALS_TO_WRITE)) * Decimal("0.01")
             logger.info("Export at {} scale.".format(self.scale))
 
-            # ===========================
+            # ==========================
             # Plate Height & Human Error
             # ==========================
             if properties.export_scale == 100.0:
@@ -95,7 +100,7 @@ class DerivativeProperties(object):
                 properties.human_error = properties.human_error * self.scale
                 properties.plate_height = properties.plate_heigh * self.scale
 
-            # ==========
+            # =========
             # Precision
             # =========
             prec = properties.float_precision
