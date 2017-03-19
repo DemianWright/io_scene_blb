@@ -56,8 +56,24 @@ class BLBQuadSection(IntEnum):
     WEST = 5
     OMNI = 6
 
-# A tuple of valid brick textures in alphabetical order.
-VALID_BRICK_TEXTURES = ("bottomedge", "bottomloop", "print", "ramp", "side", "top")
+
+class BrickTexture(Enum):
+    """Valid brick texture names in alphabetical order."""
+    BOTTOMEDGE = 0
+    BOTTOMLOOP = 1
+    PRINT = 2
+    RAMP = 3
+    SIDE = 4
+    TOP = 5
+
+    def __str__(self):
+        """Returns the name of the enum value in uppercase characters."""
+        return self.name
+
+    @classmethod
+    def as_list(cls):
+        """Returns the names of the members of this enum as a list of uppercase strings."""
+        return [member.name for member in BrickTexture]
 
 # BLB file strings.
 BLB_BRICK_TYPE_SPECIAL = "SPECIAL"

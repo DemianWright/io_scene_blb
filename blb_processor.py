@@ -567,7 +567,7 @@ def __sequence_z_to_plates(xyz, plate_height):
         return xyz
 
 
-def __split_object_name_to_tokens(name, replace_commas=False):
+def __split_object_string_to_tokens(name, replace_commas=False):
     """Splits a Blender object name into its token parts.
     Correctly takes into account duplicate object names with .### at the end.
 
@@ -576,7 +576,7 @@ def __split_object_name_to_tokens(name, replace_commas=False):
         replace_commas (bool): Replace all commas with periods in the object name? (Default: False)
 
     Returns:
-        The name split into a list of strings at whitespace characters.
+        The name split into a list of uppercase strings at whitespace characters.
     """
     if replace_commas:
         name = name.replace(",", ".")
@@ -586,10 +586,10 @@ def __split_object_name_to_tokens(name, replace_commas=False):
     # When the name is split at whitespace, the first object is recognized as a grid definition object and the second is not.
     if len(name) > 4 and name[-4] == ".":
         # Remove the last 4 characters of from the name before splitting at whitespace.
-        tokens = name[:-4].lower().split()
+        tokens = name[:-4].upper().split()
     else:
         # Split the object name at whitespace.
-        tokens = name.lower().split()
+        tokens = name.upper().split()
 
     return tokens
 
@@ -605,9 +605,12 @@ def __get_tokens_from_object_name(name, tokens):
         A set of tokens that exist both in the Blender object name and the specified sequence of tokens, in the order they appeared in the name.
     """
     if isinstance(name, str):
-        name_tokens = __split_object_name_to_tokens(name)
+        name_tokens = __split_object_string_to_tokens(name)
     else:
         name_tokens = name
+
+    # In case tokens sequence contains mixed case characters, convert everything to uppercase.
+    tokens = [token.upper() for token in tokens]
 
     # Convert name tokens and wanted tokens into sets.
     # Get their intersection.
@@ -1598,12 +1601,12 @@ def __calc_quad_max_edge_len_idx(sorted_verts):
     return (max_len, max_len_idx)
 
 
-def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
+def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
     """Calculates the UV coordinates for the specified texture and quad containing the specified vertices.
     In unsupported cases, default UVs are returned.
 
     Args:
-        texture_name (string): A value from const.VALID_BRICK_TEXTURES.
+        brick_texture (BrickTexture): A value from the BrickTexture enum.
         vert_coords (sequence of coordinates): A sequence of 4 local space coordinates of a face in CW order.
                                               The vertex order must be the same that is written to the BLB file.
         normal (sequence of numbers): The normal vector of the quad.
@@ -1635,7 +1638,7 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
 
     # Sanity check.
     if len(vert_coords) < 4:
-        raise RuntimeError("__calculate_uvs(texture_name, vert_coords, normal) function expects a quad, input polygon was not a quad.")
+        raise RuntimeError("__calculate_uvs(brick_texture, vert_coords, normal) function expects a quad, input polygon was not a quad.")
 
     idx_coord = [(idx, coord) for idx, coord in enumerate(vert_coords)]
 
@@ -1707,7 +1710,7 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
     # UV tuples are in order: (u, v)
     # Where u is the x axis increasing from left to right.
     # Where v is the y axis increasing from top to bottom.
-    if texture_name == "top":
+    if brick_texture is const.BrickTexture.TOP:
         # Works well for axis aligned faces horizontal faces.
         # Works well enough for axis aligned faces vertical faces.
         # Doesn't look bad for all other face orientations.
@@ -1737,7 +1740,7 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
         else:
             uvs_blender = uvs_sorted
 
-    elif texture_name == "side":
+    elif brick_texture is const.BrickTexture.SIDE:
         # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each side.
         # Calculate the UV components for top, left, right, and bottom edges of the quad.
         # If the quad is rectangular then the components of opposing sides are equal.
@@ -1757,7 +1760,9 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
                       (1 - u_t, v_r),
                       (1 - u_b, 1 - v_r),
                       (u_b, 1 - v_l))
-    elif texture_name == "bottomedge":
+    elif brick_texture is const.BrickTexture.BOTTOMEDGE:
+        # FIXME: Blender uvs broken. Widths are swapped + has Y offset. BLB uvs OK.
+
         # Bottom edge is a special case where the average width/height does not work and the top left may not be what was determined by the sorting algorithm above.
         # We need the length of the longest edge in the quad, the direction it is pointing, and the index of the first vertex of the longest edge (CW order).
         edge_info = __calc_quad_max_edge_len_idx(sorted_verts)
@@ -1783,26 +1788,26 @@ def __calculate_uvs(texture_name, vert_coords, normal, forward_axis):
             # for uv in uvs_sorted:
             #     print("\t", uv)
 
-    elif texture_name == "bottomloop":
+    elif brick_texture is const.BrickTexture.BOTTOMLOOP:
         uvs_sorted = ((0, w),
                       (0, 0),
                       (h, 0),
                       (h, w))
 
-    elif texture_name == "print":
+    elif brick_texture is const.BrickTexture.PRINT:
         uvs_sorted = ((0, 0),
                       (1, 0),
                       (1, 1),
                       (0, 1))
 
-    elif texture_name == "ramp":
+    elif brick_texture is const.BrickTexture.RAMP:
         uvs_sorted = ((0, w),
                       (0, 0),
                       (h, 0),
                       (h, w))
 
     else:
-        raise RuntimeError("Unknown texture name '{}'".format(texture_name))
+        raise RuntimeError("Unknown texture name '{}'".format(brick_texture))
 
     #print("__calculate_uvs | uvs_sorted:")
     # for uv in uvs_sorted:
@@ -2169,7 +2174,7 @@ def __process_definition_objects(properties, objects):
         # PROCESS TOKENS.
 
         obj_name = obj.name
-        obj_name_tokens = __split_object_name_to_tokens(obj_name)
+        obj_name_tokens = __split_object_string_to_tokens(obj_name)
         object_grid_definitions = __get_tokens_from_object_name(obj_name_tokens, properties.grid_def_obj_token_priority)
 
         # Ignore non-mesh objects
@@ -2327,7 +2332,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         colors = None
 
         if properties.blendprop.use_object_colors:
-            tokens = __split_object_name_to_tokens(object_name, True)
+            tokens = __split_object_string_to_tokens(object_name, True)
 
             # Does the object name contain the color definition token signifying that it defines the object's color?
             if properties.blendprop.deftoken_color in tokens:
@@ -2463,22 +2468,22 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             # ================
             # BLB texture name
             # ================
-            texture_name = None
+            brick_texture = None
 
             if current_mesh.materials and current_mesh.materials[poly.material_index] is not None:
                 matname = current_mesh.materials[poly.material_index].name
-                texnames = __get_tokens_from_object_name(matname, const.VALID_BRICK_TEXTURES)
+                texnames = __get_tokens_from_object_name(matname, const.BrickTexture.as_list())
                 texcount = len(texnames)
 
                 if texcount > 0:
-                    texture_name = texnames[0]
+                    brick_texture = const.BrickTexture[texnames[0]]
 
                     if texcount > 1:
                         logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
 
-            if texture_name is None:
+            if brick_texture is None:
                 # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                texture_name = "side"
+                brick_texture = const.BrickTexture.SIDE
 
             # ===
             # UVs
@@ -2489,7 +2494,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             # Join all material names into one string.
             generated_uv_layer_names = " ".join(current_mesh.materials.keys())
             # Get only the brick texture names.
-            generated_uv_layer_names = __get_tokens_from_object_name(generated_uv_layer_names, const.VALID_BRICK_TEXTURES)
+            generated_uv_layer_names = __get_tokens_from_object_name(generated_uv_layer_names, const.BrickTexture.as_list())
             # List of possible layer names based on the materials of this mesh.
             generated_uv_layer_names = [__string_to_uv_layer_name(texnames) for texnames in generated_uv_layer_names]
 
@@ -2523,15 +2528,15 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
             if uvs is None:
                 if properties.blendprop.calculate_uvs:
-                    uvs = __calculate_uvs(texture_name, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
+                    uvs = __calculate_uvs(brick_texture, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
 
                     if properties.blendprop.store_uvs:
                         if uvs[1] is not None:
                             # Put the special Blender UVs into the Blender mesh.
-                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(texture_name))
+                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(brick_texture.name))
                         else:
                             # Put the calculated UVs into the Blender mesh.
-                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[0], __string_to_uv_layer_name(texture_name))
+                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[0], __string_to_uv_layer_name(brick_texture.name))
 
                     uvs = uvs[0]
                 else:
@@ -2547,7 +2552,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 # Object has material slots?
                 if len(obj.material_slots) > 0:
                     material = obj.material_slots[poly.material_index].material
-                    tokens = __split_object_name_to_tokens(material.name)
+                    tokens = __split_object_string_to_tokens(material.name)
 
                     if material is not None:
                         if properties.blendprop.deftoken_color_add in tokens:
@@ -2580,7 +2585,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                         # color_layer.data[index] may contain more than 4 values.
                         loop_color = current_mesh.vertex_colors[0].data[index]
                         layer_name = current_mesh.vertex_colors[0].name.replace(",", ".")
-                        tokens = __split_object_name_to_tokens(layer_name)
+                        tokens = __split_object_string_to_tokens(layer_name)
 
                         if properties.blendprop.deftoken_color_add in tokens:
                             addsub = 1
@@ -2626,7 +2631,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 raise RuntimeError("Quad color data only defined for {} vertices, 4 required.".format(len(colors)))
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-            quads[section.value].append([positions, normals, uvs, colors, texture_name])
+            quads[section.value].append([positions, normals, uvs, colors, brick_texture.name])
 
             if reset_section:
                 section = None
