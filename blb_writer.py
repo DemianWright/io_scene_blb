@@ -122,14 +122,14 @@ def write_file(properties, filepath, blb_data):
         # -----
         # Quads
         # -----
-        for index, section_name in enumerate(const.QUAD_SECTION_ORDER):
+        for section_name, section in const.BLBQuadSection.__members__.items():
             # Write section name.
             file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_SECTION_SEPARATOR.format(section_name)))
 
             # Write section length.
-            file.write("{}\n".format(str(len(blb_data.quads[index]))))
+            file.write("{}\n".format(str(len(blb_data.quads[section.value]))))
 
-            for (positions, normals, uvs, colors, texture_name) in blb_data.quads[index]:
+            for (positions, normals, uvs, colors, texture_name) in blb_data.quads[section.value]:
                 # Face texture name.
                 file.write("\n{}{}\n".format(const.BLB_PREFIX_TEXTURE, texture_name))
 

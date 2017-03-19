@@ -22,7 +22,7 @@ Various constants used in multiple modules.
 """
 
 from decimal import Decimal
-from enum import Enum
+from enum import Enum, IntEnum
 from math import pi
 
 # The BLB file extension.
@@ -43,19 +43,18 @@ Z = 2
 MAX_BRICK_HORIZONTAL_PLATES = 64
 MAX_BRICK_VERTICAL_PLATES = 256
 
-# Quad and coverage section IDs and directions for sorting.
-QUAD_SECTION_IDX_TOP = 0
-QUAD_SECTION_IDX_BOTTOM = 1
-QUAD_SECTION_IDX_NORTH = 2
-QUAD_SECTION_IDX_EAST = 3
-QUAD_SECTION_IDX_SOUTH = 4
-QUAD_SECTION_IDX_WEST = 5
-QUAD_SECTION_IDX_OMNI = 6
-
 # FIXME: Use more enums.
 
-# The quad sections in the correct order for writing to a BLB file.
-QUAD_SECTION_ORDER = ("TOP", "BOTTOM", "NORTH", "EAST", "SOUTH", "WEST", "OMNI")
+
+class BLBQuadSection(IntEnum):
+    """The quad sections in the correct order for writing to a BLB file. Indexed from 0 to 6."""
+    TOP = 0
+    BOTTOM = 1
+    NORTH = 2
+    EAST = 3
+    SOUTH = 4
+    WEST = 5
+    OMNI = 6
 
 # A tuple of valid brick textures in alphabetical order.
 VALID_BRICK_TEXTURES = ("bottomedge", "bottomloop", "print", "ramp", "side", "top")

@@ -696,45 +696,39 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_grid=Non
                 # - Blender west   / grid north : first slice in grid.
                 # Coverage only takes into account symbols that are not empty space "-".
                 # Calculate the area of the brick grid symbols on each the brick side.
-                if index == const.QUAD_SECTION_IDX_TOP:
-                    area = 0
+                area = 0
 
+                if index == const.BLBQuadSection.TOP.value:
                     for axis_slice in brick_grid:
                         area += __count_occurrences(const.GRID_OUTSIDE, axis_slice[0], True)
 
-                elif index == const.QUAD_SECTION_IDX_BOTTOM:
-                    area = 0
+                elif index == const.BLBQuadSection.BOTTOM.value:
                     slice_last_row_idx = len(brick_grid[0]) - 1
 
                     for axis_slice in brick_grid:
                         area += __count_occurrences(const.GRID_OUTSIDE, axis_slice[slice_last_row_idx], True)
 
-                elif index == const.QUAD_SECTION_IDX_NORTH:
-                    area = 0
+                elif index == const.BLBQuadSection.NORTH.value:
                     row_last_symbol_idx = len(brick_grid[0][0]) - 1
-
                     for axis_slice in brick_grid:
                         for row in axis_slice:
                             area += 0 if row[row_last_symbol_idx] == const.GRID_OUTSIDE else 1
 
-                elif index == const.QUAD_SECTION_IDX_EAST:
-                    area = 0
-
+                elif index == const.BLBQuadSection.EAST.value:
                     for row in brick_grid[len(brick_grid) - 1]:
                         area += __count_occurrences(const.GRID_OUTSIDE, row, True)
 
-                elif index == const.QUAD_SECTION_IDX_SOUTH:
-                    area = 0
-
+                elif index == const.BLBQuadSection.SOUTH.value:
                     for axis_slice in brick_grid:
                         for row in axis_slice:
                             area += 0 if row[0] == const.GRID_OUTSIDE else 1
 
-                elif index == const.QUAD_SECTION_IDX_WEST:
-                    area = 0
-
+                elif index == const.BLBQuadSection.WEST.value:
                     for row in brick_grid[0]:
                         area += __count_occurrences(const.GRID_OUTSIDE, row, True)
+
+                else:
+                    raise RuntimeError("Invalid quad section index '{}'.".format(index))
 
             else:
                 area = const.DEFAULT_COVERAGE
@@ -788,7 +782,7 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
         plate_height (Decimal): The height of a Blockland plate in Blender units.
 
     Returns:
-        The index of the section name in const.QUAD_SECTION_ORDER sequence.
+        The section of the quad as a value of the BLBQuadSection enum.
     """
     # ROUND & CAST
     # Divide all dimension values by 2 to get the local bounding plane values.
@@ -796,7 +790,7 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
     local_bounds = __sequence_z_to_plates([value * const.DECIMAL_HALF for value in bounds_dimensions], plate_height)
 
     # Assume omni direction until otherwise proven.
-    direction = 6
+    direction = const.BLBQuadSection.OMNI
 
     # Each position list has exactly 3 values.
     # 0 = X
@@ -819,30 +813,30 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
             if positions[0][axis] == local_bounds[axis]:
                 # +X = East
                 if axis == X:
-                    direction = const.QUAD_SECTION_IDX_EAST
+                    direction = const.BLBQuadSection.EAST
                     break
                 # +Y = North
                 elif axis == Y:
-                    direction = const.QUAD_SECTION_IDX_NORTH
+                    direction = const.BLBQuadSection.NORTH
                     break
                 # +Z = Top
                 else:
-                    direction = const.QUAD_SECTION_IDX_TOP
+                    direction = const.BLBQuadSection.TOP
                     break
 
             # Negative values.
             elif positions[0][axis] == -local_bounds[axis]:
                 # -X = West
                 if axis == X:
-                    direction = const.QUAD_SECTION_IDX_WEST
+                    direction = const.BLBQuadSection.WEST
                     break
                 # -Y = South
                 elif axis == Y:
-                    direction = const.QUAD_SECTION_IDX_SOUTH
+                    direction = const.BLBQuadSection.SOUTH
                     break
                 # -Z = Bottom
                 else:
-                    direction = const.QUAD_SECTION_IDX_BOTTOM
+                    direction = const.BLBQuadSection.BOTTOM
                     break
             # Else the quad is not on the same plane with one of the bounding planes = Omni
         # Else the quad is not planar = Omni
@@ -850,53 +844,54 @@ def __sort_quad(positions, bounds_dimensions, plate_height):
     return direction
 
 
-def __rotate_section_idx(direction, forward_axis):
+def __rotate_section_value(section, forward_axis):
     """
     Args:
+        section (BLBQuadSection): A value of the BLBQuadSection enum.
         forward_axis (string): The name of the user-defined BLB forward axis.
 
     Returns:
-        The index of the section name in const.QUAD_SECTION_ORDER sequence.
+        The input section rotated according to the specified forward_axis as a value in the BLBQuadSection.
     """
-    # ===========================
-    # QUAD_SECTION_IDX_TOP    = 0
-    # QUAD_SECTION_IDX_BOTTOM = 1
-    # QUAD_SECTION_IDX_NORTH  = 2
-    # QUAD_SECTION_IDX_EAST   = 3
-    # QUAD_SECTION_IDX_SOUTH  = 4
-    # QUAD_SECTION_IDX_WEST   = 5
-    # QUAD_SECTION_IDX_OMNI   = 6
-    # ===========================
+    # ==========
+    # TOP    = 0
+    # BOTTOM = 1
+    # NORTH  = 2
+    # EAST   = 3
+    # SOUTH  = 4
+    # WEST   = 5
+    # OMNI   = 6
+    # ==========
 
     # Top and bottom always the same and do not need to be rotated because Z axis remapping is not yet supported.
     # Omni is not planar and does not need to be rotated.
     # The initial values are calculated according to +X forward axis.
-    if direction <= const.QUAD_SECTION_IDX_BOTTOM or direction == const.QUAD_SECTION_IDX_OMNI or forward_axis == "POSITIVE_X":
-        return direction
+    if section <= const.BLBQuadSection.BOTTOM or section == const.BLBQuadSection.OMNI or forward_axis == "POSITIVE_X":
+        return section
 
     # ========================================================================
-    # Rotate the direction according the defined forward axis.
-    # 0. direction is in the range [2, 5].
-    # 1. Subtract 2 to put direction in the range [0, 3]: dir - 2
-    # 2. Add the rotation constant:                       dir - 2 + R
-    # 3. Use modulo make direction wrap around 3 -> 0:    dir - 2 + R % 4
-    # 4. Add 2 to get back to the correct range [2, 5]:   dir - 2 + R % 4 + 2
+    # Rotate the section according the defined forward axis.
+    # 0. section is in the range [2, 5].
+    # 1. Subtract 2 to put section in the range [0, 3]: sec - 2
+    # 2. Add the rotation constant:                     sec - 2 + R
+    # 3. Use modulo make section wrap around 3 -> 0:    sec - 2 + R % 4
+    # 4. Add 2 to get back to the correct range [2, 5]: sec - 2 + R % 4 + 2
     # ========================================================================
     elif forward_axis == "POSITIVE_Y":
         # 90 degrees clockwise.
         # [2] North -> [3] East:  (2 - 2 + 1) % 4 + 2 = 3
         # [5] West  -> [2] North: (5 - 2 + 1) % 4 + 2 = 2
-        return (direction - 1) % 4 + 2
+        return const.BLBQuadSection((section - 1) % 4 + 2)
     elif forward_axis == "NEGATIVE_X":
         # 180 degrees clockwise.
         # [2] North -> [4] South: (2 - 2 + 2) % 4 + 2 = 4
         # [4] South -> [2] North
-        return direction % 4 + 2
+        return const.BLBQuadSection(section % 4 + 2)
     elif forward_axis == "NEGATIVE_Y":
         # 270 degrees clockwise.
         # [2] North -> [5] West:  (2 - 2 + 3) % 4 + 2 = 5
         # [5] West  -> [4] South
-        return (direction + 1) % 4 + 2
+        return const.BLBQuadSection((section + 1) % 4 + 2)
 
 
 def __record_bounds_data(properties, blb_data, bounds_data):
@@ -2305,17 +2300,11 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
     Returns:
         A sequence of mesh data sorted into sections or a string containing an error message to display to the user.
     """
-    # Create an empty list for each quad section_idx.
+    # Create an empty list for each quad section.
     # This is my workaround to making a sort of dictionary where the keys are in insertion order.
     # The quads must be written in a specific order.
     # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-    quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
-
-    # Create an empty list for each quad section_idx.
-    # This is my workaround to making a sort of dictionary where the keys are in insertion order.
-    # The quads must be written in a specific order.
-    # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-    quads = [[] for i in range(len(const.QUAD_SECTION_ORDER))]
+    quads = [[] for i in range(len(const.BLBQuadSection))]
 
     for obj in mesh_objects:
         count_tris = 0
@@ -2369,22 +2358,21 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         # Manual Quad Sorting
         # ===================
         # Manual sorting is per-object.
-        section_idx = None
+        section = None
         reset_section = True
 
         quad_sections = __get_tokens_from_object_name(object_name, properties.quad_sort_definitions)
         section_count = len(quad_sections)
 
         if section_count >= 1:
-            section_idx = properties.quad_sort_definitions.index(quad_sections[0])
-
+            section = const.BLBQuadSection(properties.quad_sort_definitions.index(quad_sections[0]))
             if section_count > 1:
                 logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
-                    object_name, section_count, section_idx), 2)
+                    object_name, section_count, section), 2)
 
             # TODO: Do forward axis rotation of section in the format_blb_data function?
-            # The section_idx index needs to rotated according to the forward axis.
-            section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
+            # The section needs to rotated according to the forward axis.
+            section = __rotate_section_value(section, properties.blendprop.axis_blb_forward)
             reset_section = False
         # Else: No manual sort.
 
@@ -2395,10 +2383,6 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         # PROCESS QUAD DATA
 
         for poly in mesh.polygons:
-            # If automatically sorting, reset variable to None because it is initially defined before the loop.
-            if properties.blendprop.auto_sort_quads:
-                section_idx = None
-
             # ===================
             # Vertex loop indices
             # ===================
@@ -2438,32 +2422,16 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             # Automatic Quad Sorting
             # ======================
             # And the current object does not have a manual definition?
-            if section_idx is None:
+            if section is None:
+                reset_section = True
                 # Does user want to automatically sort quads?
                 if properties.blendprop.auto_sort_quads:
                     # Calculate the section name the quad belongs to.
-                    # Get the index of that section name in the QUAD_SECTION_ORDER list.
-                    section_idx = __sort_quad(positions, bounds_data.dimensions, properties.plate_height)
-                    section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
+                    section = __sort_quad(positions, bounds_data.dimensions, properties.plate_height)
+                    section = __rotate_section_value(section, properties.blendprop.axis_blb_forward)
                 else:
                     # No auto sort, no definition, use omni.
-                    section_idx = const.QUAD_SECTION_IDX_OMNI
-            # Else: The quad had a manual sort, in which case there is no point in calculating the section per quad.
-
-            # ======================
-            # Automatic Quad Sorting
-            # ======================
-            # The current object does not have a manual definition?
-            if section_idx is None:
-                # Does user want to automatically sort quads?
-                if properties.blendprop.auto_sort_quads:
-                    # Calculate the section name the quad belongs to.
-                    # Get the index of that section name in the QUAD_SECTION_ORDER list.
-                    section_idx = __sort_quad(positions, bounds_data.dimensions, properties.plate_height)
-                    section_idx = __rotate_section_idx(section_idx, properties.blendprop.axis_blb_forward)
-                else:
-                    # No auto sort, no definition, use omni.
-                    section_idx = const.QUAD_SECTION_IDX_OMNI
+                    section = const.BLBQuadSection.OMNI
             # Else: The quad had a manual sort, in which case there is no point in calculating the section per quad.
 
             # =======
@@ -2658,10 +2626,10 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 raise RuntimeError("Quad color data only defined for {} vertices, 4 required.".format(len(colors)))
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
-            quads[section_idx].append([positions, normals, uvs, colors, texture_name])
+            quads[section.value].append([positions, normals, uvs, colors, texture_name])
 
             if reset_section:
-                section_idx = None
+                section = None
 
         # Delete the mesh datablock that was created earlier.
         bpy.data.meshes.remove(mesh)
