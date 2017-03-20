@@ -88,7 +88,8 @@ def __to_decimal(value, quantize=None):
     elif isinstance(quantize, Decimal):
         pass
     else:
-        raise ValueError("quantize must be a string or a Decimal, was {}".format(type(quantize)))
+        # Development error.
+        raise ValueError("__to_decimal(value) quantize must be a string or a Decimal, was '{}'.".format(type(quantize)))
 
     # Calculate the fraction that will be used to do the rounding to an arbitrary number.
     fraction = Decimal("1.0") / quantize
@@ -731,6 +732,7 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_grid=Non
                         area += __count_occurrences(const.GRID_OUTSIDE, row, True)
 
                 else:
+                    # Development error.
                     raise RuntimeError("Invalid quad section index '{}'.".format(index))
 
             else:
@@ -953,6 +955,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     elif properties.blendprop.export_count == "MULTIPLE" and properties.blendprop.brick_name_source_multi == "BOUNDS":
         if bounds_data.object_name is None:
             if properties.blendprop.brick_definition == "LAYERS":
+                # RETURN ON ERROR
                 return "When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick."
             else:
                 logger.warning(
@@ -963,6 +966,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
 
             if len(name_elements) == 1:
                 if properties.blendprop.brick_definition == "LAYERS":
+                    # RETURN ON ERROR
                     return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name."
                 else:
                     logger.warning(
@@ -1384,7 +1388,8 @@ def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
     """
     # The angle could easily be normalized here, but doing this has helped me track a couple of mistakes in the code.
     if angle < 0 or angle > const.TWO_PI:
-        raise RuntimeError("__get_2d_angle_axis(angle) expects angle to be normalized to range [0,2pi], value was:", angle)
+        # Development error.
+        raise ValueError("__get_2d_angle_axis(angle) expects angle to be normalized to range [0,2pi], value was:", angle)
 
     if angle >= const.RAD_315_DEG or angle >= 0 and angle < const.RAD_45_DEG:
         if plane == AxisPlane3D.XY:
@@ -1638,7 +1643,8 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
     # Sanity check.
     if len(vert_coords) < 4:
-        raise RuntimeError("__calculate_uvs(brick_texture, vert_coords, normal) function expects a quad, input polygon was not a quad.")
+        # Development error.
+        raise ValueError("__calculate_uvs(brick_texture, vert_coords, normal) function expects a quad, input polygon was not a quad.")
 
     idx_coord = [(idx, coord) for idx, coord in enumerate(vert_coords)]
 
@@ -1809,7 +1815,8 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (h, w))
 
     else:
-        raise RuntimeError("Unknown texture name '{}'".format(brick_texture))
+        # Development error.
+        raise ValueError("Unknown texture name '{}'".format(brick_texture))
 
     #print("__calculate_uvs | uvs_sorted:")
     # for uv in uvs_sorted:
@@ -1905,7 +1912,12 @@ def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
         mesh (Blender Mesh): The mesh to store the UVs in.
         uvs (sequence of sequences): A sequence containing UV pairs.
         layer_name (string): Name to give the UV layer.
+
+    Returns:
+        None if UVs were stored successfully or a string containing an error message.
     """
+    error_string = "Unable to store UV coordinates in object '{}' while it is in edit mode.".format(mesh.name)
+
     # If no UV layer exists, create one.
     if layer_name not in mesh.uv_layers.keys():
         mesh.uv_textures.new(layer_name)
@@ -1921,11 +1933,17 @@ def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
 
     # Get the UV layer in BMesh format.
     bm_uv_layer = bm.loops.layers.uv.get(layer_name)
-    for vert_idx, uv_pair in enumerate(uvs):
-        bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uv_pair
 
-    # TODO: Throws ValueError if mesh is in edit mode.
-    bm.to_mesh(mesh)
+    # RETURN ON ERROR
+    for vert_idx, uv_pair in enumerate(uvs):
+        try:
+            bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uv_pair
+        except AttributeError:
+            return error_string
+    try:
+        bm.to_mesh(mesh)
+    except ValueError:
+        return error_string
 
 
 def __process_grid_definitions(properties, blb_data, bounds_data, definition_objects):
@@ -2277,6 +2295,7 @@ def __process_definition_objects(properties, objects):
     if blb_data.brick_size[X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
             Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[Z] <= const.MAX_BRICK_VERTICAL_PLATES:
         if __sequence_product(blb_data.brick_size) < 1.0:
+            # RETURN ON ERROR
             return "Brick has no volume, brick could not be rendered in-game."
         else:
             # Process brick grid and collision definitions now that a bounds definition exists.
@@ -2286,6 +2305,7 @@ def __process_definition_objects(properties, objects):
             # Return the data.
             return (blb_data, bounds_data, mesh_objects)
     else:
+        # RETURN ON ERROR
         # The formatter fails miserably if this return is on one line so I've broken it in two.
         msg = "Brick size ({0}x{1}x{2}) exceeds the maximum brick size of {3} wide {3} deep and {4} plates tall.".format(blb_data.brick_size[X],
                                                                                                                          blb_data.brick_size[Y],
@@ -2536,12 +2556,15 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     if properties.blendprop.store_uvs:
                         if uvs[1] is not None:
                             # Put the special Blender UVs into the Blender mesh.
-                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(brick_texture.name))
+                            error_message = __store_uvs_in_mesh(poly.index, current_mesh, uvs[1], __string_to_uv_layer_name(brick_texture.name))
                         else:
                             # Put the calculated UVs into the Blender mesh.
-                            __store_uvs_in_mesh(poly.index, current_mesh, uvs[0], __string_to_uv_layer_name(brick_texture.name))
+                            error_message = __store_uvs_in_mesh(poly.index, current_mesh, uvs[0], __string_to_uv_layer_name(brick_texture.name))
 
-                    uvs = uvs[0]
+                    if error_message is None:
+                        uvs = uvs[0]
+                    else:
+                        return error_message
                 else:
                     # No UVs present, no calculation: use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
@@ -2625,13 +2648,15 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
             # Sanity check.
             if not len(positions) is len(normals) is len(uvs) is 4:
-                raise RuntimeError(
-                    "Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
-                        len(positions),
-                        len(normals),
-                        len(uvs)))
+                # RETURN ON ERROR
+                return "Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
+                    len(positions),
+                    len(normals),
+                    len(uvs))
+
             if colors is not None and len(colors) is not 4:
-                raise RuntimeError("Quad color data only defined for {} vertices, 4 required.".format(len(colors)))
+                # RETURN ON ERROR
+                return "Quad color data only defined for {} vertices, 4 required.".format(len(colors))
 
             # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
             quads[section.value].append([positions, normals, uvs, colors, brick_texture.name])
@@ -2651,6 +2676,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
     count_quads = sum([len(sec) for sec in quads])
 
     if count_quads == 0:
+        # RETURN ON ERROR
         return "No faces to export."
     else:
         logger.info("Brick quads: {}".format(count_quads), 1)
@@ -2756,4 +2782,5 @@ def process_blender_data(context, properties, objects):
             # Format and return the data for writing.
             return __format_blb_data(blb_data, properties.forward_axis)
     else:
+        # RETURN ON ERROR
         return "No objects to export."

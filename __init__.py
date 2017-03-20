@@ -568,11 +568,16 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
             # Show an error popup in the UI.
             self.report({"ERROR"}, message)
-        # Else: No error message, everything is OK.
 
-        logger.clear_log()
+            logger.clear_log()
 
-        return {"FINISHED"}
+            return {"CANCELLED"}
+        else:
+            # No error message, everything is OK.
+
+            logger.clear_log()
+
+            return {"FINISHED"}
 
     # ==============
     # User Interface
