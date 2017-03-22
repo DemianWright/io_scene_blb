@@ -196,13 +196,13 @@ If no manual collision definition objects exist, calculates a cuboid collision t
 Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Coverage & Quad Sorting](#defining-coverage--quad-sorting) for more information. (Default: False)
 
 #### Automatic Quad Sorting ####
-Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless [Coverage](#coverage) is enabled. (Default: False)
+Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless [Coverage](#coverage) is enabled. (Default: True)
 
 #### Use Material Colors ####
-Get object colors from object materials. (Default: True)
+Get object colors from object materials. (Default: False)
 
 #### Use Vertex Colors ####
-Get object colors from vertex color layers. (Default: True)
+Get object colors from vertex color layers. (Default: False)
 
 #### Parse Object Colors ####
 Get object colors from object names. (Default: False)

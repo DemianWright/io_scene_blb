@@ -270,7 +270,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     auto_sort_quads = BoolProperty(
         name="Automatic Quad Sorting",
         description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
-        default=False,
+        default=True,
     )
 
     # -------------
@@ -279,7 +279,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     use_materials = BoolProperty(
         name="Use Material Colors",
         description="Read quad colors from materials (recommended method, overrides object colors)",
-        default=True,
+        default=False,
     )
 
     # -----------------
@@ -288,7 +288,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     use_vertex_colors = BoolProperty(
         name="Use Vertex Colors",
         description="Read quad colors from the first vertex color layer (overrides material colors)",
-        default=True,
+        default=False,
     )
 
     # -----------------
