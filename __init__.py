@@ -45,7 +45,6 @@ bl_info = {
 # TODO: Render brick preview.
 # TODO: Panels in the UI?
 # TODO: Brick quad limit?
-# TODO: Double check all round & cast operations, user defined precision is not always honored.
 # TODO: Check that all docstrings and comments are still up to date.
 # TODO: Write about quad sorting to README.
 

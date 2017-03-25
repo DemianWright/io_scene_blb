@@ -43,8 +43,6 @@ Z = 2
 MAX_BRICK_HORIZONTAL_PLATES = 64
 MAX_BRICK_VERTICAL_PLATES = 256
 
-# FIXME: Use more enums.
-
 
 class BLBQuadSection(IntEnum):
     """The quad sections in the correct order for writing to a BLB file. Indexed from 0 to 6."""
@@ -88,6 +86,8 @@ BLB_HEADER_NORMALS = "NORMALS:"
 # The default coverage value = no coverage. (Number of plates that need to cover a brick side to hide it.)
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
 DEFAULT_COVERAGE = 99999
+
+# TODO: Refactor to use enum/dictionary for brick symbols.
 
 # Brick grid symbols.
 GRID_INSIDE = "x"  # Disallow building inside brick.
