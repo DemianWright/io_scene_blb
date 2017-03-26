@@ -46,7 +46,6 @@ bl_info = {
 # TODO: Panels in the UI?
 # TODO: Brick quad limit?
 # TODO: Check that all docstrings and comments are still up to date.
-# TODO: Write about quad sorting to README.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):

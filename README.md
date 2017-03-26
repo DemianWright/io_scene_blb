@@ -40,7 +40,7 @@ The add-on does not support importing .BLB files yet. For Blender 2.67 and newer
    1. [Definition Objects](#definition-objects)
       1. [Defining Brick Grid](#defining-brick-grid)
    1. [Mesh Definition Tokens](#mesh-definition-tokens)
-      1. [Defining Coverage & Quad Sorting](#defining-coverage--quad-sorting)
+      1. [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage)
       1. [Defining Colors](#defining-colors)
    1. [Brick Textures](#brick-textures)
 1. [UV Mapping](#uv-mapping)
@@ -70,7 +70,7 @@ The exporter supports all BLB features.
    - N-gons are ignored
 - [x] UV coordinates
    - Manually define UV coordinates
-   - Automatic UV calculation for all brick textures.
+   - Automatic UV calculation for all brick textures
 - [x] Colors
    - Multiple ways to define colors: materials, object names, vertex paint
    - Per-vertex coloring
@@ -193,7 +193,7 @@ Applies any modifiers on the object before exporting. Does not change the modifi
 If no manual collision definition objects exist, calculates a cuboid collision that is the same size as the brick bounds. If disabled and no collision is defined, brick will have no collision. (Default: True)
 
 #### Coverage ####
-Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Coverage & Quad Sorting](#defining-coverage--quad-sorting) for more information. (Default: False)
+Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage) for more information. (Default: False)
 
 #### Automatic Quad Sorting ####
 Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless [Coverage](#coverage) is enabled. (Default: True)
@@ -318,10 +318,10 @@ A single object may not contain the same definition more than once.
 Definition | Token | Requirements | Maximum Count/Brick | Axis Aligned | Brick Grid Aligned | Description 
 -----------|-------|--------------|--------------------:|:------------:|:------------------:|------------
 <a name="mesh-definition-tokens-color">Color</a> | `c` <red> <green> <blue> <alpha> | See [Defining Colors](#defining-colors) | Unlimited | No | No | Defines the object's RGBA color.
-Coverage | See [Defining Coverage & Quad Sorting](#defining-coverage--quad-sorting) | Must contain a face | Unlimited | No | No | Assigns the object's quads into a specific section in the brick.
+Coverage | See [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage) | Must contain a face | Unlimited | No | No | Assigns the object's quads into a specific section in the brick.
 
-#### Defining Coverage & Quad Sorting ####
-The coverage system is used to improve the performance of the game by hiding faces that cannot be seen. This works by sorting the quads of a brick into one of the 7 sections using the tokens listed below. The game can then intelligently hide all quads in a section in this brick or any adjacent ones when a specific side of a brick is fully covered.
+#### Defining Quad Sorting & Coverage ####
+BLB files allow model quads to be sorted into seven sections: top, bottom, north, east, south, west, and omni. Quads in these sections may then be automatically hidden in-game using the coverage system, if it is defined correctly in the BLB file. This way the game does not have to render quads that are completely covered by adjacent bricks improving frame rate when a large number of bricks are on the screen at once. Quads are sorted into these sections by using one of the tokens below in the name of the object containing the faces to be sorted in that section. If nothing is specified, omni section is used.
 
 Token | Section
 ------|--------
@@ -338,7 +338,7 @@ Sorting quads in the manner described above is pointless unless the [Coverage](#
 Option | Description
 -------|------------
 Hide Self | When enabled, for example for the **top section**, the game will not render the quads in the **top** section of **this brick** when the **top** area of **this brick** is **completely covered**.
-Hide Adjacent | When enabled, for example for the **top section**, the game will not render the quads in the **bottom** section of **adjacent bricks** on **top** of this brick if the coverage rules for those bricks are satisfied.
+Hide Adjacent | When enabled, for example for the **top section**, the game will not render the quads in the **bottom** section of **adjacent bricks** on **top** of this brick if the coverage rules for those bricks are fulfilled.
 
 #### Defining Colors ####
 The exporter supports three methods for defining vertex colors. To allow faces to be colored using the spray can tool in-game, do not assign a color those faces.
