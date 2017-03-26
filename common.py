@@ -46,34 +46,63 @@ def swizzle(sequence, order):
     return [sequence[ascii_lowercase.index(letter)] for letter in order]
 
 
+def swizzle_by_index(sequence, order):
+    """Changes the order of the elements in the specified sequence.
+
+    Args:
+        sequence (sequence): A sequence of objects.
+        order (sequence of integers): The new order of the specified sequence as sequence of indices.
+                                      Duplicating elements is possible by specifying the the same index multiple times.
+    Returns:
+        A new list of objects shallowly copied from the specified sequence in the specified order.
+        The new sequence will only contain the elements specified in the order, elements not specified in the new order are discarded.
+    """
+    return [sequence[idx] for idx in order]
+
+
+def offset_sequence(sequence, offset):
+    """Moves every element in the sequence by the specified offset, looping the elements around when they are pushed off either end of the sequence.
+
+    Args:
+        sequence (sequence): A sequence of objects.
+        offset (integer): The number of slots to move each element forwards (positive) or backwards (negative).
+
+    Returns:
+        A new list of objects shallowly copied from the specified sequence with each element's position offset by the specified amount.
+    """
+    length = len(sequence)
+
+    return [sequence[(i - offset) % length] for i in range(0, length)]
+
+
 def rotate(xyz, forward_axis):
     """Rotates the specified XYZ coordinate sequence according to the specified forward axis so the coordinates will be correctly represented in the game.
     By default Blockland assumes that coordinates are relative to +X axis being the brick forward axis pointing away from the player.
 
     Args:
         xyz (sequence of numbers): A sequence of XYZ coordinates. Only the first 3 values are taken into account even if more are specified.
-        forward_axis (string): The name of the enum value representing the user-specified forward axis.
+        forward_axis (Axis3D): A value of the Axis3D enum. The axis that will point forwards in-game.
 
     Returns:
         A new list of XYZ coordinates.
     """
     rotated = []
 
-    if forward_axis == "POSITIVE_X":
+    if forward_axis is const.Axis3D.POS_X:
         # Rotate: 0 degrees clockwise
         return xyz
 
-    elif forward_axis == "POSITIVE_Y":
+    elif forward_axis is const.Axis3D.POS_Y:
         # Rotate: 90 degrees clockwise = X Y Z -> Y -X Z
         rotated.append(xyz[const.Y])
         rotated.append(-xyz[const.X])
 
-    elif forward_axis == "NEGATIVE_X":
+    elif forward_axis is const.Axis3D.NEG_X:
         # Rotate: 180 degrees clockwise = X Y Z -> -X -Y Z
         rotated.append(-xyz[const.X])
         rotated.append(-xyz[const.Y])
 
-    elif forward_axis == "NEGATIVE_Y":
+    elif forward_axis is const.Axis3D.NEG_Y:
         # Rotate: 270 degrees clockwise = X Y Z -> -Y X Z
         rotated.append(-xyz[const.Y])
         rotated.append(xyz[const.X])
