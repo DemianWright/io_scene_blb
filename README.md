@@ -1,9 +1,10 @@
 # Blender BLB Exporter #
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://img.shields.io/badge/License-GPL%20v2-blue.svg)
 
-A [Blender](https://www.blender.org/) add-on written in Python 3 for exporting [Blockland](http://blockland.us/) bricks (.BLB files) directly from Blender 2.67 and newer without the need for intermediary formats or external programs. It works on the principle of "what you see is what you get", the brick will look exactly the same in-game as it does in the 3D viewport.
+A [Blender](https://www.blender.org/) add-on written in Python 3 for exporting [Blockland](http://blockland.us/) bricks (.BLB files) directly from Blender 2.67 and newer without the need for intermediary formats or external programs. It works on the principle of "what you see is what you get", the brick will look exactly the same in-game as it does in the 3D viewport<sup>[__*__](#exporter-fn-1)</sup>.
 
 The add-on does not support importing .BLB files yet.
+
 
 ## Table of Contents ##
 1. [Features](#features)
@@ -44,7 +45,7 @@ The add-on does not support importing .BLB files yet.
       1. [Defining Colors](#defining-colors)
    1. [Brick Textures](#brick-textures)
 1. [UV Mapping](#uv-mapping)
-	1. [The TOP Brick Texture](the-top-brick-texture)
+	1. [The TOP Brick Texture](#the-top-brick-texture)
 1. [Rounded Values](#rounded-values)
 1. [Troubleshooting](#troubleshooting)
 	1. [Automatically calculated UV coordinates for brick textures are distorted](#automatically-calculated-uv-coordinates-for-brick-textures-are-distorted)
@@ -424,3 +425,5 @@ The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the 
 ## Contributors ##
 - [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.
 - [Demian Wright](https://github.com/DemianWright) - Everything else.
+
+<a name="exporter-fn-1">__*__</a> There's always a footnote, see the issue with [the TOP brick texture](#the-top-brick-texture).
