@@ -132,11 +132,11 @@ class DerivativeProperties(object):
         tokens = [None] * 5
 
         # Go through every priority individually.
-        tokens[properties.deftoken_gridx_priority] = properties.deftoken_gridx
-        tokens[properties.deftoken_griddash_priority] = properties.deftoken_griddash
-        tokens[properties.deftoken_gridu_priority] = properties.deftoken_gridu
-        tokens[properties.deftoken_gridd_priority] = properties.deftoken_gridd
-        tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb
+        tokens[properties.deftoken_gridx_priority] = properties.deftoken_gridx.upper()
+        tokens[properties.deftoken_griddash_priority] = properties.deftoken_griddash.upper()
+        tokens[properties.deftoken_gridu_priority] = properties.deftoken_gridu.upper()
+        tokens[properties.deftoken_gridd_priority] = properties.deftoken_gridd.upper()
+        tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb.upper()
 
         if None in tokens:
             logger.error("Two or more brick grid definitions had the same priority. Unable to proceed.")
