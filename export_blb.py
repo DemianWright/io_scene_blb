@@ -28,21 +28,42 @@ from . import const, logger, blb_processor, blb_writer, common
 
 # The export mediator module.
 
+# ======================
+# DefinitionTokens Class
+# ======================
+class DefinitionTokens(object):
+    """A class storing all definition tokens, except brick grid and quad sort, in upper case strings.
+    Brick grid and quad sort definitions are stored separately in the DerivativeProperties class.
+    """
+
+    def __init__(self, properties):
+        self.bounds = properties.deftoken_bounds.upper()
+        self.collision = properties.deftoken_collision.upper()
+
+        self.color = properties.deftoken_color.upper()
+        self.color_blank = properties.deftoken_color_blank.upper()
+        self.color_add = properties.deftoken_color_add.upper()
+        self.color_sub = properties.deftoken_color_sub.upper()
+
 # ==========================
 # DerivativeProperties Class
 # ==========================
+
 
 class DerivativeProperties(object):
     """A class for storing various properties derived from the user-defined Blender properties to guide the export process.
 
     Stores the following data:
         blendprop (Blender properties object): The original Blender properties object containing more properties that have not been processed further.
-        plate_height (Decimal): The height of one Blockland plate in Blender units.
-        human_error (Decimal): Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
-        scale (Decimal): The scale to export the brick at. Value is in range [0.0,1.0].
+        forward_axis (Axis3D): The axis that will point forwards in-game.
+        deftokens (DefinitionTokens): A class storing all definition tokens, except brick grid and quad sort, in upper case strings.
         grid_def_obj_token_priority (sequence): A sequence containing the user-defined brick grid definitions in reverse priority order.
         grid_definitions_priority (sequence): A sequence containing the brick grid symbols in the same order as grid_def_obj_token_priority.
         quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
+        scale (Decimal): The scale to export the brick at. Value is in range [0.0,1.0].
+        plate_height (Decimal): The height of one Blockland plate in Blender units.
+        human_error (Decimal): Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
+        precision (String): The precision to round floating point numbers to when performing calculations.
     """
 
     def __init__(self, properties):
@@ -61,6 +82,11 @@ class DerivativeProperties(object):
         # Forward Axis
         # ============
         self.forward_axis = const.Axis3D.from_property_name(properties.axis_blb_forward)
+
+        # =================
+        # Definition Tokens
+        # =================
+        self.deftokens = DefinitionTokens(properties)
 
         # ==========
         # Brick Grid
@@ -163,13 +189,13 @@ class DerivativeProperties(object):
             A tuple containing the definitions for manual quad section sorting in the correct order.
         """
         # The definitions must be in the same order as const.QUAD_SECTION_ORDER
-        return (properties.deftoken_quad_sort_top,
-                properties.deftoken_quad_sort_bottom,
-                properties.deftoken_quad_sort_north,
-                properties.deftoken_quad_sort_east,
-                properties.deftoken_quad_sort_south,
-                properties.deftoken_quad_sort_west,
-                properties.deftoken_quad_sort_omni)
+        return (properties.deftoken_quad_sort_top.upper(),
+                properties.deftoken_quad_sort_bottom.upper(),
+                properties.deftoken_quad_sort_north.upper(),
+                properties.deftoken_quad_sort_east.upper(),
+                properties.deftoken_quad_sort_south.upper(),
+                properties.deftoken_quad_sort_west.upper(),
+                properties.deftoken_quad_sort_omni.upper())
 
 
 def __has_object_in_visible_layer(context, objects):
