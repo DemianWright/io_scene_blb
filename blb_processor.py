@@ -2518,10 +2518,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
                     if texcount > 1:
                         logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
-
-            if brick_texture is None:
-                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                brick_texture = const.BrickTexture.SIDE
+            # else: No material name or a brick texture was not specified. Keep None to skip automatic UV generation.
 
             # ===
             # UVs
@@ -2557,15 +2554,21 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     # Blender UV (and vertex) coordinates are in reverse order compared to Blockland so their order needs to be reversed.
                     uvs = __bl_blender_uv_origin_swap(uv_data[1])[::-1]
 
+                    if brick_texture is None:
+                        # Fall back to SIDE texture if nothing was specified.
+                        brick_texture = const.BrickTexture.SIDE
+                        logger.warning("Please specify a brick texture if also specifying UV coordinates, using SIDE by default.", 2)
+
                     # Do we have UV coordinates for a tri?
                     if len(uvs) == 3:
                         # Repeat last coordinate.
                         uvs = uvs + [uvs[2]]
                 # else: UV data is generated, overwrite data.
-            # else: No UV data, generate or use defaults.
+            # else: No UV data, generate UVs, or use defaults.
 
             if uvs is None:
-                if properties.blendprop.calculate_uvs:
+                # Calculating UVs and a brick texture was specified
+                if properties.blendprop.calculate_uvs and brick_texture is not None:
                     uvs = __calculate_uvs(brick_texture, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
 
                     if properties.blendprop.store_uvs:
@@ -2584,6 +2587,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     # No UVs present, no calculation: use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
                     uvs = const.DEFAULT_UV_COORDINATES
+                    brick_texture = const.BrickTexture.SIDE
 
             # ===============
             # Material Colors
