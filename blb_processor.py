@@ -2562,7 +2562,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     # Do we have UV coordinates for a tri?
                     if len(uvs) == 3:
                         # Repeat last coordinate.
-                        uvs = uvs + [uvs[2]]
+                        uvs = uvs + (uvs[2],)
                 # else: UV data is generated, overwrite data.
             # else: No UV data, generate UVs, or use defaults.
 
