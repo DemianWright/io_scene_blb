@@ -2211,11 +2211,11 @@ def __process_definition_objects(properties, objects):
 
         # Ignore non-mesh objects
         if obj.type != "MESH":
-            if obj_name.startswith(properties.deftokens.bounds):
+            if obj_name.upper().startswith(properties.deftokens.bounds):
                 logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
-            elif obj_name.startswith(properties.grid_def_obj_token_priority):
+            elif obj_name.upper().startswith(properties.grid_def_obj_token_priority):
                 logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
-            elif obj_name.startswith(properties.deftokens.collision):
+            elif obj_name.upper().startswith(properties.deftokens.collision):
                 logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
