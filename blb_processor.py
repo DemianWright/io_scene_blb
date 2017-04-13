@@ -952,15 +952,14 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             logger.warning(
                 "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
         else:
-            # Split the bounds object name at whitespace.
-            name_elements = bounds_data.object_name.split()
-
-            if len(name_elements) == 1:
+            if len(bounds_data.object_name.split()) == 1:
                 logger.warning(
                     "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
-                # Brick name follows the bounds definition, spaces are not allowed.
-                blb_data.brick_name = name_elements[name_elements.index(properties.deftokens.bounds) + 1]
+                # Brick name follows the bounds definition, must be separated by a space.
+                # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
+                blb_data.brick_name = bounds_data.object_name[
+                    bounds_data.object_name.upper().index(properties.deftokens.bounds) + len(properties.deftokens.bounds) + 1:]
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
     elif properties.blendprop.export_count == "MULTIPLE" and properties.blendprop.brick_name_source_multi == "BOUNDS":
         if bounds_data.object_name is None:
@@ -971,10 +970,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                 logger.warning(
                     "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
         else:
-            # Split the bounds object name at whitespace.
-            name_elements = bounds_data.object_name.split()
-
-            if len(name_elements) == 1:
+            if len(bounds_data.object_name.split()) == 1:
                 if properties.blendprop.brick_definition == "LAYERS":
                     # RETURN ON ERROR
                     return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name."
@@ -982,8 +978,10 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                     logger.warning(
                         "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
-                # Brick name follows the bounds definition, spaces are not allowed.
-                blb_data.brick_name = name_elements[name_elements.index(properties.deftokens.bounds) + 1]
+                # Brick name follows the bounds definition, must be separated by a space.
+                # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
+                blb_data.brick_name = bounds_data.object_name[
+                    bounds_data.object_name.upper().index(properties.deftokens.bounds) + len(properties.deftokens.bounds) + 1:]
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
 
     return blb_data
