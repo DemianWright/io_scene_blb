@@ -107,10 +107,13 @@ These features may or may not be implemented at some unspecified time in the fut
 - Automatic rendering of the brick preview icon
 
 ## Installation ##
-1. **Do not download** the source code from the releases. Blender cannot handle the `.` character in file names. (Manual installation or renaming works.)
-1. Instead click this link to download the latest version of the master branch: [latest version](https://github.com/DemianWright/io_scene_blb/archive/master.zip). Or go to the front page of the repository and press `Clone or download > Download ZIP`.
+1. Download the add-on using one of them methods below:
+    1. **The cutting edge:** [download the latest version of the develop branch](https://github.com/DemianWright/io_scene_blb/archive/develop.zip) or go to the [develop branch page](https://github.com/DemianWright/io_scene_blb/tree/develop) and press `Clone or download > Download ZIP`.
+        * The develop branch contains the newest features still under active development. Some functionality may be broken or only half-implemented.
+    1. **The latest version:** [download the latest version of the master branch](https://github.com/DemianWright/io_scene_blb/archive/master.zip) or go to the [front page](https://github.com/DemianWright/io_scene_blb) of the repository and press `Clone or download > Download ZIP`.
+    1. **A specific version:** [go to the releases page](https://github.com/DemianWright/io_scene_blb/releases) and follow the instructions on the specific release.
 1. Open Blender and go to `File > User Preferences > Add-ons`.
-1. Press the `Install from File...` button at the bottom of the dialog and find the downloaded source code.
+1. Press the `Install from File...` button at the bottom of the dialog and find the downloaded .ZIP file.
 1. Press `Install from File...` again.
 1. Enable the add-on in the add-ons list and press `Save User Settings` to keep the add-on enabled the next time you start Blender.
 1. The export option is under `File > Export > Blockland Brick (.blb)`.

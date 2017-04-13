@@ -44,7 +44,6 @@ bl_info = {
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
 # TODO: Panels in the UI?
-# TODO: Brick quad limit?
 # TODO: Check that all docstrings and comments are still up to date.
 
 
@@ -93,7 +92,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ----------
     brick_name_source = EnumProperty(
         items=[("BOUNDS", "Bounds", "Brick name is in the name of the bounds object, after the bounds definition, separated with a space (directory set in export file dialog)"),
-               ("FILE", "File", "Brick name is the same as this .blend file name (can be changed manually in the file dialog)")],
+               ("FILE", "File", "Brick name is the same as the .blend file name (can be changed manually in the file dialog)")],
         name="Brick Name from:",
         description="Where to get the name of the exported brick",
         default="BOUNDS"
