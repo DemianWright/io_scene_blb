@@ -45,6 +45,7 @@ bl_info = {
 # TODO: Render brick preview.
 # TODO: Panels in the UI?
 # TODO: Check that all docstrings and comments are still up to date.
+# TODO: Quad sorting is per object but BLBs support per-quad sorting: the exporter does not support quad sorting for smoothed objects.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
@@ -171,9 +172,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
-    # -------------------
-    # Calculate Collision
-    # -------------------
+    # ---------
+    # Collision
+    # ---------
     calculate_collision = BoolProperty(
         name="Calculate Collision",
         description="Calculate cuboid collision for the brick if nothing is defined manually",
@@ -345,12 +346,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="collision",
     )
 
-    deftoken_color = StringProperty(
-        name="Object Color",
-        description="Token for specifying a color for an object using its name. Token must be followed by 4 values (red green blue alpha) separated with spaces using a comma (,) as decimal separator. Integers 0-255 also supported.",
-        default="c",
-    )
-
     # Sections
 
     deftoken_quad_sort_top = StringProperty(
@@ -469,21 +464,27 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     # Colors
 
+    deftoken_color = StringProperty(
+        name="Object Color",
+        description="Token for specifying a color for an object using its name. Token must be followed by 4 values (red green blue alpha) separated with spaces using a comma (,) as decimal separator. Integers 0-255 also supported.",
+        default="c",
+    )
+
     deftoken_color_blank = StringProperty(
-        name="No Color",
-        description="Token for specifying that no color should be written for these faces",
+        name="In-Game Color",
+        description="No color is written for these faces: in-game spray color is used",
         default="blank",
     )
 
     deftoken_color_add = StringProperty(
         name="Additive Color",
-        description="Token for specifying that this color is additive",
+        description="Blender material/vertex color is added to in-game spray color",
         default="cadd",
     )
 
     deftoken_color_sub = StringProperty(
         name="Subtractive Color",
-        description="Token for specifying that this color is subtractive",
+        description="Blender material/vertex color is subtracted from in-game spray color",
         default="csub",
     )
 
@@ -778,11 +779,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
                 """A helper function for drawing the definition properties."""
                 row = box.row()
 
-                split = row.split(percentage=0.35)
+                split = row.split(percentage=0.25)
                 col = split.column()
                 col.label("{}".format(symbol))
 
-                split = split.split(percentage=0.6)
+                split = split.split(percentage=0.7)
                 col = split.column()
                 col.prop(self, prop_name, "")
 
@@ -792,39 +793,27 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
             # This has duplicate data but I don't know how to access the property names defined earlier since self.deftoken_bounds.name doesn't seem to work.
             # For some reason self.deftoken_bounds = "deftoken_bounds" instead of an instance of StringProperty.
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Definition Objects (Object Name)")
             draw_definition_property("Brick Bounds", "deftoken_bounds")
             draw_definition_property("Collision Cuboids", "deftoken_collision")
-            draw_definition_property("Object Colors", "deftoken_color")
-
-            # Sorting definitions.
-
-            draw_definition_property("Top Quads", "deftoken_quad_sort_top")
-            draw_definition_property("Bottom Quads", "deftoken_quad_sort_bottom")
-            draw_definition_property("North Quads", "deftoken_quad_sort_north")
-            draw_definition_property("East Quads", "deftoken_quad_sort_east")
-            draw_definition_property("South Quads", "deftoken_quad_sort_south")
-            draw_definition_property("West Quads", "deftoken_quad_sort_west")
-            draw_definition_property("Omni Quads", "deftoken_quad_sort_omni")
-            draw_definition_property("No Color", "deftoken_color_blank")
-            draw_definition_property("Additive Color", "deftoken_color_add")
-            draw_definition_property("Subtractive Color", "deftoken_color_sub")
-
-            # Grid definitions.
 
             row = box.row()
-            split = row.split(percentage=0.35)
+            row.alignment = "CENTER"
+            row.label("Definition Objects: Brick Grid (Object Name)")
+
+            row = box.row()
+            split = row.split(percentage=0.25)
             col = split.column()
-            col.label("Brick Grid")
             col.label("Symbol")
 
-            split = split.split(percentage=0.6)
+            split = split.split(percentage=0.7)
             col = split.column()
-            col.label()
             col.label("Token")
 
             split = split.split()
             col = split.column()
-            col.label()
             col.label("Priority")
 
             draw_grid_definition_property("b", "deftoken_gridb")
@@ -832,6 +821,25 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             draw_grid_definition_property("u", "deftoken_gridu")
             draw_grid_definition_property("-", "deftoken_griddash")
             draw_grid_definition_property("x", "deftoken_gridx")
+
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Quad Sorting (Object Name)")
+            draw_definition_property("Top Quads", "deftoken_quad_sort_top")
+            draw_definition_property("Bottom Quads", "deftoken_quad_sort_bottom")
+            draw_definition_property("North Quads", "deftoken_quad_sort_north")
+            draw_definition_property("East Quads", "deftoken_quad_sort_east")
+            draw_definition_property("South Quads", "deftoken_quad_sort_south")
+            draw_definition_property("West Quads", "deftoken_quad_sort_west")
+            draw_definition_property("Omni Quads", "deftoken_quad_sort_omni")
+
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Colors (Object/Material/Vertex Color Name)")
+            draw_definition_property("Object Colors", "deftoken_color")
+            draw_definition_property("In-Game Color", "deftoken_color_blank")
+            draw_definition_property("Additive Color", "deftoken_color_add")
+            draw_definition_property("Subtractive Color", "deftoken_color_sub")
 
         layout.separator()
 
@@ -880,6 +888,7 @@ def unregister():
     """Unregisters this module from Blender."""
     bpy.utils.unregister_module(__name__)
     bpy.types.INFO_MT_file_export.remove(menu_export)
+
 
 if __name__ == "__main__":
     register()

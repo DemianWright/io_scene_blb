@@ -261,28 +261,28 @@ An object may contain other text in addition to definition tokens as long as the
 
 Blender adds a running index (e.g. `.003`) to the end of duplicate object, material, etc. names. This is handled correctly, you need not worry about it. The logic for removing the index simply checks if `.` is the fourth last character in the object name and simply removes it an everything after it.
 
-Below is a full list of all definition tokens. For more information on what each of them do, read the rest of the readme.
+Below is a full list of all definition tokens with a brief description. For more information on what each of them do, see the rest of the readme.
 
-Token | Usable In | Description
-------|-----------|------------
-`bounds` | Object name | The bounds object.
-`collision` | Object name | A collision box.
-`c` | Object name | Define object color.
-`qt` | Object name | Sort quads in top section.
-`qb` | Object name | Sort quads in bottom section.
-`qn` | Object name | Sort quads in north section.
-`qe` | Object name | Sort quads in east section.
-`qs` | Object name | Sort quads in south section.
-`qw` | Object name | Sort quads in west section.
-`qo` | Object name | Sort quads in omni section.
-`gridb` | Object name | Write brick grid `b` symbol.
-`gridd` | Object name | Write brick grid `d` symbol.
-`gridu` | Object name | Write brick grid `u` symbol.
-`grid-` | Object name | Write brick grid `-` symbol.
-`gridx` | Object name | Write brick grid `x` symbol.
-`blank` | Material name | Do not write a color.
-`cadd` | Material name, vertex color layer name | Use color as an additive color.
-`csub` | Material name, vertex color layer name | Use color as a subtractive color.
+Token | Category | Usable In | Description
+------|----------|-----------|------------
+`bounds` | Definition objects | Object name | The bounds object. See [Definition Objects](#definition-objects).
+`collision` | Definition objects | Object name | A BLB collision box/cuboid.
+`gridb` | Definition objects: brick grid | Object name | Write brick grid `b` symbol. See [Defining Brick Grid](#defining-brick-grid).
+`gridd` | Definition objects: brick grid | Object name | Write brick grid `d` symbol.
+`gridu` | Definition objects: brick grid | Object name | Write brick grid `u` symbol.
+`grid-` | Definition objects: brick grid | Object name | Write brick grid `-` symbol.
+`gridx` | Definition objects: brick grid | Object name | Write brick grid `x` symbol.
+`qt` | Quad sorting | Object name | Sort quads in top section. See [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage).
+`qb` | Quad sorting | Object name | Sort quads in bottom section.
+`qn` | Quad sorting | Object name | Sort quads in north section.
+`qe` | Quad sorting | Object name | Sort quads in east section.
+`qs` | Quad sorting | Object name | Sort quads in south section.
+`qw` | Quad sorting | Object name | Sort quads in west section.
+`qo` | Quad sorting | Object name | Sort quads in omni section.
+`c` | Colors | Object name | Define object color in object name. See [Defining Colors](#defining-colors).
+`blank` | Colors | Material name | Do not write a color: use in-game spray can color as is.
+`cadd` | Colors | Material name, vertex color layer name | Add material/vertex color to in-game spray can color.
+`csub` | Colors | Material name, vertex color layer name | Subtract material/vertex color from in-game spray can color.
 
 ### Definition Objects ###
 When a definition object token is read in an object's name it is treated as a definition object. Definition objects are never exported as visual 3D models, in fact they are not exported at all. Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
@@ -417,7 +417,7 @@ Normal vectors | [Optional](#round-normals)
 [UV coordinates](#uv-mapping) | No
 
 ## Troubleshooting ##
-Solutions to common issues with the BLB Exporter. If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again. The log file may contain warnings or errors describing the issue with the model.
+Solutions to common issues with the BLB Exporter. If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again. The log file may contain warnings or errors describing issues with the models and how to fix them.
 
 ### Automatically calculated UV coordinates for brick textures are distorted ###
 The automatic UV calculation is only designed to work with rectangular quads. Manually define UV coordinates for non-rectangular quads.
