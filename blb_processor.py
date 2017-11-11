@@ -31,9 +31,8 @@ from math import atan, ceil, modf, pi, radians, sqrt
 import bpy
 
 from mathutils import Euler, Vector
-import numpy
-
 import bmesh
+import numpy
 
 from . import common, const, logger
 from .const import Axis3D, AxisPlane3D, X, Y, Z
@@ -943,18 +942,19 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
                 bounds_size[index] = round(properties.human_error * round(value / properties.human_error))
+                # FIXME: Force to integer size?
 
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
 
     if properties.blendprop.export_count == "SINGLE" and properties.blendprop.brick_name_source == "BOUNDS":
         if bounds_data.object_name is None:
-            logger.warning(
-                "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
+            logger.warning("Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
                 logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
+                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.",
+                    1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -976,7 +976,8 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                     return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name."
                 else:
                     logger.warning(
-                        "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
+                        "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.",
+                        1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -2129,16 +2130,18 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
 
     defcount = len(definition_objects)
     # Log messages for collision definitions.
+    # FIXME: Skip collision processing if calculating collision!
     if defcount == 0:
         if properties.blendprop.calculate_collision:
-            logger.warning("No collision definitions found. Calculating full brick collision.", 1)
+            logger.info("No collision definitions found. Brick collision will be the same size as the brick bounds.", 1)
         else:
             logger.warning("No collision definitions found. Brick will have no collision.", 1)
     elif defcount == 1:
         if processed == 0:
             if properties.blendprop.calculate_collision:
+                # TODO: Remove.
                 logger.warning(
-                    "{} collision definition found but was not processed. Calculating full brick collision.".format(defcount), 1)
+                    "{} collision definition found but was not processed. Brick collision will be the same size as the brick bounds.".format(defcount), 1)
             else:
                 logger.warning(
                     "{} collision definition found but was not processed. Brick will have no collision.".format(defcount), 1)
@@ -2149,6 +2152,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
         # Found more than one.
         if processed == 0:
             if properties.blendprop.calculate_collision:
+                # TODO: Remove.
                 logger.warning(
                     "{} collision definitions found but were not processed. Calculating full brick collision.".format(defcount), 1)
             else:
@@ -2377,7 +2381,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 # Did user define at least 4 numerical values?
                 if size >= 4:
                     if size > 4:
-                        logger.info("More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name), 2)
+                        logger.warning("More than 4 color values defined for object '{}', only the first 4 values (RGBA) are used.".format(object_name), 2)
 
                         # We're only interested in the first 4 values: R G B A
                         floats = floats[:4]
@@ -2406,7 +2410,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         if section_count >= 1:
             section = const.BLBQuadSection(properties.quad_sort_definitions.index(quad_sections[0]))
             if section_count > 1:
-                logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
+                logger.warning("Object '{}' has {} section definitions, only using the first one: {}".format(
                     object_name, section_count, section), 2)
 
             # TODO: Do forward axis rotation of section in the format_blb_data function?
@@ -2515,7 +2519,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     brick_texture = const.BrickTexture[texnames[0]]
 
                     if texcount > 1:
-                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
+                        logger.warning("More than one brick texture name found in material '{}', only using the first one.".format(matname), 2)
             # else: No material name or a brick texture was not specified. Keep None to skip automatic UV generation.
 
             # ===
@@ -2555,7 +2559,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     if brick_texture is None:
                         # Fall back to SIDE texture if nothing was specified.
                         brick_texture = const.BrickTexture.SIDE
-                        logger.warning("Please specify a brick texture if also specifying UV coordinates, using SIDE by default.", 2)
+                        logger.warning("Face has UV coordinates but no brick texture, using SIDE by default.", 2)
 
                     # Do we have UV coordinates for a tri?
                     if len(uvs) == 3:
@@ -2645,6 +2649,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
                         name = common.to_float_or_none(" ".join(tokens))
 
+                        # FIXME: vertex_color_alpha is never assigned.
                         if vertex_color_alpha is None:
                             if name is None:
                                 vertex_color_alpha = 1.0

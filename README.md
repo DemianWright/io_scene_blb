@@ -50,6 +50,8 @@ The add-on does not support importing .BLB files yet.
 1. [Troubleshooting](#troubleshooting)
 	1. [Automatically calculated UV coordinates for brick textures are distorted](#automatically-calculated-uv-coordinates-for-brick-textures-are-distorted)
 	1. [Automatically calculated UV coordinates for brick textures are rotated incorrectly](#automatically-calculated-uv-coordinates-for-brick-textures-are-rotated-incorrectly)
+1. [Warning & Error Log Messages](#warning--error-log-messages)
+	1. [Warnings](#warnings)
 1. [Contributors](#contributors)
 
 ## Features ##
@@ -351,7 +353,7 @@ Method | Overrides | Extent of Coloring | RGB Values | Alpha Value | Notes
 -------|-----------|--------------------|------------|-------------|------
 Object Colors | In-game paint color | Entire object (color & alpha)| In object name after the [Color token](#mesh-definition-tokens-color) [**(1)**](#defining-colors-fn-1) | In object name after the red, green, and blue values | Implemented only to support legacy 3D brick models, not recommended for use.
 Material Colors | Object Colors | Assigned faces (color & alpha) | In `Material` tab as `Diffuse Color` | In `Material` tab under `Transparency` in `Alpha` slider| Recommended method for defining colors. Multiple materials may be used in a single object.
-Vertex Colors | Material Colors | Entire object (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer [**(2)**](#defining-colors-fn-2) | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
+<a name="vertex-colors">Vertex Colors</a> | Material Colors | Entire object (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer [**(2)**](#defining-colors-fn-2) | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
 
 There are three definition tokens that are specific to dealing with colors.
 
@@ -418,12 +420,466 @@ Normal vectors | [Optional](#round-normals)
 
 ## Troubleshooting ##
 Solutions to common issues with the BLB Exporter. If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again. The log file may contain warnings or errors describing issues with the models and how to fix them.
+Additional instructions on how to fix specific issues are detailed in the [Warning & Error Log Messages](#warning--error-log-messages) section.
 
 ### Automatically calculated UV coordinates for brick textures are distorted ###
 The automatic UV calculation is only designed to work with rectangular quads. Manually define UV coordinates for non-rectangular quads.
 
 ### Automatically calculated UV coordinates for brick textures are rotated incorrectly ###
 The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the SIDE texture pointing sideways instead of up) is not a perfect rectangle. Even one vertex being off by some minuscule, visually indistinguishable amount from a perfectly rectangular shape can cause the automatic UV calculation to incorrectly determine the rotation of the quad. Double check all 4 coordinates of the quad and manually correct any floating point errors. If working on axis-aligned quads or if the vertices should be on grid points snapping the coordinates of the problem quad to grid coordinates using `Mesh > Snap > Snap Selection to Grid` usually fixes floating point errors.
+
+## Warning & Error Log Messages ##
+Detailed explanations of the warning and error messages logged by the program and directions on how to solve the associated issues.
+In the messages listed in this section the `#` character is used to represent a variable numerical value.
+Text surrounded by `%` describes a variable alphanumeric value.
+
+### Warnings ###
+Warning log messages can be ignored as the issues are automatically corrected, but the resulting brick may not behave or look as excepted.
+It is recommended to manually adjust the brick until no warning messages are present in the output log.
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Calculated bounds have a non-integer size # # #, rounding up.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>No <a href="#definition-objects-bounds">Bounds object</a> was defined and the axis-aligned bounding box calculated from the visible 3D models has non-integer dimensions as a brick.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Brick dimensions of the calculated bounding box will be rounded up to ensure that <a href="#definition-objects-collision">collision cuboids</a> (if any) still fit within the bounds.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td><ol>
+			<li><strong>Recommended:</strong> Manually define a bounds object.</li>
+			<li>Manually ensure that the visible parts of your brick model form an axis-aligned bounding box that has a valid size for a brick.</li>
+		</ol></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Defined bounds have a non-integer size # # #, rounding to a precision of #.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The axis-aligned bounding box calculated from the defined <a href="#definition-objects-bounds">bounds object</a> has non-integer dimensions as a brick.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The brick dimensions will be rounded to the specified precision.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that the defined bounds object aligns with the brick grid.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to "Bounds" but no manually defined <a href="#definition-objects-bounds">bounds object</a> was found.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The file name specified in the export dialog is used as the name of the BLB file instead.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Create a bounds object and in the name of the object separate the name of the BLB file from the bounds <a href="#definition-tokens">definition token</a> with a whitespace character.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to "Bounds" but no string was found after the bounds <a href="#definition-tokens">definition token</a> in the name of the <a href="#definition-objects-bounds">bounds object</a>.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The file name specified in the export dialog is used as the name of the BLB file instead.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Separate the name of the BLB file from the bounds definition token with a whitespace character, such as a space.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>No brick grid definitions found. Automatically generated brick grid may be undesirable.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>There are no <a href="#defining-brick-grid">brick grid definition objects</a>.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>A full block brick grid will be generated. Brick will act as if it were a basic cuboid brick of that size.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Create brick grid definitions for the model.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp># brick grid definition(s) found but was/were not processed. Automatically generated brick grid may be undesirable.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>An error occurred for all <a href="#defining-brick-grid">brick grid definition objects</a> when converting into a brick placement rule.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>A full block brick grid will be generated. Brick will act as if it were a basic cuboid brick of that size.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Create valid brick grid definitions for the model.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Collision definition object '%object name%' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A <a href="#definition-objects-collision">collision definition object</a> contained more than 8 vertices.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>No effect other this warning message.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that all collision definition objects have 2-8 vertices only.</td>
+	</tr>
+	<tr>
+		<th>Notes</th>
+		<td>This warning message exists to promote good modeling standards. The exporter uses the axis-aligned bounding box of a collision definition object as the BLB collision cuboid so from a technical standpoint the shape of the mesh is irrelevant. However from a practical standpoint, it does not make sense to use a shape other than a cuboid made from 8 vertices (or merely 2 vertices if you're being minimal) to represent a collision <em>cuboid</em>.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>No collision definitions found. Brick will have no collision.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>No <a href="#definition-objects-collision">collision definition objects</a> were found and the <a href="#calculate-collision">Calculate Collision</a> <a href="#blender-export-properties">export property</a> was disabled.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The brick will have no collision data and it cannot be interacted with in game in any way.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td><ol>
+			<li>Manually define collision objects.</li>
+			<li>Enable the Calculate Collision export property.</li>
+		</ol></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp># collision definition(s) found but was/were not processed. Brick will have no collision.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>An error occurred for all <a href="#definition-objects-collision">collision definition objects</a> when calculating their dimensions.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The brick will have no collision data and it cannot be interacted with in game in any way.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td><ol>
+			<li>Manually define valid collision objects.</li>
+			<li>Enable the Calculate Collision export property.</li>
+		</ol></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' cannot be used to define bounds, must be a mesh.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A non-mesh object such as a camera had a bounds <a href="#definition-tokens">definition token</a> in its name.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>No effect other this warning message.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the bounds definition token from the name of the object.</td>
+	</tr>
+	<tr>
+		<th>Notes</th>
+		<td>This warning message exists to promote good naming standards. Definition token strings should not be used with anything other than definition objects..</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' cannot be used to define brick grid, must be a mesh.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A non-mesh object such as a camera had a brick grid <a href="#definition-tokens">definition token</a> in its name.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>No effect other this warning message.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the brick grid definition token from the name of the object.</td>
+	</tr>
+	<tr>
+		<th>Notes</th>
+		<td>This warning message exists to promote good naming standards. Definition token strings should not be used with anything other than definition objects..</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' cannot be used to define collision, must be a mesh.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A non-mesh object such as a camera had a collision <a href="#definition-tokens">definition token</a> in its name.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>No effect other this warning message.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the collision definition token from the name of the object.</td>
+	</tr>
+	<tr>
+		<th>Notes</th>
+		<td>This warning message exists to promote good naming standards. Definition token strings should not be used with anything other than definition objects..</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Multiple bounds definitions found. '%object name%' definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>One brick contained more than one <a href="#definition-objects-bounds">bounds definition object</a>.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The oldest bounds definition object is used and the rest are discarded.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional bounds definition objects.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Multiple brick grid definitions in object '%object name%', only the first one is used.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A single <a href="#definition-objects">definition object</a> contained more than one <a href="#defining-brick-grid">brick grid definition token</a>.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first brick grid definition token is used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional brick grid definition tokens.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>No brick bounds definition found. Automatically calculated brick size may be undesirable.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>Brick did not have a <a href="#definition-objects-bounds">bounds definition object</a>.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The axis-aligned bounding box of all visible meshes will rounded to the nearest brick dimensions and used as the brick bounds.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Create a bounds definition object.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>More than 4 color values defined for object '%object name%', only the first 4 values (RGBA) are used.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>Object name contained more than 4 color values. <a href="#defining-colors">Colors</a> must be defined by exactly 4 numbers.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first 4 numbers are used as color values.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the additional numbers.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' has # vertex color layers, only using the first.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The object had more than one <a href="#vertex-colors">vertex color layer</a>.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first vertex color layer is used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional vertex color layers.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' has # section definitions, only using the first one: %section name%</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The object had more than one <a href="#defining-quad-sorting--coverage">quad section definition token</a>.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first section definition token is used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional section definition tokens.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>More than one brick texture name found in material '%material name%', only using the first one.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The material name contained more than one <a href="#brick-textures">brick texture</a> name.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first brick texture name is used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional brick texture names.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Face has UV coordinates but no brick texture, using SIDE by default.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The material assigned to a face had no <a href="#brick-textures">brick texture</a> defined but the face had UV coordinates.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The `side` brick texture is used for the face.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Manually define brick textures in the names of the materials that are assigned to UV mapped faces.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>No alpha value set in vertex color layer name, using 1.0.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The color defined in the <a href="#vertex-colors">vertex color layer</a> did not contain an alpha value.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Alpha of `1.0` is used resulting in an opaque color.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Define the alpha value in the verter color layer name.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp># triangles degenerated to quads.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A mesh contained a triangle.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The triangle is forcefully converted into a quad by copying the first vertex and using that as the last vertex of a quad. This conversion has three different outcomes:
+		<ul>
+			<li>If flat shading is used for the face there is no change visually and the face will look like a triangle in game.</li>
+			<li>If the face and adjacent connected faces are planar and smooth shading is used there are no visual anomalies.</li>
+			<li>If the face and adjacent connected faces are <em>not planar</em> and smooth shading is used there may be shading errors.</li>
+		</ul></td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Do not use triangles in any meshes.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp># n-gons skipped.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A mesh contained a face made from more than 4 vertices.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Faces made from more than 4 vertices are not exported.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Manually rebuild faces made from more than 4 vertices using quads.</td>
+	</tr>
+</table>
 
 ## Contributors ##
 - [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.

@@ -123,6 +123,7 @@ class DerivativeProperties(object):
                 # Used for rounding vertex positions to the brick grid.
                 self.human_error = Decimal("0.1")
             else:
+                # FIXME: Typo? Shouldn't I define self.human_error and self.plate_height?
                 properties.human_error = properties.human_error * self.scale
                 properties.plate_height = properties.plate_heigh * self.scale
 
@@ -360,6 +361,7 @@ def export(context, properties, export_dir, export_file, file_name):
                             # Group has at least one object in a visible layer, export group.
                         # Else: Export all groups in the scene, no need to check anything.
 
+                        # TODO: Is the newline intentional or left from development?
                         logger.info("\nExporting group '{}'.".format(group.name))
 
                         # Objects in multiple groups will be exported more than once.
@@ -390,6 +392,7 @@ def export(context, properties, export_dir, export_file, file_name):
                             continue
                         # Layer has at least one object in a visible layer, export layer objects.
 
+                    # TODO: Is the newline intentional or left from development?
                     logger.info("\nExporting layer {}.".format(layer_idx + 1))
                     # Get brick name from bounds.
                     message = export_brick(context, deriv_properties, export_dir, None, file_name, layer_objects)

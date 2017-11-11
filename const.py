@@ -73,6 +73,7 @@ class BrickTexture(Enum):
         """Returns the names of the members of this enum as a list of uppercase strings."""
         return [member.name for member in BrickTexture]
 
+
 # BLB file strings.
 BLB_BRICK_TYPE_SPECIAL = "SPECIAL"
 BLB_SECTION_SEPARATOR = "---------------- {} QUADS ----------------"
