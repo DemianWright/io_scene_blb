@@ -133,6 +133,7 @@ class DerivativeProperties(object):
             prec = properties.float_precision
 
             if common.to_float_or_none(prec) is None:
+                # FIXME: Concatenate message.
                 self.error_message = "Invalid floating point precision value given."
             else:
                 if prec == "0":
@@ -166,6 +167,7 @@ class DerivativeProperties(object):
         tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb.upper()
 
         if None in tokens:
+            # FIXME: Return string.
             logger.error("Two or more brick grid definitions had the same priority. Unable to proceed.")
             return None
         else:
@@ -347,6 +349,7 @@ def export(context, properties, export_dir, export_file, file_name):
             # Bricks in groups.
             if deriv_properties.blendprop.brick_definition == "GROUPS":
                 if len(bpy.data.groups) == 0:
+                    # RETURN ON ERROR
                     return "No groups to export."
                 else:
                     # For all groups in the scene.
@@ -403,4 +406,5 @@ def export(context, properties, export_dir, export_file, file_name):
                         return message
 
                 if exported == 0:
+                    # RETURN ON ERROR
                     return "Nothing to export in layers."

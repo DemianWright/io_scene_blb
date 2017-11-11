@@ -108,7 +108,7 @@ def __to_decimal(val, quantize=None):
         elif isinstance(quantize, Decimal):
             pass
         else:
-            # Development error.
+            # EXCEPTION
             raise ValueError("__to_decimal(value) quantize must be a string or a Decimal, was '{}'.".format(type(quantize)))
 
         # Calculate the fraction that will be used to do the rounding to an arbitrary number.
@@ -741,7 +741,7 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_grid=Non
                         area += __count_occurrences(const.GRID_OUTSIDE, row, True)
 
                 else:
-                    # Development error.
+                    # EXCEPTION
                     raise RuntimeError("Invalid quad section index '{}'.".format(index))
 
             else:
@@ -1399,7 +1399,7 @@ def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
     """
     # The angle could easily be normalized here, but doing this has helped me track a couple of mistakes in the code.
     if angle < 0 or angle > const.TWO_PI:
-        # Development error.
+        # EXCEPTION
         raise ValueError("__get_2d_angle_axis(angle) expects angle to be normalized to range [0,2pi], value was:", angle)
 
     if angle >= const.RAD_315_DEG or angle >= 0 and angle < const.RAD_45_DEG:
@@ -1439,7 +1439,7 @@ def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
 
 
 def __get_normal_axis(normal):
-    """Determines the closes axis of the specified normal vector.
+    """Determines the closest axis of the specified normal vector.
 
     Args:
         normal (Vector): A normal vector in XYZ-space.
@@ -1542,8 +1542,8 @@ def __get_normal_axis(normal):
             plane = None
 
     if point:
-        logger.error("Normal vector is point and has no direction. Returning +X axis by default.")
-        return Axis3D.POS_X
+        # EXCEPTION
+        raise ValueError("__get_normal_axis(normal) expects a vector, point '{}' given instead.".format(normal))
 
     if plane is None:
         # TODO: Z-axis is ignored for now. Assume XY-plane.
@@ -1654,7 +1654,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
     # Sanity check.
     if len(vert_coords) < 4:
-        # Development error.
+        # EXCEPTION
         raise ValueError("__calculate_uvs(brick_texture, vert_coords, normal) function expects a quad, input polygon was not a quad.")
 
     idx_coord = [(idx, coord) for idx, coord in enumerate(vert_coords)]
@@ -1826,7 +1826,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (h, w))
 
     else:
-        # Development error.
+        # EXCEPTION
         raise ValueError("Unknown texture name '{}'".format(brick_texture))
 
     #print("__calculate_uvs | uvs_sorted:")
