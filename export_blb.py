@@ -95,8 +95,8 @@ class DerivativeProperties(object):
         # Contains the brick grid definition object name tokens in reverse priority order.
         result = self.__build_grid_priority_tuples(properties)
 
-        if result is None:
-            self.error_message = "Two or more brick grid definitions had the same priority."
+        if isinstance(result, str):
+            self.error_message = result
         else:
             self.grid_def_obj_token_priority = result[0]
             self.grid_definitions_priority = result[1]
@@ -167,9 +167,7 @@ class DerivativeProperties(object):
         tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb.upper()
 
         if None in tokens:
-            # FIXME: Return string.
-            logger.error("Two or more brick grid definitions had the same priority. Unable to proceed.")
-            return None
+            return "Two or more brick grid definitions had the same priority."
         else:
             symbols = [None] * 5
 
@@ -265,6 +263,7 @@ def export(context, properties, export_dir, export_file, file_name):
                 for index in range(len(context.scene.layers)):
                     # If this layer is visible.
                     # And this object is in the layer.
+                    # TODO: Clarify this funky condition.
                     if True is obj.layers[index] == context.scene.layers[index]:
                         # Append to the list of objects.
                         objects.append(obj)
@@ -274,6 +273,7 @@ def export(context, properties, export_dir, export_file, file_name):
         # If user wants to export the whole scene.
         # Or if user wanted to export only the selected objects or layers but they contained nothing.
         # Get all scene objects.
+        # TODO: Remove len(objects) == 0 condition.
         if properties.blendprop.export_objects == "SCENE" or len(objects) == 0:
             logger.info("Exporting scene to BLB.")
             objects = context.scene.objects

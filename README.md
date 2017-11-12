@@ -52,6 +52,9 @@ The add-on does not support importing .BLB files yet.
 	1. [Automatically calculated UV coordinates for brick textures are rotated incorrectly](#automatically-calculated-uv-coordinates-for-brick-textures-are-rotated-incorrectly)
 1. [Warning & Error Log Messages](#warning--error-log-messages)
 	1. [Warnings](#warnings)
+	1. [Errors](#errors)
+		1. [Fatal Errors](#fatal-errors)
+		1. [Non-Fatal Errors](#non-fatal-errors)
 1. [Contributors](#contributors)
 
 ## Features ##
@@ -443,7 +446,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>No <a href="#definition-objects-bounds">Bounds object</a> was defined and the axis-aligned bounding box calculated from the visible 3D models has non-integer dimensions as a brick.</td>
+		<td>No <a href="#definition-objects-bounds">bounds object</a> was defined and the axis-aligned bounding box calculated from the visible 3D models has non-integer dimensions as a brick.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -482,7 +485,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to "Bounds" but no manually defined <a href="#definition-objects-bounds">bounds object</a> was found.</td>
+		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to <strong>Bounds</strong> but no manually defined <a href="#definition-objects-bounds">bounds object</a> was found.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -500,7 +503,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to "Bounds" but no string was found after the bounds <a href="#definition-tokens">definition token</a> in the name of the <a href="#definition-objects-bounds">bounds object</a>.</td>
+		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to <strong>Bounds</strong> but no string was found after the bounds <a href="#definition-tokens">definition token</a> in the name of the <a href="#definition-objects-bounds">bounds object</a>.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -878,6 +881,607 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	<tr>
 		<th>Solution</th>
 		<td>Manually rebuild faces made from more than 4 vertices using quads.</td>
+	</tr>
+</table>
+
+### Errors ###
+Errors are separated into two categories: fatal and non-fatal errors.
+* Fatal errors cause the program execution to stop as there is insuffient or incorrect input data to process into a Blockland brick.
+* Non-fatal errors occur when the exporter attempts to do something (due to invalid input data) that would have caused an error when loading or using the exported brick in game.
+Alternatively the user has attempted to do something that is explicitly not allowed by the exporter or would lead to a mathematical error.
+
+It is recommended to manually adjust the brick until no error messages are present in the output log.
+
+#### Fatal Errors ####
+Fatal errors always lead to the program execution stopping.
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Two or more brick grid definitions had the same priority.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>Two or more <a href="#custom-definition-tokens">user defined</a> <a href="#defining-brick-grid">brick grid definition tokens</a> had the same priority number.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>The user-intended priority order of the tokens cannot be automatically determined.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that all custom brick grid definition tokens have a unique priority number.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+			<table>
+				<thead>
+					<tr>
+						<th>Property</th>
+						<th>Value</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><a href="#bricks-to-export">Bricks to Export</a></td>
+						<td>Multiple</td>
+					</tr>
+					<tr>
+						<td><a href="#brick-names-from-multiple-export">Brick Names from (Multiple Export)</a></td>
+						<td>Bounds</td>
+					</tr>
+					<tr>
+						<td><a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></td>
+						<td>Layers</td>
+					</tr>
+				</tbody>
+			</table>
+			And a visible layer did not contain a <a href="#definition-objects-bounds">bounds definition object</a>.
+		</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>In the interest of promoting good workflow practices this is considered a fatal error instead of automatically naming the brick by the index of the layer it is contained in.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that there is exactly one valid bounds definition object in every visible layer.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>When exporting multiple bricks in separate layers, the brick name must be after the bounds definition token (separated with a space) in the bounds definition object name.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+			<table>
+				<thead>
+					<tr>
+						<th>Property</th>
+						<th>Value</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><a href="#bricks-to-export">Bricks to Export</a></td>
+						<td>Multiple</td>
+					</tr>
+					<tr>
+						<td><a href="#brick-names-from-multiple-export">Brick Names from (Multiple Export)</a></td>
+						<td>Bounds</td>
+					</tr>
+					<tr>
+						<td><a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></td>
+						<td>Layers</td>
+					</tr>
+				</tbody>
+			</table>
+			And a <a href="#definition-objects-bounds">bounds definition object</a> name did not contain the name of the brick.
+		</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>In the interest of promoting good workflow practices this is considered a fatal error instead of automatically naming the brick by the index of the layer it is contained in.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that each bounds definition object contains the name of that brick.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Unable to store UV coordinates in object '%object name%' while it is in edit mode.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The <a href="#store-uvs">Store UVs</a> property is enabled and the exporter attempted to write UV coordinates to a Blender object that is currently in edit mode.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>The authors have not bothered to find a way to automatically disable and re-enable the edit mode.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Confirm that you are not in the edit object interaction mode by changing to the <strong>Object Mode</strong> in the 3D viewport.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Brick has no volume, brick could not be rendered in-game.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The <a href="#definition-objects-bounds">bounds definition object</a> or the automatically calculated axis-aligned bounding box of the brick was smaller than 1 brick on one or more axis.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>A brick size cannot be zero on any axis.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that the manually defined bounds definition object or if none is defined, the actual model of the brick, is larger than a 1x1 plate brick.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Brick size (#x#x#) exceeds the maximum brick size of 64 wide 64 deep and 256 plates tall.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The <a href="#definition-objects-bounds">bounds definition object</a> or the automatically calculated axis-aligned bounding box of the brick is larger than maximum brick size supported by Blockland.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>The maximum size of a single Blockland brick is 64 plates wide 64 plates deep and 256 plates tall.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Make your brick bounds smaller, while keeping in mind the rules regarding other <a href="#definition-objects">definition objects</a>.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>No faces to export.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>None of the non-definition objects had any faces.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Creating a brick with no visible faces is pointless.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that there is at least one face to export.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>No objects to export.</samp></td>
+	</tr>
+	<tr>
+		<th>Causes</th>
+		<td>Depends on the values of various <a href="#blender-export-properties">export properties</a>.
+			<table>
+				<caption>Value of <a href="#bricks-to-export">Bricks to Export</a></caption>
+				<thead>
+					<tr>
+						<th>Value</th>
+						<th>Causes</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Single</td>
+						<td>
+							<table>
+				  				<caption>Value of <a href="#export-only-single-export">Export Only (Single Export)</a></caption>
+								<thead>
+									<tr>
+										<th>Value</th>
+										<th>Cause</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Selection</td>
+										<td>No objects were selected. Selected objects have an orange outline.</td>
+									</tr>
+									<tr>
+										<td>Layers</td>
+										<td>There are no objects in the currently visible layers.</td>
+									</tr>
+									<tr>
+										<td>Scene</td>
+										<td>There are no objects in the current scene. In other words none of the layers in the current scene contained objects.</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>Multiple</td>
+						<td>
+							<table>
+				  				<caption>Value of <a href="#export-bricks-in-multiple-export">Export Bricks in (Multiple Export)</a></caption>
+								<thead>
+									<tr>
+										<th>Value</th>
+										<th>Causes</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Layers</td>
+										<td>
+											<table>
+				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
+												<thead>
+													<tr>
+														<th>Value</th>
+														<th>Cause</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+														<td>Groups</td>
+														<td>None of the groups in the current scene had any objects in the visible layers.</td>
+													</tr>
+													<tr>
+														<td>Layers</td>
+														<td>None of the visible layers contained any objects.</td>
+													</tr>
+												</tbody>
+											</table>
+										</td>
+									</tr>
+									<tr>
+										<td>Scene</td>
+										<td>
+											<table>
+				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
+												<thead>
+													<tr>
+														<th>Value</th>
+														<th>Cause</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+														<td>Groups</td>
+														<td>None of the groups in the current scene contained any objects.</td>
+													</tr>
+													<tr>
+														<td>Layers</td>
+														<td>None of the layers in the current scene contained any objects.</td>
+													</tr>
+												</tbody>
+											</table>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>No data to export, nothing to do.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td>Depends on the values of various export properties.
+			<table>
+					<caption>Value of <a href="#bricks-to-export">Bricks to Export</a></caption>
+				<thead>
+					<tr>
+						<th>Value</th>
+						<th>Solutions</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Single</td>
+						<td>
+							<table>
+				  				<caption>Value of <a href="#export-only-single-export">Export Only (Single Export)</a></caption>
+								<thead>
+									<tr>
+										<th>Value</th>
+										<th>Solution</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Selection</td>
+										<td>Select some objects.</td>
+									</tr>
+									<tr>
+										<td>Layers</td>
+										<td>Select one or more layers with objects.</td>
+									</tr>
+									<tr>
+										<td>Scene</td>
+										<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>Multiple</td>
+						<td>
+							<table>
+				  				<caption>Value of <a href="#bricks-to-export">Bricks to Export</a></caption>
+								<thead>
+									<tr>
+										<th>Value</th>
+										<th>Solutions</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Layers</td>
+										<td>
+											<table>
+				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
+												<thead>
+													<tr>
+														<th>Value</th>
+														<th>Solution</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+														<td>Groups</td>
+														<td>Ensure that your groups have objects assigned to them and that you have selected layers with objects in them.</td>
+													</tr>
+													<tr>
+														<td>Layers</td>
+														<td>Select layers with objects.</td>
+													</tr>
+												</tbody>
+											</table>
+										</td>
+									</tr>
+									<tr>
+										<td>Scene</td>
+										<td>
+											<table>
+				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
+												<thead>
+													<tr>
+														<th>Value</th>
+														<th>Solution</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+														<td>Groups</td>
+														<td>Add objects to a group in the current scene.</td>
+													</tr>
+													<tr>
+														<td>Layers</td>
+														<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
+													</tr>
+												</tbody>
+											</table>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</td>
+	</tr>
+</table>
+
+#### Non-Fatal Errors ####
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Brick grid definition object '%object name%' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A <a href="#defining-brick-grid">brick grid definition object</a> had vertices outside the automatically calculated brick bounds.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Blockland does not allow brick grid definitions outside the bounds of a brick.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The brick grid definition object is discarded.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td><ul>
+		<li><strong>Recommended:</strong> Manually create a <a href="#definition-objects-bounds">bounds definition object</a> that properly fits around the defined brick grid.</li>
+		<li>Ensure that the specified brick grid definition object is fully contained within the axis-aligned bounding box of the visual model.</li>
+		</ul></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Brick grid definition object '%object name%' has vertices outside the bounds definition object '%object name%'. Definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A <a href="#defining-brick-grid">brick grid definition object</a> had vertices outside the <a href="#definition-objects-bounds">bounds object</a>.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Blockland does not allow brick grid definitions outside the bounds of a brick.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The brick grid definition object is discarded.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td><ul>
+		<li>Ensure that the specified brick grid definition object is fully contained within the bounds object.</li>
+		<li>Make the bounds definition object larger.</li>
+		</ul></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Brick grid definition object '%object name%' has no volume. Definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The axis-aligned bounding box of a <a href="#defining-brick-grid">brick grid definition object</a> was either a plane or a point.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>A brick grid definition with no volume does not produce any brick placement rules when calculating the brick grid.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The brick grid definition object is discarded.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that the specified brick grid definition object is not a point or a plane and has some volume.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp># collision boxes defined but 10 is the maximum. Only the first 10 will be used.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>More than 10 <a href="#definition-objects-collision">collision definition objects</a> were found.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>A BLB file may have a maximum of 10 collision boxes.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the 10 oldest objects marked as collision definitions will be used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional collision definition objects.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Collision definition object '%object name%' has less than 2 vertices. Definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A <a href="#definition-objects-collision">collision definition object</a> had 1 or 0 vertices.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>At least two points are required to specify a volume in three-dimensional space.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The specified collision definition object is discarded.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that the specified collision definition object has at least 2 vertices.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Collision definition object '%object name%' has no volume. Definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The axis-aligned bounding box of a <a href="#definition-objects-collision">collision definition object</a> was either a plane or a point.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>A two-dimensional collision box does nothing in game.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The collision definition object is discarded.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that the specified collision definition object is not a point or a plane and has some volume.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Collision definition object '%object name%' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A <a href="#definition-objects-collision">collision definition object</a> had vertices outside the automatically calculated brick bounds.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Collision boxes outside the bounds of a brick cause strange behavior in game.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The collision definition object is discarded.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td><ul>
+		<li><strong>Recommended:</strong> Manually create a <a href="#definition-objects-bounds">bounds definition object</a> that properly fits around the defined collision definition objects.</li>
+		<li>Ensure that the specified brick grid definition object is fully contained within the axis-aligned bounding box of the visual model.</li>
+		</ul></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Collision definition object '%object name%' has vertices outside the bounds definition object '%object name%'. Definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A <a href="#definition-objects-collision">collision definition object</a> had vertices outside the <a href="#definition-objects-bounds">bounds object</a>.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Collision boxes outside the bounds of a brick cause strange behavior in game.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The collision definition object is discarded.</td>
+	</tr>
+	<tr>
+		<th>Solutions</th>
+		<td><ul>
+		<li>Ensure that the specified collision definition object is fully contained within the bounds object.</li>
+		<li>Make the bounds definition object larger.</li>
+		</ul></td>
 	</tr>
 </table>
 

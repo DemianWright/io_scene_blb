@@ -967,13 +967,14 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                 # RETURN ON ERROR
                 return "When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick."
             else:
+                # TODO: Does this work? Does it actually export multiple bricks or overwrite the first one?
                 logger.warning(
                     "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
                 if properties.blendprop.brick_definition == "LAYERS":
                     # RETURN ON ERROR
-                    return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name."
+                    return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition token (separated with a space) in the bounds definition object name."
                 else:
                     logger.warning(
                         "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.",
@@ -1985,8 +1986,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
                 processed += 1
             except OutOfBoundsException:
                 if bounds_data.object_name is None:
-                    logger.error(
-                        "Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name), 1)
+                    logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name), 1)
                 else:
                     logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
                         grid_obj.name, bounds_data.object_name))
@@ -2069,7 +2069,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
     processed = 0
 
     if len(definition_objects) > 10:
-        logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)), 1)
+        logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be used.".format(len(definition_objects)), 1)
 
     for obj in definition_objects:
         # Break the loop as soon as 10 definitions have been processed.
@@ -2103,6 +2103,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
         # Technically collision outside brick bounds is not invalid but the collision is also horribly broken and as such is not allowed.
         if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
             if not __has_volume(col_min, col_max):
+                # TODO: Test this. Does it actually work in game?
                 logger.error("Collision definition object '{}' has no volume. Definition ignored.".format(obj.name), 1)
                 # Skip the rest of the loop.
                 continue
@@ -2216,6 +2217,7 @@ def __process_definition_objects(properties, objects):
         # Ignore non-mesh objects
         if obj.type != "MESH":
             if obj_name.upper().startswith(properties.deftokens.bounds):
+                # FIXME: Change into errors.
                 logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
             elif obj_name.upper().startswith(properties.grid_def_obj_token_priority):
                 logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
@@ -2309,7 +2311,10 @@ def __process_definition_objects(properties, objects):
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
             Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[Z] <= const.MAX_BRICK_VERTICAL_PLATES:
+        # Multiply the dimensions of the bounding box together: if any dimension is 0.0 the product is 0.0.
         if __sequence_product(blb_data.brick_size) < 1.0:
+            # TODO: Actually test this.
+            # TODO: Round 0 brick size up to 1?
             # RETURN ON ERROR
             return "Brick has no volume, brick could not be rendered in-game."
         else:
@@ -2670,16 +2675,16 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
             # Sanity check.
             if not len(positions) is len(normals) is len(uvs) is 4:
-                # RETURN ON ERROR
-                return "Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
+                # EXCEPTION
+                raise ValueError("Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
                     len(positions),
                     len(normals),
-                    len(uvs))
+                    len(uvs)))
 
             if colors is not None:
                 if len(colors) is not 4:
-                    # RETURN ON ERROR
-                    return "Quad color data only defined for {} vertices, 4 required.".format(len(colors))
+                    # EXCEPTION
+                    raise ValueError("Quad color data only defined for {} vertices, 4 required.".format(len(colors)))
 
                 # ROUND & CAST: Color values.
                 colors = __to_decimal(colors)
@@ -2705,6 +2710,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
     count_quads = sum([len(sec) for sec in quads])
 
     if count_quads == 0:
+        # TODO: Test if an invisible brick works and remove this error.
         # RETURN ON ERROR
         return "No faces to export."
     else:

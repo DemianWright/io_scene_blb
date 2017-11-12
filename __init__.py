@@ -58,6 +58,8 @@ bl_info = {
 # TODO: Improve warning and error messages.
 # TODO: Fix link to Port's GitHub profile.
 # TODO: Calculate Bounds property.
+# TODO: Definition object bounds rules to readme.
+# TODO: Define what a visible mesh is.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
