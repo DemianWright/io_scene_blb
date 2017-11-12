@@ -1530,8 +1530,8 @@ Normal vectors | [Optional](#round-normals)
 [UV coordinates](#uv-mapping) | No
 
 ## Contributors ##
-- [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.
-- [Demian Wright](https://github.com/DemianWright) - Everything else.
+- [Nick Smith](https://github.com/qoh) - The original source code for reading, processing, and writing Blender data into the .BLB format. A majority of his code has been rewritten since.
+- [Demian Wright](https://github.com/DemianWright) - Significant extensions and rewrites to Nick's original code and everything else.
 
 <a name="exporter-fn-1">__*__</a> There's always a footnote, see the issue with [the TOP brick texture](#the-top-brick-texture-has-incorrect-rotation-in-blender).
 

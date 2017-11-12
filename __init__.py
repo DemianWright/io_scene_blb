@@ -55,7 +55,6 @@ bl_info = {
 # TODO: Clarify brick grid and brick grid placement rules.
 # TODO: Clarify which errors occur when autogenerating brick grid.
 # TODO: Improve warning and error messages.
-# TODO: Fix link to Port's GitHub profile.
 # TODO: Calculate Bounds property.
 
 
