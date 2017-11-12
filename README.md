@@ -586,7 +586,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.</samp></td>
+		<td><samp>Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -604,7 +604,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.</samp></td>
+		<td><samp>Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -622,7 +622,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>No brick grid definitions found. Automatically generated brick grid may be undesirable.</samp></td>
+		<td><samp>No brick grid definitions found. Full cuboid brick grid may be undesirable.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -640,7 +640,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp><code>#</code> brick grid definition(s) found but was/were not processed. Automatically generated brick grid may be undesirable.</samp></td>
+		<td><samp><code>#</code> brick grid definition(s) found but was/were not processed. Full cuboid brick grid may be undesirable.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -722,7 +722,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>No brick bounds definition found. Automatically calculated brick size may be undesirable.</samp></td>
+		<td><samp>No brick bounds definition found. Calculated brick size may be undesirable.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -758,7 +758,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Face has UV coordinates but no brick texture, using SIDE by default.</samp></td>
+		<td><samp>Face has UV coordinates but no brick texture was set in the material name, using SIDE by default.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -794,7 +794,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp><code>#</code> triangles degenerated to quads.</samp></td>
+		<td><samp><code>#</code> triangles converted to quads.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1222,7 +1222,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp><code>#</code> collision boxes defined but 10 is the maximum. Only the first 10 will be used.</samp></td>
+		<td><samp><code>#</code> collision cuboids defined but 10 is the maximum, only using the first 10.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1404,7 +1404,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Multiple bounds definitions found. '<code>object name</code>' definition ignored.</samp></td>
+		<td><samp>Bounds already defined by '<code>object name</code>', bounds definition '<code>object name</code>' ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>

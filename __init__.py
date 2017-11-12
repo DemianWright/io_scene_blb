@@ -55,7 +55,6 @@ bl_info = {
 # TODO: Consider using unique IDs for errors and warnings? [WARNING:IOBLBW0000] and [ERROR:IOBLBE0000]?
 # TODO: Clarify brick grid and brick grid placement rules.
 # TODO: Clarify which errors occur when autogenerating brick grid.
-# TODO: Improve warning and error messages.
 # TODO: Calculate Bounds property.
 
 

@@ -949,12 +949,11 @@ def __record_bounds_data(properties, blb_data, bounds_data):
 
     if properties.blendprop.export_count == "SINGLE" and properties.blendprop.brick_name_source == "BOUNDS":
         if bounds_data.object_name is None:
-            logger.warning("Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
+            logger.warning("Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
-                logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.",
-                    1)
+                logger.warning("Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.",
+                               1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -968,17 +967,15 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                 return "When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick."
             else:
                 # TODO: Does this work? Does it actually export multiple bricks or overwrite the first one?
-                logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
+                logger.warning("Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
                 if properties.blendprop.brick_definition == "LAYERS":
                     # RETURN ON ERROR
                     return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition token (separated with a space) in the bounds definition object name."
                 else:
-                    logger.warning(
-                        "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.",
-                        1)
+                    logger.warning("Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.",
+                                   1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -1995,18 +1992,16 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
 
     # Log messages for brick grid definitions.
     if total_definitions == 0:
-        logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.", 1)
+        logger.warning("No brick grid definitions found. Full cuboid brick grid may be undesirable.", 1)
     elif total_definitions == 1:
         if processed == 0:
-            logger.warning(
-                "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
+            logger.warning("{} brick grid definition found but was not processed. Full cuboid brick grid may be undesirable.".format(total_definitions), 1)
         else:
             logger.info("Processed {} of {} brick grid definition.".format(processed, total_definitions), 1)
     else:
         # Found more than one.
         if processed == 0:
-            logger.warning(
-                "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
+            logger.warning("{} brick grid definitions found but were not processed. Full cuboid brick grid may be undesirable.".format(total_definitions), 1)
         else:
             logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions), 1)
 
@@ -2069,7 +2064,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
     processed = 0
 
     if len(definition_objects) > 10:
-        logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be used.".format(len(definition_objects)), 1)
+        logger.error("{} collision cuboids defined but 10 is the maximum, only using the first 10.".format(len(definition_objects)), 1)
 
     for obj in definition_objects:
         # Break the loop as soon as 10 definitions have been processed.
@@ -2142,7 +2137,7 @@ def __process_collision_definitions(properties, bounds_data, definition_objects,
             if properties.blendprop.calculate_collision:
                 # TODO: Remove.
                 logger.warning(
-                    "{} collision definition found but was not processed. Brick collision will be the same size as the brick bounds.".format(defcount), 1)
+                    "{} collision definition found but was not processed. Brick collision will be the same size and shape as the bounds.".format(defcount), 1)
             else:
                 logger.warning(
                     "{} collision definition found but was not processed. Brick will have no collision.".format(defcount), 1)
@@ -2250,7 +2245,7 @@ def __process_definition_objects(properties, objects):
                                                                                                     "", bricks, (" brick", " bricks")),
                                                                                                 logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
             else:
-                logger.error("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
+                logger.error("Bounds already defined by '{}', bounds definition '{}' ignored.".format(bounds_data.object_name, obj_name), 1)
                 continue
 
         # Is the current object a collision definition object?
@@ -2282,7 +2277,7 @@ def __process_definition_objects(properties, objects):
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
-        logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.", 1)
+        logger.warning("No brick bounds definition found. Calculated brick size may be undesirable.", 1)
 
         # ROUND & CAST
         bounds_data = __calculate_bounds(properties.scale, __to_decimal(min_world_coordinates), __to_decimal(max_world_coordinates))
@@ -2563,7 +2558,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     if brick_texture is None:
                         # Fall back to SIDE texture if nothing was specified.
                         brick_texture = const.BrickTexture.SIDE
-                        logger.warning("Face has UV coordinates but no brick texture, using SIDE by default.", 2)
+                        logger.warning("Face has UV coordinates but no brick texture was set in the material name, using SIDE by default.", 2)
 
                     # Do we have UV coordinates for a tri?
                     if len(uvs) == 3:
@@ -2701,7 +2696,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         bpy.data.meshes.remove(mesh)
 
         if count_tris > 0:
-            logger.warning("{} triangles degenerated to quads.".format(count_tris), 2)
+            logger.warning("{} triangles converted to quads.".format(count_tris), 2)
 
         if count_ngon > 0:
             logger.warning("{} n-gons skipped.".format(count_ngon), 2)
