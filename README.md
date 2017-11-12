@@ -617,108 +617,6 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Object '%object name%' cannot be used to define bounds, must be a mesh.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>A non-mesh object such as a camera had a bounds <a href="#definition-tokens">definition token</a> in its name.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>No effect other this warning message.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Remove the bounds definition token from the name of the object.</td>
-	</tr>
-	<tr>
-		<th>Notes</th>
-		<td>This warning message exists to promote good naming standards. Definition token strings should not be used with anything other than definition objects..</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
-		<td><samp>Object '%object name%' cannot be used to define brick grid, must be a mesh.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>A non-mesh object such as a camera had a brick grid <a href="#definition-tokens">definition token</a> in its name.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>No effect other this warning message.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Remove the brick grid definition token from the name of the object.</td>
-	</tr>
-	<tr>
-		<th>Notes</th>
-		<td>This warning message exists to promote good naming standards. Definition token strings should not be used with anything other than definition objects..</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
-		<td><samp>Object '%object name%' cannot be used to define collision, must be a mesh.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>A non-mesh object such as a camera had a collision <a href="#definition-tokens">definition token</a> in its name.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>No effect other this warning message.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Remove the collision definition token from the name of the object.</td>
-	</tr>
-	<tr>
-		<th>Notes</th>
-		<td>This warning message exists to promote good naming standards. Definition token strings should not be used with anything other than definition objects..</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
-		<td><samp>Multiple bounds definitions found. '%object name%' definition ignored.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>One brick contained more than one <a href="#definition-objects-bounds">bounds definition object</a>.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>The oldest bounds definition object is used and the rest are discarded.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Delete the additional bounds definition objects.</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
-		<td><samp>Multiple brick grid definitions in object '%object name%', only the first one is used.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>A single <a href="#definition-objects">definition object</a> contained more than one <a href="#defining-brick-grid">brick grid definition token</a>.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>Only the first brick grid definition token is used.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Delete the additional brick grid definition tokens.</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
 		<td><samp>No brick bounds definition found. Automatically calculated brick size may be undesirable.</samp></td>
 	</tr>
 	<tr>
@@ -732,24 +630,6 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	<tr>
 		<th>Solution</th>
 		<td>Create a bounds definition object.</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
-		<td><samp>More than 4 color values defined for object '%object name%', only the first 4 values (RGBA) are used.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>Object name contained more than 4 color values. <a href="#defining-colors">Colors</a> must be defined by exactly 4 numbers.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>Only the first 4 numbers are used as color values.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Remove the additional numbers.</td>
 	</tr>
 </table>
 <table>
@@ -773,42 +653,6 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Object '%object name%' has # section definitions, only using the first one: %section name%</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>The object had more than one <a href="#defining-quad-sorting--coverage">quad section definition token</a>.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>Only the first section definition token is used.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Delete the additional section definition tokens.</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
-		<td><samp>More than one brick texture name found in material '%material name%', only using the first one.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>The material name contained more than one <a href="#brick-textures">brick texture</a> name.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>Only the first brick texture name is used.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Delete the additional brick texture names.</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
 		<td><samp>Face has UV coordinates but no brick texture, using SIDE by default.</samp></td>
 	</tr>
 	<tr>
@@ -817,7 +661,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>The `side` brick texture is used for the face.</td>
+		<td>The <code>side</code> brick texture is used for the face.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -835,7 +679,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>Alpha of `1.0` is used resulting in an opaque color.</td>
+		<td>Alpha of <code>1.0</code> is used resulting in an opaque color.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -1482,6 +1326,182 @@ Fatal errors always lead to the program execution stopping.
 		<li>Ensure that the specified collision definition object is fully contained within the bounds object.</li>
 		<li>Make the bounds definition object larger.</li>
 		</ul></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' cannot be used to define bounds, must be a mesh.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A non-mesh object such as a camera had a bounds <a href="#definition-tokens">definition token</a> in its name.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Non-mesh objects do not contain data that can be used to calculate an axis-aligned bounding box.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The specified object is ignored.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the bounds definition token from the name of the object.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' cannot be used to define brick grid, must be a mesh.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A non-mesh object such as a camera had a brick grid <a href="#definition-tokens">definition token</a> in its name.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Non-mesh objects do not contain data that can be used to calculate an axis-aligned bounding box.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The specified object is ignored.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the brick grid definition token from the name of the object.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' cannot be used to define collision, must be a mesh.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A non-mesh object such as a camera had a collision <a href="#definition-tokens">definition token</a> in its name.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Non-mesh objects do not contain data that can be used to calculate an axis-aligned bounding box.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The specified object is ignored.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the collision definition token from the name of the object.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Multiple bounds definitions found. '%object name%' definition ignored.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>One brick contained more than one <a href="#definition-objects-bounds">bounds definition object</a>.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>Although it is technically possible to calculate the axis-aligned bounding box of multiple bounds definitions and use that as the final bounds of the brick a feature like this would be confusing for beginner users and breaks the "what you see is what you get" principle of the exporter.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>The oldest bounds definition object is used and the rest are discarded.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional bounds definition objects.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Multiple brick grid definitions in object '%object name%', only the first one is used.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>A single <a href="#definition-objects">definition object</a> contained more than one <a href="#defining-brick-grid">brick grid definition token</a>.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>One definition object may only be used to define one brick placement rule.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first brick grid definition token is used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional brick grid definition tokens.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>More than 4 color values defined for object '%object name%', only the first 4 values (RGBA) are used.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>Object name contained more than 4 color values.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>An RGBA <a href="#defining-colors">color</a> is be defined by exactly 4 numerical values: red, green, blue, and alpha.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first 4 numbers are used as color values.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Remove the additional numbers.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>Object '%object name%' has # section definitions, only using the first one: %section name%</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The object had more than one <a href="#defining-quad-sorting--coverage">quad section definition token</a>.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>A single face cannot be in multiple quad sorting sections at the same time.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first section definition token is used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional section definition tokens.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Message</th>
+		<td><samp>More than one brick texture name found in material '%material name%', only using the first one.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The material name contained more than one <a href="#brick-textures">brick texture</a> name.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>A single face cannot have multiple brick textures at the same time.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>Only the first brick texture name is used.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Delete the additional brick texture names.</td>
 	</tr>
 </table>
 

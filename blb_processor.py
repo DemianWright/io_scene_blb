@@ -2217,12 +2217,11 @@ def __process_definition_objects(properties, objects):
         # Ignore non-mesh objects
         if obj.type != "MESH":
             if obj_name.upper().startswith(properties.deftokens.bounds):
-                # FIXME: Change into errors.
-                logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
+                logger.error("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
             elif obj_name.upper().startswith(properties.grid_def_obj_token_priority):
-                logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
+                logger.error("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
             elif obj_name.upper().startswith(properties.deftokens.collision):
-                logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
+                logger.error("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
             continue
@@ -2251,7 +2250,7 @@ def __process_definition_objects(properties, objects):
                                                                                                     "", bricks, (" brick", " bricks")),
                                                                                                 logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
             else:
-                logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
+                logger.error("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
                 continue
 
         # Is the current object a collision definition object?
@@ -2262,7 +2261,7 @@ def __process_definition_objects(properties, objects):
         # Is the current object a brick grid definition object?
         elif len(object_grid_definitions) > 0:
             if len(object_grid_definitions) > 1:
-                logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
+                logger.error("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
 
             # Get the priority index of this grid definition.
             index = properties.grid_def_obj_token_priority.index(object_grid_definitions[0])
@@ -2386,7 +2385,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 # Did user define at least 4 numerical values?
                 if size >= 4:
                     if size > 4:
-                        logger.warning("More than 4 color values defined for object '{}', only the first 4 values (RGBA) are used.".format(object_name), 2)
+                        logger.error("More than 4 color values defined for object '{}', only the first 4 values (RGBA) are used.".format(object_name), 2)
 
                         # We're only interested in the first 4 values: R G B A
                         floats = floats[:4]
@@ -2415,7 +2414,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         if section_count >= 1:
             section = const.BLBQuadSection(properties.quad_sort_definitions.index(quad_sections[0]))
             if section_count > 1:
-                logger.warning("Object '{}' has {} section definitions, only using the first one: {}".format(
+                logger.error("Object '{}' has {} section definitions, only using the first one: {}".format(
                     object_name, section_count, section), 2)
 
             # TODO: Do forward axis rotation of section in the format_blb_data function?
@@ -2524,7 +2523,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     brick_texture = const.BrickTexture[texnames[0]]
 
                     if texcount > 1:
-                        logger.warning("More than one brick texture name found in material '{}', only using the first one.".format(matname), 2)
+                        logger.error("More than one brick texture name found in material '{}', only using the first one.".format(matname), 2)
             # else: No material name or a brick texture was not specified. Keep None to skip automatic UV generation.
 
             # ===
