@@ -99,12 +99,12 @@ The exporter supports all BLB features.
 - [x] Pretty .BLB files: extraneous zeros are not written at the end of floating point values and if possible, they are written as integers
 - [x] Logging with descriptive error and warning messages to help you correct problems with the brick
 - [x] Customizable floating point accuracy
-- [ ] DTS collision is intentionally not a part of this add-on as it an entirely different file format.
-   - See Nick Smith's [io_scene_dts](https://github.com/portify/io_scene_dts) for a Blender DTS importer/exporter.
+- [ ] Exporting DTS collision is not yet supported.
 
 ### Planned Features ###
 These features may or may not be implemented at some unspecified time in the future.
 
+- Exporting DTS collision using Nick Smith's [io_scene_dts](https://github.com/qoh/io_scene_dts) Blender plugin.
 - Importing .BLB files
 - Export-time brick rotation on the Z-axis
 - Automatic rendering of the brick preview icon

@@ -41,6 +41,7 @@ bl_info = {
     "tracker_url": "",
     "category": "Import-Export"}
 
+# TODO: Exporting DTS collision.
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
 # TODO: Panels in the UI?
