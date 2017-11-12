@@ -12,6 +12,7 @@ The add-on does not support importing .BLB files yet.
    1. [Planned Features](#planned-features)
 1. [Installation](#installation)
    1. [Updating](#updating)
+1. [Terminology](#terminology)
 1. [Blender Export Properties](#blender-export-properties)
    1. [Bricks to Export](#bricks-to-export)
    1. [Brick Name from (Single Export)](#brick-name-from-single-export)
@@ -36,7 +37,6 @@ The add-on does not support importing .BLB files yet.
    1. [Write Log](#write-log)
    1. [Only on Warnings](#only-on-warnings)
    1. [Precision](#precision)
-1. [Terminology](#terminology)
 1. [Definition Tokens](#definition-tokens)
    1. [Definition Objects](#definition-objects)
       1. [Defining Brick Grid](#defining-brick-grid)
@@ -128,6 +128,64 @@ These features may or may not be implemented at some unspecified time in the fut
 1. Quickly find the add-on by typing `blb` into the search field.
 1. Expand the add-on by clicking the white triangle on the left, press the `Remove` button, and confirm the removal.
 1. Follow the installation instructions above.
+
+## Terminology ##
+A list of more or less technical terms used in this document. The definitions are in the context of Blockland, Blender, and this exporter and may vary from their mathematical definitions.
+<dl>
+<dt><dfn id="def-axis-aligned-plane">Axis-Aligned Plane</dfn></dt>
+<dd>A <strong>plane</strong> whose vertices have the same coordinate on exactly one axis. When this two-dimensional plane is viewed from either of the other two axes it disappears from view.</dd>
+
+<dt><dfn id="def-brick-grid">Brick Grid</dfn></dt>
+<dd>The three-dimensional space of the game divided into 1x1x1 brick plates, also the blocks of <code>u</code>, <code>x</code>, <code>-</code>, and other characters near the top of the .BLB file that define the brick's placement rules.</dd>
+
+<dt><dfn id="def-brick">Brick</dfn></dt>
+<dd>A collection of meshes that act as a single object in Blockland and all the non-visual data it contains. (E.g. brick grid information.)</dd>
+
+<dt><dfn id="def-coverage">Coverage</dfn></dt>
+<dd>The coverage system describes how to hide faces on this and adjacent bricks, also the 6 pairs of integers near the top of the .BLB file.</dd>
+
+<dt><dfn id="def-cuboid">Cuboid</dfn></dt>
+<dd>More specifically a <strong>right cuboid</strong>. A <a href="https://en.wikipedia.org/wiki/Convex_polytope">convex polyhedron</a> with 6 faces that are all at right angles with each other. I.e. a cube or a cube that has been scaled on one axis.</dd>
+
+<dt><dfn id="def-definition-object">Definition Object</dfn></dt>
+<dd>An object containing a special definition token. These objects cannot be seen in-game. They exist to tell the exporter how to create the brick.</dd>
+
+<dt><dfn id="def-definition-token">Definition Token</dfn></dt>
+<dd>A special word in an object's name that tells the exporter what to do with that object.</dd>
+
+<dt><dfn id="def-face">Face</dfn></dt>
+<dd>A <strong>tri</strong> or a <strong>quad</strong>.</dd>
+
+<dt><dfn id="def-mesh">Mesh</dfn></dt>
+<dd>The vertices, edges, and faces that make up a 3D model. Multiple meshes can be within an object. Used interchangeably with <strong>object</strong> and <strong>model</strong>.</dd>
+
+<dt><dfn id="def-model">Model</dfn></dt>
+<dd>Used interchangeably with <strong>object</strong> and <strong>mesh</strong>.</dd>
+
+<dt><dfn id="def-n-gon">N-gon</dfn></dt>
+<dd>Technically any <a href="https://en.wikipedia.org/wiki/Polygon">polygon</a> but in Blender used to refer to a single face formed from more than 4 vertices. These are not supported by the exporter or Blockland.</dd>
+
+<dt><dfn id="def-object">Object</dfn></dt>
+<dd>The things you see in the 3D viewport. Blender objects can contain multiple meshes. This document uses this term interchangeably with <strong>model</strong> and <strong>mesh</strong>.</dd>
+
+<dt><dfn id="def-plane">Plane</dfn></dt>
+<dd>A two-dimensional surface in 3D space. Used interchangeably with <strong>tri</strong> and <strong>quad</strong>.</dd>
+
+<dt><dfn id="def-quad">Quad</dfn></dt>
+<dd>A plane with 4 vertices.</dd>
+
+<dt><dfn id="def-token">Token</dfn></dt>
+<dd>A string (word) of one or more letters surrounded with a whitespace character (usually a space) on one or both sides.</dd>
+
+<dt><dfn id="def-tri"><abbr title="Triangle">Tri</abbr></dfn></dt>
+<dd>A plane with 3 vertices. Not supported by Blockland bricks, converted to <strong>quads</strong> automatically.</dd>
+
+<dt><dfn id="def-volume">Volume</dfn></dt>
+<dd>A piece of 3D space, usually cuboidal in shape in the context of this exporter.</dd>
+
+<dt><dfn id="def-whitespace"><a href="https://en.wikipedia.org/wiki/Whitespace_character">Whitespace (Character)</a></dfn></dt>
+<dd>In Blender, commonly a space or a tab character.</dd>
+</dl>
 
 ## Blender Export Properties ##
 The following properties are present in the current version of the exporter.
@@ -239,27 +297,6 @@ Write a log file only if warnings or errors occurred during the export process. 
 
 #### Precision ####
 Allows you to specify a custom precision for floating point numbers. See [Rounded Values](#rounded-values) for more details. (Default: 0.000001)
-
-## Terminology ##
-Term | Definition
------|-----------
-Axis Aligned Plane | A plane where all vertices have the same coordinates on exactly on axis. I.e. when viewed from one of the three axes the plane cannot be seen as it is viewed directly from the side.
-Brick Grid | The three dimensional space of the game divided into 1x1x1 plates, also the blocks of characters near the top of the .BLB file containing characters such as `u`, `x`, and `-` that define whether bricks may be placed above, below, or inside this brick grid "slot" (the space of a 1x1x1 plate).
-Brick | A collection of meshes that act as a single object in Blockland and all the non-visual data it contains. (E.g. brick grid information.)
-Coverage | The coverage system describes how to hide faces on this and adjacent bricks, also the 6 pairs of integers near the top of the .BLB file.
-Cuboid | More specifically a **right cuboid**. A [convex polyhedron](https://en.wikipedia.org/wiki/Convex_polytope) with 6 faces that are all at right angles with each other. I.e. a cube or a cube that has been scaled on one axis.
-Definition Object | An object containing a special definition token. These objects cannot be seen in-game. They exist to tell the exporter how to create the brick.
-Definition Token | A special word in an object's name that tells the exporter what to do with that object.
-Face | A **tri** or a **quad**.
-Mesh | The vertices, edges, and faces that make up a 3D model. Multiple meshes can be within an object. Used interchangeably with **object** and **model**.
-Model | See object. Used interchangeably with **object** and **mesh**.
-N-gon | A plane with more than 4 vertices. These are not supported.
-Object | The things you see in the 3D viewport. Blender objects can contain multiple meshes. This document uses this term interchangeably with **model** and **mesh**.
-Plane | A two-dimensional surface in 3D space. Used interchangeably with **tri** and **quad**.
-Quad | A plane with 4 vertices.
-Token | A string (word) of one or more letters surrounded with a whitespace character (usually a space) on one or both sides.
-Tri | A plane with 3 vertices. (A triangle.) Not supported by Blockland bricks, converted to **quads** automatically.
-Volume | A piece of 3D space, usually cuboidal in shape.
 
 ## Definition Tokens ##
 An object may contain other text in addition to definition tokens as long as the tokens themselves are separated from other tokens and text by one whitespace character. (E.g. a space.) The definition tokens may be changed from the defaults by selecting `Custom Definition Tokens` in the export dialog.
@@ -385,7 +422,7 @@ Defining brick textures is done using Blender materials. To assign a brick textu
 - `side`
 - `top`
 
-If no brick texture is defined, `side` is used. Material name may contain other words as long as the brick texture name is separated from them with one whitespace character such as a space. A common combination is to define a brick texture name and the [definition token `blank`](#defining-colors-blank) (e.g. `blank ramp` or `ramp blank`) to allow the player to color the face in-game using the spray can.
+If no brick texture is defined, `side` is used. Material name may contain other words as long as the brick texture name is separated from them with one whitespace character such as a space. A common combination is to define a brick texture name and the [definition token `blank`](#defining-colors-blank) (e.g. `blank ramp` or `side blank`) to allow the player to color the face in-game using the spray can.
 
 #### UV Mapping ####
 Manually defined UV coordinates must be stored in one or more UV layers that do not share a name with one of the automatically generated UV layers:
