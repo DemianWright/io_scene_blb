@@ -48,7 +48,6 @@ bl_info = {
 # TODO: Quad sorting is per object but BLBs support per-quad sorting: the exporter does not support quad sorting for smoothed objects.
 # TODO: Add a section about brick size to the readme.
 # TODO: Add a section about brick grid to the readme.
-# TODO: Improve terminology section in the readme. Use dl?
 # TODO: Make the capitalization consistent in the readme.
 # TODO: Consider reformatting readme to have one sentence per line for nicer diffs.
 # TODO: Consider refactoring readme for consistent use of mesh, model, and object words.
@@ -59,7 +58,6 @@ bl_info = {
 # TODO: Fix link to Port's GitHub profile.
 # TODO: Calculate Bounds property.
 # TODO: Definition object bounds rules to readme.
-# TODO: Define what a visible mesh is.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
