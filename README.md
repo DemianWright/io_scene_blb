@@ -305,54 +305,54 @@ Value | Description
 -Y | Negative Y-axis: back
 
 #### Scale ####
-The scale of the brick in-game. Values outside the the range of 0.001–400.0 may be typed in manually. Does not change the scale of the objects in the Blender scene. (Default: 100%)
+The scale of the brick in-game. Values outside the the range of 0.001–400.0 may be typed in manually. Does not change the scale of the objects in the Blender scene. (Default: <code>100%</code>)
 
 :exclamation: Be aware that at 100% scale a 1x1x1 Blockland brick is defined to be 1.0 x 1.0 x 1.2 Blender units on the X, Y, and Z axes. In other words a 1x1f plate would be 1.0 x 1.0 x 0.4 Blender units.
 
 #### Apply Modifiers ####
-Applies any modifiers on the object before exporting. Does not change the modifiers of the objects in the Blender scene. (Default: True)
+Applies any modifiers on the object before exporting. Does not change the modifiers of the objects in the Blender scene. (Default: <code>True</code>)
 
 #### Calculate Collision ####
-If no manual collision definition objects exist, calculates a cuboid collision that is the same size as the brick bounds. If disabled and no collision is defined, brick will have no collision. (Default: True)
+If no manual collision definition objects exist, calculates a cuboid collision that is the same size as the brick bounds. If disabled and no collision is defined, brick will have no collision. (Default: <code>True</code>)
 
 #### Coverage ####
-Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information. (Default: False)
+Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information. (Default: <code>False</code>)
 
 #### Automatic Quad Sorting ####
-Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless [Coverage](#coverage) is enabled. (Default: True)
+Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless [Coverage](#coverage) is enabled. (Default: <code>True</code>)
 
 #### Use Material Colors ####
-Get object colors from object materials. (Default: False)
+Get object colors from object materials. (Default: <code>False</code>)
 
 #### Use Vertex Colors ####
-Get object colors from vertex color layers. (Default: False)
+Get object colors from vertex color layers. (Default: <code>False</code>)
 
 #### Parse Object Colors ####
-Get object colors from object names. (Default: False)
+Get object colors from object names. (Default: <code>False</code>)
 
 #### Calculate UVs ####
-Automatically calculate correct UV coordinates based on the brick texture name specified in the material name. See [UV Mapping](#uv-mapping) for more information. (Default: True)
+Automatically calculate correct UV coordinates based on the brick texture name specified in the material name. See [UV Mapping](#uv-mapping) for more information. (Default: <code>True</code>)
 
 #### Store UVs ####
-Write calculated UVs into Blender objects. Data in existing generated UV layers will be overwritten. See [UV Mapping](#uv-mapping) for a list of generated UV layer names. (Default: True)
+Write calculated UVs into Blender objects. Data in existing generated UV layers will be overwritten. See [UV Mapping](#uv-mapping) for a list of generated UV layer names. (Default: <code>True</code>)
 
 #### Round Normals ####
-Round vertex normals to the user-defined floating point value precision. If disabled normals will be written as accurately as possible but extraneous zeros will still be removed. (Default: False)
+Round vertex normals to the user-defined floating point value precision. If disabled normals will be written as accurately as possible but extraneous zeros will still be removed. (Default: <code>False</code>)
 
 #### Custom Definition Tokens ####
-Allows you to specify the definition tokens the exporter uses. Shows additional settings when selected. See [Definition Tokens](#definition-tokens) for more information. (Default: False)
+Allows you to specify the definition tokens the exporter uses. Shows additional settings when selected. See [Definition Tokens](#definition-tokens) for more information. (Default: <code>False</code>)
 
 #### Terse Mode ####
-When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections. Using this option is not recommended as it makes the .BLB file harder to read and understand. Although the file is shorter, the difference in file size is negligible. (Default: False)
+When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections. Using this option is not recommended as it makes the .BLB file harder to read and understand. Although the file is shorter, the difference in file size is negligible. (Default: <code>False</code>)
 
 #### Write Log ####
-Write a log file to the same folder as the exported brick detailing the export process. Shows additional settings when selected. (Default: True)
+Write a log file to the same folder as the exported brick detailing the export process. Shows additional settings when selected. (Default: <code>True</code>)
 
 #### Only on Warnings ####
-Write a log file only if warnings or errors occurred during the export process. (Default: True)
+Write a log file only if warnings or errors occurred during the export process. (Default: <code>True</code>)
 
 #### Precision ####
-Allows you to specify a custom precision for floating point numbers. See [Rounded Values](#rounded-values) for more details. (Default: 0.000001)
+Allows you to specify a custom precision for floating point numbers. See [Rounded Values](#rounded-values) for more details. (Default: <code>0.000001</code>)
 
 ## Definition Tokens ##
 [Definition tokens](#def-definition-token) are special [strings](#def-string) added to the names of objects, materials, and other Blender data objects that have a name.
@@ -984,7 +984,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Brick size (#x#x#) exceeds the maximum brick size of 64 wide 64 deep and 256 plates tall.</samp></td>
+		<td><samp>Brick size (<code>#</code>x<code>#</code>x<code>#</code>) exceeds the maximum brick size of 64 wide 64 deep and 256 plates tall.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1175,7 +1175,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Brick grid definition object '%object name%' has vertices outside the bounds definition object '%object name%'. Definition ignored.</samp></td>
+		<td><samp>Brick grid definition object '<code>object name</code>' has vertices outside the bounds definition object '<code>object name</code>'. Definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1222,7 +1222,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp># collision boxes defined but 10 is the maximum. Only the first 10 will be used.</samp></td>
+		<td><samp><code>#</code> collision boxes defined but 10 is the maximum. Only the first 10 will be used.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
