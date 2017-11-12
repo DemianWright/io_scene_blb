@@ -7,7 +7,6 @@ The add-on does not support importing .BLB files yet.
 
 ## Table of Contents ##
 1. [Features](#features)
-   1. [Additional Features](#additional-features)
    1. [Planned Features](#planned-features)
 1. [Installation](#installation)
    1. [Updating](#updating)
@@ -37,22 +36,24 @@ The add-on does not support importing .BLB files yet.
    1. [Only on Warnings](#only-on-warnings)
    1. [Precision](#precision)
 1. [Definition Tokens](#definition-tokens)
-   1. [Definition Objects](#definition-objects)
-      1. [Defining Brick Grid](#defining-brick-grid)
    1. [Mesh Definition Tokens](#mesh-definition-tokens)
-      1. [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage)
+      1. [Defining Quad Sections & Coverage](#defining-quad-sections--coverage)
       1. [Defining Colors](#defining-colors)
-   1. [Brick Textures](#brick-textures)
+         1. [RGBA Color Format](#rgba-color-format)
+1. [Definition Objects](#definition-objects)
+   1. [Defining Collision](#defining-collision)
+   1. [Defining Brick Grid](#defining-brick-grid)
+1. [Brick Textures](#brick-textures)
 1. [UV Mapping](#uv-mapping)
-	1. [The TOP Brick Texture](#the-top-brick-texture)
 1. [Troubleshooting](#troubleshooting)
-	1. [Automatically calculated UV coordinates for brick textures are distorted](#automatically-calculated-uv-coordinates-for-brick-textures-are-distorted)
-	1. [Automatically calculated UV coordinates for brick textures are rotated incorrectly](#automatically-calculated-uv-coordinates-for-brick-textures-are-rotated-incorrectly)
+   1. [Automatically calculated UV coordinates for brick textures are distorted](#automatically-calculated-uv-coordinates-for-brick-textures-are-distorted)
+   1. [Automatically calculated UV coordinates for brick textures are rotated incorrectly](#automatically-calculated-uv-coordinates-for-brick-textures-are-rotated-incorrectly)
+   1. [The TOP brick texture has incorrect rotation in Blender](#the-top-brick-texture-has-incorrect-rotation-in-blender)
 1. [Warning & Error Log Messages](#warning--error-log-messages)
-	1. [Warnings](#warnings)
-	1. [Errors](#errors)
-		1. [Fatal Errors](#fatal-errors)
-		1. [Non-Fatal Errors](#non-fatal-errors)
+   1. [Warnings](#warnings)
+   1. [Errors](#errors)
+      1. [Fatal Errors](#fatal-errors)
+      1. [Non-Fatal Errors](#non-fatal-errors)
 1. [Rounded Values](#rounded-values)
 1. [Contributors](#contributors)
 
@@ -82,26 +83,24 @@ The exporter supports all BLB features.
    - Transparency
    - Additive and subtractive colors
 - [x] Flat and smooth shading
-- [ ] DTS collision is intentionally not a part of this add-on as it an entirely different file format.
-   - See Nick Smith's [io_scene_dts](https://github.com/portify/io_scene_dts) for a Blender DTS importer/exporter.
-
-### Additional Features ###
 - [x] Save and load export settings
 - [x] Export multiple bricks from the same file
 - [x] Vertices are all relative to the defined or calculated brick bounds
-   - Object centers (orange dot) are irrelevant: calculations are performed using raw vertex world coordinates
+   - Object centers (orange dot) are irrelevant: calculations are performed using vertex world coordinates
    - Object locations relative to the origin of the world are irrelevant: the calculated center of the brick bounds acts as the new world origin
    - Object locations relative to the Blender grid are irrelevant: the brick bounds define the brick grid origin (however it is highly recommended to align the brick bounds object with the Blender grid for ease of use)
    - This allows you to easily create multiple bricks in the same file in any location in the 3D space and the bricks still export correctly as expected
    - Arbitrary brick grid rotation, however, is not supported
 - [x] Selective object export: selection, visible layers, entire scene
-- [x] Change brick rotation during export: does not affect objects in viewport
-- [x] Change brick scale during export: does not affect objects in viewport
-- [x] Apply modifiers (e.g. edge split) during export: does not affect objects in viewport
-- [x] Terse file writing: excludes optional lines from the BLB file
+- [x] Change brick rotation during export: does not affect objects in the .BLEND file
+- [x] Change brick scale during export: does not affect objects in the .BLEND file
+- [x] Apply modifiers (e.g. edge split) during export: does not affect objects in the .BLEND file
+- [x] Terse file writing: exclude optional lines from the BLB file
 - [x] Pretty .BLB files: extraneous zeros are not written at the end of floating point values and if possible, they are written as integers
-- [x] Logging with descriptive error and warning messages to help you correct problems with the model
-- [x] Changeable floating point accuracy
+- [x] Logging with descriptive error and warning messages to help you correct problems with the brick
+- [x] Customizable floating point accuracy
+- [ ] DTS collision is intentionally not a part of this add-on as it an entirely different file format.
+   - See Nick Smith's [io_scene_dts](https://github.com/portify/io_scene_dts) for a Blender DTS importer/exporter.
 
 ### Planned Features ###
 These features may or may not be implemented at some unspecified time in the future.
@@ -137,8 +136,11 @@ The definitions are in the context of Blockland, Blender, and this exporter and 
 When this two-dimensional plane is viewed from either of the other two coordinate axes it disappears from view.</dd>
 
 <dt><dfn id="def-aabb"><a href="https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box">Axis-Aligned Bounding Box</a></dfn> / Axis-Aligned Minimum Bounding Box</dt>
-<dd>A <strong><a href="#def-cuboid">cuboid</a></strong> that completely encompasses all vertices of one or more <a href="#def-object">objects</a>.
+<dd>A <a href="#def-cuboid">cuboid</a> that completely encompasses all vertices of one or more <a href="#def-object">objects</a>.
 The faces of this cuboid are parallel with the coordinate axes.</dd>
+
+<dt><dfn id="def-aac">Axis-Aligned Cuboid</a></dfn></dt>
+<dd>A <a href="#def-cuboid">cuboid</a> whose faces are parallel with the coordinate axes.</dd>
 
 <dt><dfn id="def-brick-grid">Brick Grid</dfn></dt>
 <dd><ol>
@@ -168,9 +170,15 @@ A <a href="https://en.wikipedia.org/wiki/Convex_polytope">convex polyhedron</a> 
 I.e. a regular cube or a cube that is elongated on one axis.</dd>
 
 <dt><dfn id="def-definition-object">Definition Object</dfn></dt>
-<dd>An <a href="#def-object">object</a> containing one or more <a href="#def-definition-token">definition tokens</a> in its name.
+<dd>An <a href="#def-object">object</a> that has a specific <a href="#def-definition-token">definition token</a> in its name.
 These objects cannot be seen in-game.
-They exist to tell the exporter how to create the <a href="#def-brick">brick</a>.</dd>
+They exist to tell the exporter how to create the <a href="#def-brick">brick</a>.
+There are three different definition objects:
+<ul>
+	<li>a <a href="#definition-objects-bounds">bounds definition object</a>,</li>
+	<li>a <a href="#definition-objects-collision">collision definition object</a>,</li>
+	<li>and a <a href="#defining-brick-grid">brick grid definition object</a>.</li>
+</ul></dd>
 
 <dt><dfn id="def-definition-token">Definition Token</dfn></dt>
 <dd>A special <a href="#def-token">token</a> in an <a href="#def-object">object's</a> name that tells the exporter what to do with that object.</dd>
@@ -289,11 +297,12 @@ Scene | Export all bricks in the current scene. I.e. all bricks in all layers re
 #### Forward Axis ####
 The Blender 3D axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it. Does not change the rotation of the objects in the Blender scene.
 
-Possible values:
-- Positive X-axis ("Right")
-- Default: Positive Y-axis ("Forward")
-- Negative X-axis ("Left")
-- Negative Y-axis ("Back")
+Value | Description
+------|------------
++X | Positive X-axis: right
++Y | Positive Y-axis: forward (Default)
+-X | Negative X-axis: left
+-Y | Negative Y-axis: back
 
 #### Scale ####
 The scale of the brick in-game. Values outside the the range of 0.001–400.0 may be typed in manually. Does not change the scale of the objects in the Blender scene. (Default: 100%)
@@ -307,7 +316,7 @@ Applies any modifiers on the object before exporting. Does not change the modifi
 If no manual collision definition objects exist, calculates a cuboid collision that is the same size as the brick bounds. If disabled and no collision is defined, brick will have no collision. (Default: True)
 
 #### Coverage ####
-Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage) for more information. (Default: False)
+Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information. (Default: False)
 
 #### Automatic Quad Sorting ####
 Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless [Coverage](#coverage) is enabled. (Default: True)
@@ -346,78 +355,62 @@ Write a log file only if warnings or errors occurred during the export process. 
 Allows you to specify a custom precision for floating point numbers. See [Rounded Values](#rounded-values) for more details. (Default: 0.000001)
 
 ## Definition Tokens ##
-An object may contain other text in addition to definition tokens as long as the tokens themselves are separated from other tokens and text by one whitespace character. (E.g. a space.) The definition tokens may be changed from the defaults by selecting `Custom Definition Tokens` in the export dialog.
+[Definition tokens](#def-definition-token) are special [strings](#def-string) added to the names of objects, materials, and other Blender data objects that have a name.
+A name field may contain other text in addition to definition tokens as long as the tokens themselves are separated from other tokens and text by one [whitespace character](#def-whitespace) such as a space.
+The definition tokens may be changed from the defaults by selecting [Custom Definition Tokens](#custom-definition-tokens) in the export dialog.
 
-Blender adds a running index (e.g. `.003`) to the end of duplicate object, material, etc. names. This is handled correctly, you need not worry about it. The logic for removing the index simply checks if `.` is the fourth last character in the object name and simply removes it an everything after it.
+:bulb: Blender adds a running index (e.g. `.003`) to the end of duplicate object, material, etc. names.
+This is handled correctly, you need not worry about it.
+The logic for removing the index simply checks if `.` is the fourth last character in the name and simply removes it an everything after it.
 
-Below is a full list of all definition tokens with a brief description. For more information on what each of them do, see the rest of the readme.
+:exclamation: Each definition token may only appear once in a name field.
 
-Token | Category | Usable In | Description
-------|----------|-----------|------------
-`bounds` | Definition objects | Object name | The bounds object. See [Definition Objects](#definition-objects).
-`collision` | Definition objects | Object name | A BLB collision box/cuboid.
-`gridb` | Definition objects: brick grid | Object name | Write brick grid `b` symbol. See [Defining Brick Grid](#defining-brick-grid).
-`gridd` | Definition objects: brick grid | Object name | Write brick grid `d` symbol.
-`gridu` | Definition objects: brick grid | Object name | Write brick grid `u` symbol.
-`grid-` | Definition objects: brick grid | Object name | Write brick grid `-` symbol.
-`gridx` | Definition objects: brick grid | Object name | Write brick grid `x` symbol.
-`qt` | Quad sorting | Object name | Sort quads in top section. See [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage).
-`qb` | Quad sorting | Object name | Sort quads in bottom section.
-`qn` | Quad sorting | Object name | Sort quads in north section.
-`qe` | Quad sorting | Object name | Sort quads in east section.
-`qs` | Quad sorting | Object name | Sort quads in south section.
-`qw` | Quad sorting | Object name | Sort quads in west section.
-`qo` | Quad sorting | Object name | Sort quads in omni section.
-`c` | Colors | Object name | Define object color in object name. See [Defining Colors](#defining-colors).
-`blank` | Colors | Material name | Do not write a color: use in-game spray can color as is.
-`cadd` | Colors | Material name, vertex color layer name | Add material/vertex color to in-game spray can color.
-`csub` | Colors | Material name, vertex color layer name | Subtract material/vertex color from in-game spray can color.
+Below is a full list of all default definition tokens with a brief description.
+For more information on what each of them do, see the specific section of the readme that relates to that token.
+Note that not all definition tokens change the object into a [definition object](#definition-objects).
 
-### Definition Objects ###
-When a definition object token is read in an object's name it is treated as a definition object. Definition objects are never exported as visual 3D models, in fact they are not exported at all. Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
-
-Definition Object | Token | Requirements | Maximum Count/Brick | Axis Aligned | Brick Grid Aligned | Can Overlap | Description
-------------------|-------|--------------|--------------------:|:------------:|:------------------:|:-----------:|------------
-<a name="definition-objects-bounds">Bounds</a> | `bounds` | At least 2 vertices, must have volume | 1 | Yes [**(1)**](#definition-objects-fn-1) | Yes | N/A | Defines the brick bounds (brick size).
-<a name="definition-objects-collision">Collision</a> | `collision` | At least 2 vertices, must be within [**Bounds**](#definition-objects-bounds) object [**(2)**](#definition-objects-fn-2) | 10 | Yes [**(3)**](#definition-objects-fn-3)  | No | Yes | Defines a collision box.
-Brick Grid | See [Defining Brick Grid](#defining-brick-grid) | At least 2 vertices, must have volume, must be within [**Bounds**](#definition-objects-bounds) object | Unlimited | Yes [**(1)**](#definition-objects-fn-1) | Yes | Yes [**(4)**](#definition-objects-fn-4) | Defines a volume in the brick grid to fill with a specific brick grid symbol.
-
-<a name="definition-objects-fn-1">**(1)**</a> It is highly recommended to use axis aligned cuboids to define bounds and the brick grid. However, if you insist on defining the size of your brick in monkey heads, you can. Only the minimum and maximum coordinates of the bounds and brick grid objects are used.
-
-<a name="definition-objects-fn-2">**(2)**</a> Collision boxes outside brick bounds are not invalid and the brick will function in-game. This behavior is not allowed by the exporter because collision outside brick bounds is horribly broken as it was never intended work in that manner.
-
-<a name="definition-objects-fn-3">**(3)**</a> Blockland only supports [AABB collision](https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box) with bricks. In other words brick collision may only be defined using boxes of varying sizes that align with the axes. You can rotate said boxes however you want but that does translate to collision boxes that are at an angle in-game. Only the the minimum and maximum coordinates of the object are used. Using anything else than cuboids to define collision is not recommended as it makes the Blender file more confusing to understand.
-
-<a name="definition-objects-fn-4">**(4)**</a> See [Defining Brick Grid](#defining-brick-grid) for the specific rules about overlapping brick grid definitions.
-
-#### Defining Brick Grid ####
-Brick grid definitions represent a 3D volume in the 3D space the brick grid encompasses. You can imagine it as if the entire cuboidal shape of the brick would be filled with 1x1f plates and these volumes define the properties of all the 1x1f plates within that volume. Each brick grid definition has their own priority. When two or more brick grid definition objects overlap in 3D space, the one with the **higher** priority takes precedence and will overwrite the symbols in the brick grid that any definitions with lower priorities would have written.
-
-:exclamation: Be aware that if your brick does not contain a `brickd` definition on the bottom of the brick, the brick cannot be planted on other bricks or the ground.
-
-Token | Brick Grid Symbol | Description
-------|:-----------------:|------------
-`gridb` | `b` | Bricks may be placed above and below this volume. This brick can be planted on the ground.
-`gridd` | `d` | Bricks may be placed below this volume. This brick can be planted on the ground.
-`gridu` | `u` | Bricks may be placed above this volume.
-`grid-` | `-` | Bricks may be placed inside this volume. (I.e. empty space.) This is the default symbol, any volume that does not have a brick grid definition uses this symbol.
-`gridx` | `x` | Bricks may not be placed inside this volume.
+Default Token | Category | Usable In | Is a [Definition Object](#def-definition-object) | Meaning
+--------------|----------|-----------|:----------------------:|--------
+`bounds` | [Definition objects](#definition-objects) | [Object](#def-object) name | Yes | This is a bounds definition object.
+`collision` | [Definition objects](#definition-objects) | [Object](#def-object) name | Yes | This is a collision definition object.
+`gridb` | [Definition objects](#definition-objects) | [Object](#def-object) name | Yes | Write brick grid `b` symbol in this [volume](#def-volume).
+`gridd` | [Definition objects](#definition-objects) | [Object](#def-object) name | Yes | Write brick grid `d` symbol in this [volume](#def-volume).
+`gridu` | [Definition objects](#definition-objects) | [Object](#def-object) name | Yes | Write brick grid `u` symbol in this [volume](#def-volume).
+`grid-` | [Definition objects](#definition-objects) | [Object](#def-object) name | Yes | Write brick grid `-` symbol in this [volume](#def-volume).
+`gridx` | [Definition objects](#definition-objects) | [Object](#def-object) name | Yes | Write brick grid `x` symbol in this [volume](#def-volume).
+`qt` | [Quad sorting](#defining-quad-sections--coverage) | [Object](#def-object) name | No | Sort these [faces](#def-face) in the top section.
+`qb` | [Quad sorting](#defining-quad-sections--coverage) | [Object](#def-object) name | No | Sort these [faces](#def-face) in the bottom section.
+`qn` | [Quad sorting](#defining-quad-sections--coverage) | [Object](#def-object) name | No | Sort these [faces](#def-face) in the north section.
+`qe` | [Quad sorting](#defining-quad-sections--coverage) | [Object](#def-object) name | No | Sort these [faces](#def-face) in the east section.
+`qs` | [Quad sorting](#defining-quad-sections--coverage) | [Object](#def-object) name | No | Sort these [faces](#def-face) in the south section.
+`qw` | [Quad sorting](#defining-quad-sections--coverage) | [Object](#def-object) name | No | Sort these [faces](#def-face) in the west section.
+`qo` | [Quad sorting](#defining-quad-sections--coverage) | [Object](#def-object) name | No | Sort these [faces](#def-face) in the omni section.
+`c` | [Colors](#defining-colors) | [Object](#def-object) name | No | The next four numbers define the color for these [faces](#def-face).
+`blank` | [Colors](#defining-colors) | Material name | No | Do not write a color for [faces](#def-face) using this material: use the in-game spray can color as is.
+`cadd` | [Colors](#defining-colors) | Material name, vertex color layer name | No | Add the material/vertex color of these [faces](#def-face) to the in-game spray can color.
+`csub` | [Colors](#defining-colors) | Material name, vertex color layer name | No | Subtract the material/vertex color of these [faces](#def-face) from the in-game spray can color.
 
 ### Mesh Definition Tokens ###
-Objects that have one or more of these definition tokens are exported into the BLB file and can be seen in-game. The definition tokens below will not cause an object to be treated as a definition object. These objects are exported normally and can be seen in-game. Instead the definition token will change some aspect of the mesh or brick.
+Mesh definition tokens are a sub-category of [definition tokens](#definition-tokens) that can only be used in the names of [objects](#def-objects) but do not change the object into an invisible [definition object](#definition-objects).
+Objects that have one or more of these definition tokens are treated as [visible objects](#def-visible-object) and they govern some aspect of the [faces](#def-face) they are related to.
 
-A single object may not contain the same definition more than once.
+:exclamation: Each definition token may only appear once in a name field but a name may contain both definition tokens.
 
-Definition | Token | Requirements | Maximum Count/Brick | Axis Aligned | Brick Grid Aligned | Description 
------------|-------|--------------|--------------------:|:------------:|:------------------:|------------
-<a name="mesh-definition-tokens-color">Color</a> | `c` <red> <green> <blue> <alpha> | See [Defining Colors](#defining-colors) | Unlimited | No | No | Defines the object's RGBA color.
-Coverage | See [Defining Quad Sorting & Coverage](#defining-quad-sorting--coverage) | Must contain a face | Unlimited | No | No | Assigns the object's quads into a specific section in the brick.
+Definition | Default Token | Requirements | Maximum Count/Brick | Description 
+-----------|---------------|--------------|--------------------:|------------
+<a name="mesh-definition-tokens-color">Color</a> | `c` <red> <green> <blue> <alpha> | See [Defining Colors](#defining-colors) | Unlimited | Defines the color of the [faces](#def-face).
+Coverage | See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) | Must contain a [face](#def-face) | Unlimited |  Assigns the object's quads into a specific section in the brick.
 
-#### Defining Quad Sorting & Coverage ####
-BLB files allow model quads to be sorted into seven sections: top, bottom, north, east, south, west, and omni. Quads in these sections may then be automatically hidden in-game using the coverage system, if it is defined correctly in the BLB file. This way the game does not have to render quads that are completely covered by adjacent bricks improving frame rate when a large number of bricks are on the screen at once. Quads are sorted into these sections by using one of the tokens below in the name of the object containing the faces to be sorted in that section. If nothing is specified, omni section is used.
+#### Defining Quad Sections & Coverage ####
+BLB files allow [mesh](#def-mesh) [faces](#def-face) to be sorted into seven sections: top, bottom, north, east, south, west, and omni.
+Quads in these sections may then be automatically hidden in-game using the [coverage system](#def-coverage), if it is defined correctly in the BLB file.
 
-Token | Section
-------|--------
+The coverage system allows the game to not render quads that are completely covered by adjacent bricks improving frame rate when a large number of bricks are on the screen at once.
+Quads are sorted into these sections by using one of the tokens below in the name of the [object](#def-object) containing the faces to be sorted into that section.
+If a [visible object](#def-visible-object) has no quad sorting token specified, the omni section is used.
+
+Default Token | Section
+--------------|--------
 `qt` | Top
 `qb` | Bottom
 `qn` | North
@@ -426,41 +419,86 @@ Token | Section
 `qw` | West
 `qo` | Omni ("any" or "none", default)
 
-Sorting quads in the manner described above is pointless unless the [Coverage](#coverage) property in the export dialog is enabled and at least one option is enabled. The coverage properties have two options for each section/side of the brick:
+:exclamation: Sorting quads in this manner is pointless unless the [Coverage](#coverage) property in the export dialog is enabled and at least one option is enabled.
+
+In the export dialog [Coverage](#coverage) properties there are two options for each section/side of the brick:
 
 Option | Description
 -------|------------
-Hide Self | When enabled, for example for the **top section**, the game will not render the quads in the **top** section of **this brick** when the **top** area of **this brick** is **completely covered**.
-Hide Adjacent | When enabled, for example for the **top section**, the game will not render the quads in the **bottom** section of **adjacent bricks** on **top** of this brick if the coverage rules for those bricks are fulfilled.
+Hide Self | For example when enabled for the top section, the game will not render the [quads](#def-quad) in the **top** section of **this brick** when the top area of this brick is completely covered.
+Hide Adjacent | For example when enabled for the top section, the game will not render the [quads](#def-quad) in the **bottom** section of **adjacent bricks** on top of this brick if the coverage rules for those adjacent bricks are fulfilled.
 
 #### Defining Colors ####
-The exporter supports three methods for defining vertex colors. To allow faces to be colored using the spray can tool in-game, do not assign a color those faces.
+The exporter supports three methods for defining brick colors.
+To allow faces to be colored using the spray can tool in game do not assign a color those faces.
+See [RGBA Color Format](#rgba-color-format) for a detailed explanation of how to write an RGBA color value.
 
 Method | Overrides | Extent of Coloring | RGB Values | Alpha Value | Notes
 -------|-----------|--------------------|------------|-------------|------
-Object Colors | In-game paint color | Entire object (color & alpha)| In object name after the [Color token](#mesh-definition-tokens-color) [**(1)**](#defining-colors-fn-1) | In object name after the red, green, and blue values | Implemented only to support legacy 3D brick models, not recommended for use.
-Material Colors | Object Colors | Assigned faces (color & alpha) | In `Material` tab as `Diffuse Color` | In `Material` tab under `Transparency` in `Alpha` slider| Recommended method for defining colors. Multiple materials may be used in a single object.
-<a name="vertex-colors">Vertex Colors</a> | Material Colors | Entire object (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer [**(2)**](#defining-colors-fn-2) | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
+Object Colors | In-game paint color | Entire object (color & alpha)| In object name after the [Color token](#mesh-definition-tokens-color) | In object name after the red, green, and blue values | Implemented only to support legacy brick models, **not recommended for use**.
+Material Colors | Object Colors | Assigned faces (color & alpha) | In `Material` tab as `Diffuse Color` | In `Material` tab under `Transparency` in `Alpha` slider| The **recommended method** for defining color. Multiple materials may be used in a single object.
+<a name="vertex-colors">Vertex Colors</a> | Material Colors | Entire object (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
 
 There are three definition tokens that are specific to dealing with colors.
 
 Token | Usable In | Description
 ------|-----------|------------
 <a name="defining-colors-blank">`blank`</a> | Material name | Ignore the material's color and do not write any color for the faces with this material assigned so they can be colored by the spray can in-game. This feature exists because an object that has a material, cannot have faces that do not have a material assigned to them.
-`cadd` | Material name, vertex color layer name | Use this color as an additive color: add the values of this color to the spray can color in-game. For example to make the spray can color a little lighter use a **dark gray** color.
-`csub` | Material name, vertex color layer name | Use this color as a subtractive color: subtract the values of this color from the spray can color in-game. For example to make the spray can color a lot darker use a **light gray** color.
+<a name="defining-colors-cadd">`cadd`</a> | Material name, vertex color layer name | Use this color as an additive color: add the values of this color to the spray can color in-game. For example to make the spray can color **a little lighter** use a **dark gray** color.
+<a name="defining-colors-csub">`csub`</a> | Material name, vertex color layer name | Use this color as a subtractive color: subtract the values of this color from the spray can color in-game. For example to make the spray can color **a lot darker** use a **light gray** color.
 
-<a name="defining-colors-fn-1">**(1)**</a> The exporter understands two ways of defining an RGBA color using text:
-1. The commonly used method of writing 4 integers that are in the range 0–255, where 0 is black, separated with a whitespace character such as a space. For example `127 255 10 191` for a yellow-green color that is 25% transparent. A full object name could be for example `glass c 240 255 255 128.001`.
+##### RGBA Color Format #####
+The exporter understands two ways of defining an RGBA color using text.
+
+:exclamation: Please note that you **must** use a comma character (`,`) as the decimal separator for floating point numbers.
+
+1. The commonly used method of writing 4 integers that are in the range 0–255, where 0 is black, separated with a whitespace character such as a space.
+For example `127 255 10 191` for a yellow-green color that is 25% transparent. A full object name could be for example `glass c 240 255 255 128.001`.
    - In the above example the running index `.001` that Blender added at the end would be removed by the exporter.
 1. Writing 4 decimals in the range 0.0–1.0, where 0.0 is black, separated with a whitespace character such as a space. An object could have a name such as `c 0,125 0,0 0,5 1,0 flower`, for example.
-   - :exclamation: Please note that you **must** use a comma character (`,`) as the decimal separator.
    - The leading zero may be omitted.
    - Up to 16 decimals are supported.
 
-<a name="defining-colors-fn-2">**(2)**</a> The definition of the alpha color value follows the same rules as described in footnote [**(1)**](#defining-colors-fn-1).
+## Definition Objects ##
+When a definition object token is read in an object's name it is treated as a definition object. Definition objects are never exported as visual 3D models, in fact they are not exported at all. Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
 
-### Brick Textures ###
+Definition Object | Default Token | Requirements | Maximum Count/Brick | Must Be Within [**Bounds**](#definition-objects-bounds)  | Axis-Aligned | Brick Grid Aligned | Can Overlap | Description
+------------------|---------------|--------------|--------------------:|:-------------------:|:------------:|:------------------:|:-----------:|------------
+<a name="definition-objects-bounds">Bounds</a> | `bounds` | At least two vertices, must have volume | 1 | N/A | Yes [**(1)**](#definition-objects-fn-1) | Yes | N/A | Defines the dimensions or the size of the brick.
+<a name="definition-objects-collision">Collision</a> | `collision` | At least two vertices, must have volume | 10 | Yes [**(2)**](#definition-objects-fn-2) | Yes | No | Yes | Defines a collision [cuboid](#def-cuboid). See [Defining Collision](#defining-collision) for more info.
+Brick Grid | See [Defining Brick Grid](#defining-brick-grid) | At least two vertices, must have volume | Unlimited | Yes | Yes [**(1)**](#definition-objects-fn-1) | Yes | Yes [**(4)**](#definition-objects-fn-4) | Defines a volume in the brick grid to fill with a specific brick grid symbol.
+
+<a name="definition-objects-fn-1">**(1)**</a> It is highly recommended to use [axis-aligned cuboids](#def-aac) to define bounds and the [brick grid](#def-brick-grid).
+However, if you insist on defining the size of your brick in monkey heads, you can.
+Only the [axis-aligned bounding box](#def-aabb) of the bounds and brick grid objects are used.
+
+<a name="definition-objects-fn-2">**(2)**</a> Collision boxes outside brick bounds are technically not invalid and the brick will function in-game.
+This behavior is not allowed by the exporter because collision outside brick bounds is horribly broken as it was never intended work in that manner.
+
+<a name="definition-objects-fn-4">**(4)**</a> See [Defining Brick Grid](#defining-brick-grid) for the specific rules about overlapping brick grid definitions.
+
+### Defining Collision ###
+Blockland bricks only supports [AABB collision](https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box).
+In other words brick collision may only be defined using [cuboids](#def-cuboids) of varying sizes that align with the coordinate axes.
+You can rotate said cuboids however you want but that will not lead to rotated collision cuboids in-game.
+Only the the [axis-aligned bounding box](#def-aabb) of the collision definition objects are used.
+
+:bulb: Using any other shape than an axis-aligned cuboid to define collision is not recommended as it makes the Blender file more difficult to understand and also breaks the "what you see is what you get" principle.
+
+### Defining Brick Grid ###
+Brick grid definitions represent a 3D volume in the 3D space the brick grid encompasses. You can imagine it as if the entire cuboidal shape of the brick would be filled with 1x1f plates and these volumes define the properties of all the 1x1f plates within that volume. Each brick grid definition has their own priority. When two or more brick grid definition objects overlap in 3D space, the one with the **higher** priority takes precedence and will overwrite the symbols in the brick grid that any definitions with lower priorities would have written.
+
+:exclamation: Be aware that if your brick does not contain a `brickd` definition on the bottom of the brick, the brick cannot be planted on other bricks or the ground.
+
+Default Token | Brick Grid Symbol | Description
+--------------|:-----------------:|------------
+`gridb` | `b` | Bricks may be placed above and below this volume. This brick can be planted on the ground.
+`gridd` | `d` | Bricks may be placed below this volume. This brick can be planted on the ground.
+`gridu` | `u` | Bricks may be placed above this volume.
+`grid-` | `-` | Bricks may be placed inside this volume. (I.e. empty space.) This is the default symbol, any volume that does not have a brick grid definition uses this symbol.
+`gridx` | `x` | Bricks may not be placed inside this volume.
+
+## Brick Textures ##
 Defining brick textures is done using Blender materials. To assign a brick texture to a face, assign a material to it containing a valid brick texture name (case insensitive):
 - `bottomedge`
 - `bottomloop`
@@ -471,7 +509,7 @@ Defining brick textures is done using Blender materials. To assign a brick textu
 
 If no brick texture is defined, `side` is used. Material name may contain other words as long as the brick texture name is separated from them with one whitespace character such as a space. A common combination is to define a brick texture name and the [definition token `blank`](#defining-colors-blank) (e.g. `blank ramp` or `side blank`) to allow the player to color the face in-game using the spray can.
 
-#### UV Mapping ####
+## UV Mapping ##
 Manually defined UV coordinates must be stored in one or more UV layers that do not share a name with one of the automatically generated UV layers:
 - `TEX:BOTTOMEDGE`
 - `TEX:BOTTOMLOOP`
@@ -485,9 +523,6 @@ Any data in UV layers with one the names above will the overwritten during autom
 
 If the [Calculate UVs](#calculate-uvs) property is enabled, UV coordinates will be automatically calculated based on the dimensions of the quad and the name of the material assigned to it. (See [Brick Textures](#brick-textures) to learn how to define brick textures with materials.) The generated coordinates are only guaranteed to be correct for strictly rectangular quads, for any other shapes the results may not be satisfactory. If using brick textures on non-rectangular quads it is recommended to manually define the UV coordinates for best results.
 
-### The TOP Brick Texture ###
-Blockland automatically performs rotations on the UV coordinates of the TOP brick texture during runtime so that the lightest side of the texture is always facing towards the sun. Because of this there is no correct way of representing the TOP brick texture in Blender. As a compromise the exporter will rotate the lightest side of the TOP brick texture to face towards the axis select in the [Forward Axis](#forward-axis) property. This means the UV coordinates of the TOP brick texture in Blender may not match those in the written BLB file.
-
 ## Troubleshooting ##
 Solutions to common issues with the BLB Exporter. If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again. The log file may contain warnings or errors describing issues with the models and how to fix them.
 Additional instructions on how to fix specific issues are detailed in the [Warning & Error Log Messages](#warning--error-log-messages) section.
@@ -497,6 +532,9 @@ The automatic UV calculation is only designed to work with rectangular quads. Ma
 
 ### Automatically calculated UV coordinates for brick textures are rotated incorrectly ###
 The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the SIDE texture pointing sideways instead of up) is not a perfect rectangle. Even one vertex being off by some minuscule, visually indistinguishable amount from a perfectly rectangular shape can cause the automatic UV calculation to incorrectly determine the rotation of the quad. Double check all 4 coordinates of the quad and manually correct any floating point errors. If working on axis-aligned quads or if the vertices should be on grid points snapping the coordinates of the problem quad to grid coordinates using `Mesh > Snap > Snap Selection to Grid` usually fixes floating point errors.
+
+### The TOP brick texture has incorrect rotation in Blender ###
+Blockland automatically performs rotations on the UV coordinates of the TOP brick texture during runtime so that the lightest side of the texture is always facing towards the sun. Because of this there is no correct way of representing the TOP brick texture in Blender. As a compromise the exporter will rotate the lightest side of the TOP brick texture to face towards the axis select in the [Forward Axis](#forward-axis) property. This means the UV coordinates of the TOP brick texture in Blender may not match those in the written BLB file.
 
 ## Warning & Error Log Messages ##
 Detailed explanations of the warning and error messages logged by the program and directions on how to solve the associated issues.
@@ -1534,7 +1572,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The object had more than one <a href="#defining-quad-sorting--coverage">quad section definition token</a>.</td>
+		<td>The object had more than one <a href="#defining-quad-sections--coverage">quad section definition token</a>.</td>
 	</tr>
 	<tr>
 		<th>Reason</th>
@@ -1593,4 +1631,4 @@ Normal vectors | [Optional](#round-normals)
 - [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.
 - [Demian Wright](https://github.com/DemianWright) - Everything else.
 
-<a name="exporter-fn-1">__*__</a> There's always a footnote, see the issue with [the TOP brick texture](#the-top-brick-texture).
+<a name="exporter-fn-1">__*__</a> There's always a footnote, see the issue with [the TOP brick texture](#the-top-brick-texture-has-incorrect-rotation-in-blender).
