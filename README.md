@@ -1026,105 +1026,56 @@ Fatal errors always lead to the program execution stopping.
 		<th>Causes</th>
 		<td>Depends on the values of various <a href="#blender-export-properties">export properties</a>.
 			<table>
-				<caption>Value of <a href="#bricks-to-export">Bricks to Export</a></caption>
 				<thead>
 					<tr>
-						<th>Value</th>
-						<th>Causes</th>
+						<th><a href="#bricks-to-export">Bricks to Export</a></th>
+						<th><a href="#export-only-single-export">Export Only (Single Export)</a></th>
+						<th>Cause</th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td>Single</td>
-						<td>
-							<table>
-				  				<caption>Value of <a href="#export-only-single-export">Export Only (Single Export)</a></caption>
-								<thead>
-									<tr>
-										<th>Value</th>
-										<th>Cause</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td>Selection</td>
-										<td>No objects were selected. Selected objects have an orange outline.</td>
-									</tr>
-									<tr>
-										<td>Layers</td>
-										<td>There are no objects in the currently visible layers.</td>
-									</tr>
-									<tr>
-										<td>Scene</td>
-										<td>There are no objects in the current scene. In other words none of the layers in the current scene contained objects.</td>
-									</tr>
-								</tbody>
-							</table>
-						</td>
+						<td rowspan="3">Single</td>
+						<td>Selection</td>
+						<td>No objects were selected. Selected objects have an orange outline.</td>
 					</tr>
 					<tr>
-						<td>Multiple</td>
-						<td>
-							<table>
-				  				<caption>Value of <a href="#export-bricks-in-multiple-export">Export Bricks in (Multiple Export)</a></caption>
-								<thead>
-									<tr>
-										<th>Value</th>
-										<th>Causes</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td>Layers</td>
-										<td>
-											<table>
-				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
-												<thead>
-													<tr>
-														<th>Value</th>
-														<th>Cause</th>
-													</tr>
-												</thead>
-												<tbody>
-													<tr>
-														<td>Groups</td>
-														<td>None of the groups in the current scene had any objects in the visible layers.</td>
-													</tr>
-													<tr>
-														<td>Layers</td>
-														<td>None of the visible layers contained any objects.</td>
-													</tr>
-												</tbody>
-											</table>
-										</td>
-									</tr>
-									<tr>
-										<td>Scene</td>
-										<td>
-											<table>
-				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
-												<thead>
-													<tr>
-														<th>Value</th>
-														<th>Cause</th>
-													</tr>
-												</thead>
-												<tbody>
-													<tr>
-														<td>Groups</td>
-														<td>None of the groups in the current scene contained any objects.</td>
-													</tr>
-													<tr>
-														<td>Layers</td>
-														<td>None of the layers in the current scene contained any objects.</td>
-													</tr>
-												</tbody>
-											</table>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</td>
+						<td>Layers</td>
+						<td>There are no objects in the currently visible layers.</td>
+					</tr>
+					<tr>
+						<td>Scene</td>
+						<td>There are no objects in the current scene. In other words none of the layers in the current scene contained objects.</td>
+					</tr>
+				</tbody>
+			</table>
+			<table>
+				<thead>
+					<tr>
+						<th><a href="#bricks-to-export">Bricks to Export</a></th>
+						<th><a href="#export-bricks-in-multiple-export">Export Bricks in (Multiple Export)</a></th>
+						<th><a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></th>
+						<th>Cause</th>
+					</tr>
+				</thead>
+					<tr>
+						<td rowspan="6">Multiple</td>
+						<td rowspan="2">Layers</td>
+						<td>Groups</td>
+						<td>None of the groups in the current scene had any objects in the visible layers.</td>
+					</tr>
+					<tr>
+						<td>Layers</td>
+						<td>None of the visible layers contained any objects.</td>
+					</tr>
+					<tr>
+						<td rowspan="2">Scene</td>
+						<td>Groups</td>
+						<td>None of the groups in the current scene contained any objects.</td>
+					</tr>
+					<tr>
+						<td>Layers</td>
+						<td>None of the layers in the current scene contained any objects.</td>
 					</tr>
 				</tbody>
 			</table>
@@ -1136,107 +1087,58 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Solutions</th>
-		<td>Depends on the values of various export properties.
+		<td>Depends on the values of various <a href="#blender-export-properties">export properties</a>.
 			<table>
-					<caption>Value of <a href="#bricks-to-export">Bricks to Export</a></caption>
 				<thead>
 					<tr>
-						<th>Value</th>
-						<th>Solutions</th>
+						<th><a href="#bricks-to-export">Bricks to Export</a></th>
+						<th><a href="#export-only-single-export">Export Only (Single Export)</a></th>
+						<th>Solution</th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td>Single</td>
-						<td>
-							<table>
-				  				<caption>Value of <a href="#export-only-single-export">Export Only (Single Export)</a></caption>
-								<thead>
-									<tr>
-										<th>Value</th>
-										<th>Solution</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td>Selection</td>
-										<td>Select some objects.</td>
-									</tr>
-									<tr>
-										<td>Layers</td>
-										<td>Select one or more layers with objects.</td>
-									</tr>
-									<tr>
-										<td>Scene</td>
-										<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
-									</tr>
-								</tbody>
-							</table>
-						</td>
+						<td rowspan="3">Single</td>
+						<td>Selection</td>
+						<td>Select some objects.</td>
 					</tr>
 					<tr>
-						<td>Multiple</td>
-						<td>
-							<table>
-				  				<caption>Value of <a href="#bricks-to-export">Bricks to Export</a></caption>
-								<thead>
-									<tr>
-										<th>Value</th>
-										<th>Solutions</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td>Layers</td>
-										<td>
-											<table>
-				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
-												<thead>
-													<tr>
-														<th>Value</th>
-														<th>Solution</th>
-													</tr>
-												</thead>
-												<tbody>
-													<tr>
-														<td>Groups</td>
-														<td>Ensure that your groups have objects assigned to them and that you have selected layers with objects in them.</td>
-													</tr>
-													<tr>
-														<td>Layers</td>
-														<td>Select layers with objects.</td>
-													</tr>
-												</tbody>
-											</table>
-										</td>
-									</tr>
-									<tr>
-										<td>Scene</td>
-										<td>
-											<table>
-				  								<caption>Value of <a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></caption>
-												<thead>
-													<tr>
-														<th>Value</th>
-														<th>Solution</th>
-													</tr>
-												</thead>
-												<tbody>
-													<tr>
-														<td>Groups</td>
-														<td>Add objects to a group in the current scene.</td>
-													</tr>
-													<tr>
-														<td>Layers</td>
-														<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
-													</tr>
-												</tbody>
-											</table>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</td>
+						<td>Layers</td>
+						<td>Select one or more layers with objects.</td>
+					</tr>
+					<tr>
+						<td>Scene</td>
+						<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
+					</tr>
+				</tbody>
+			</table>
+			<table>
+				<thead>
+					<tr>
+						<th><a href="#bricks-to-export">Bricks to Export</a></th>
+						<th><a href="#export-bricks-in-multiple-export">Export Bricks in (Multiple Export)</a></th>
+						<th><a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></th>
+						<th>Solution</th>
+					</tr>
+				</thead>
+					<tr>
+						<td rowspan="6">Multiple</td>
+						<td rowspan="2">Layers</td>
+						<td>Groups</td>
+						<td>Ensure that your groups have objects assigned to them and that you have selected layers with objects in them.</td>
+					</tr>
+					<tr>
+						<td>Layers</td>
+						<td>Select layers with objects.</td>
+					</tr>
+					<tr>
+						<td rowspan="2">Scene</td>
+						<td>Groups</td>
+						<td>Add objects to a group in the current scene.</td>
+					</tr>
+					<tr>
+						<td>Layers</td>
+						<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
 					</tr>
 				</tbody>
 			</table>
