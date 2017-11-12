@@ -131,25 +131,25 @@ These features may or may not be implemented at some unspecified time in the fut
 A list of more or less technical terms used in this document.
 The definitions are in the context of Blockland, Blender, and this exporter and may vary from their mathematical definitions.
 <dl>
-<dt><dfn id="def-aap">Axis-Aligned Plane</dfn></dt>
+<dt><a name="def-aap">Axis-Aligned Plane</a></dt>
 <dd>A <strong>plane</strong> whose vertices have the same coordinate on exactly one coordinate axis.
 When this two-dimensional plane is viewed from either of the other two coordinate axes it disappears from view.</dd>
 
-<dt><dfn id="def-aabb"><a href="https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box">Axis-Aligned Bounding Box</a></dfn> / Axis-Aligned Minimum Bounding Box</dt>
+<dt><a name="def-aabb"><a href="https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box">Axis-Aligned Bounding Box</a></a> / Axis-Aligned Minimum Bounding Box</dt>
 <dd>A <a href="#def-cuboid">cuboid</a> that completely encompasses all vertices of one or more <a href="#def-object">objects</a>.
 The faces of this cuboid are parallel with the coordinate axes.</dd>
 
-<dt><dfn id="def-aac">Axis-Aligned Cuboid</a></dfn></dt>
+<dt><a name="def-aac">Axis-Aligned Cuboid</a></a></dt>
 <dd>A <a href="#def-cuboid">cuboid</a> whose faces are parallel with the coordinate axes.</dd>
 
-<dt><dfn id="def-brick-grid">Brick Grid</dfn></dt>
+<dt><a name="def-brick-grid">Brick Grid</a></dt>
 <dd><ol>
 <li>The three-dimensional space of the game divided into 1x1x1 brick plates</li>
 <li>The blocks of <code>u</code>, <code>x</code>, <code>-</code>, and other characters near the top of the .BLB file that define the brick's placement rules.
 See <a href="#defining-brick-grid">Defining Brick Grid</a>.</li<
 </ol></dd>
 
-<dt><dfn id="def-brick">Brick</dfn></dt>
+<dt><a name="def-brick">Brick</a></dt>
 <dd><ol>
 <li>A collection of faces that acts as a single object in Blockland and all the non-visual data it contains such as collision information.</li>
 <li>The BLB file itself.</li>
@@ -157,19 +157,19 @@ See <a href="#defining-brick-grid">Defining Brick Grid</a>.</li<
 </ol>
 </dd>
 
-<dt><dfn id="def-coverage">Coverage</dfn> (System)</dt>
+<dt><a name="def-coverage">Coverage</a> (System)</dt>
 <dd><ol>
 <li>The Blockland coverage system describes how to hide faces on a brick and any adjacent bricks.</li>
 <li>The six pairs of integers near the top of a BLB file.</li>
 </ol>
 </dd>
 
-<dt><dfn id="def-cuboid">Cuboid</dfn></dt>
+<dt><a name="def-cuboid">Cuboid</a></dt>
 <dd>More specifically a <strong>right cuboid</strong> in the context of Blockland bricks.
 A <a href="https://en.wikipedia.org/wiki/Convex_polytope">convex polyhedron</a> with 6 faces that are all at right angles to each other.
 I.e. a regular cube or a cube that is elongated on one axis.</dd>
 
-<dt><dfn id="def-definition-object">Definition Object</dfn></dt>
+<dt><a name="def-definition-object">Definition Object</a></dt>
 <dd>An <a href="#def-object">object</a> that has a specific <a href="#def-definition-token">definition token</a> in its name.
 These objects cannot be seen in-game.
 They exist to tell the exporter how to create the <a href="#def-brick">brick</a>.
@@ -180,65 +180,65 @@ There are three different definition objects:
 	<li>and a <a href="#defining-brick-grid">brick grid definition object</a>.</li>
 </ul></dd>
 
-<dt><dfn id="def-definition-token">Definition Token</dfn></dt>
+<dt><a name="def-definition-token">Definition Token</a></dt>
 <dd>A special <a href="#def-token">token</a> in an <a href="#def-object">object's</a> name that tells the exporter what to do with that object.</dd>
 
-<dt><dfn id="def-face">Face</dfn></dt>
+<dt><a name="def-face">Face</a></dt>
 <dd>A visible surface that is rendered in game and in the Blender viewport.
 The surface must be bound by or created by at least three vertices (making it a <a href="#def-tri">tri</a>) or in deed any number of vertices (also called an <a href="#def-n-gon">n-gon</a>).
 
 :exclamation: Blockland bricks only support faces made from exactly four vertices: <a href="#def-quad">quads</a>.</dd>
 
-<dt><dfn id="def-mesh">Mesh</dfn></dt>
+<dt><a name="def-mesh">Mesh</a></dt>
 <dd>The vertices, edges, and faces that make up a 3D model.</dd>
 
-<dt><dfn id="def-mesh-object">Mesh Object</dfn></dt>
+<dt><a name="def-mesh-object">Mesh Object</a></dt>
 <dd>A Blender object that contains vertices, edges, and <a href="#def-face">faces</a>.
 Commonly just referred to as an <a href="#def-object">object</a>.</dd>
 
-<dt><dfn id="def-model">Model</dfn></dt>
+<dt><a name="def-model">Model</a></dt>
 <dd>One or more <a href="#def-object">objects</a> that make up a <a href="#def-brick">brick</a>.</dd>
 
-<dt><dfn id="def-n-gon">N-gon</dfn></dt>
+<dt><a name="def-n-gon">N-gon</a></dt>
 <dd>Technically any <a href="https://en.wikipedia.org/wiki/Polygon">polygon</a> but in this document used to refer to a single face formed from more than four vertices.
 N-gons are not necessarily <a href="#def-plane">planes</a>.
 
 :exclamation: These are not supported by the exporter or Blockland: the faces will be ignored.</dd>
 
-<dt><dfn id="def-object">Object</dfn></dt>
+<dt><a name="def-object">Object</a></dt>
 <dd>Usually a <a href="#def-mesh-object">mesh object</a>.
 Technically refers to all the meshes, cameras, lights, empties, and everything else you see in the 3D viewport.
 Blender objects contain data about vertices, materials, groups, object names, and more.</dd>
 
-<dt><dfn id="def-plane">Plane</dfn></dt>
+<dt><a name="def-plane">Plane</a></dt>
 <dd>A flat two-dimensional surface in 3D space.
 A particular type of <a href="#def-face">face</a>.</dd>
 
-<dt><dfn id="def-quad">Quad</dfn></dt>
+<dt><a name="def-quad">Quad</a></dt>
 <dd>A <a href="#def-face">face</a> with four vertices.
 Quads are not necessarily <a href="#def-plane">planes</a>.</dd>
 
-<dt><dfn id="def-string">String</dfn></dt>
+<dt><a name="def-string">String</a></dt>
 <dd>A sequence of letters.
 Usually a word.</dd>
 
-<dt><dfn id="def-token">Token</dfn></dt>
+<dt><a name="def-token">Token</a></dt>
 <dd>A <a href="#def-string">string</a> surrounded with a <a href="#def-whitespace">whitespace character</a> on one or both sides.</dd>
 
-<dt><dfn id="def-tri"><abbr title="Triangle">Tri</abbr></dfn></dt>
+<dt><a name="def-tri"><abbr title="Triangle">Tri</abbr></a></dt>
 <dd>A <a href="#def-face">face</a> with three vertices.
 Triangles are always <a href="#def-plane">planes</a>.
 
 :exclamation: These are not supported by Blockland bricks and they are converted to <a href="#def-quad">quads</a> automatically.</dd>
 
-<dt><dfn id="def-visible-object">Visible Object</dfn></dt>
+<dt><a name="def-visible-object">Visible Object</a></dt>
 <dd>Any <a href="#def-mesh-object">mesh object</a> that is not a <a href="#def-definition-object">definition object</a>.
 Visible objects are rendered and are seen in-game as a <a href="#def-brick">brick</a>.</dd>
 
-<dt><dfn id="def-volume">Volume</dfn></dt>
+<dt><a name="def-volume">Volume</a></dt>
 <dd>A section of 3D space, usually <a href="#def-cuboid">cuboidal</a> in shape in the context of this exporter.</dd>
 
-<dt><dfn id="def-whitespace"><a href="https://en.wikipedia.org/wiki/Whitespace_character">Whitespace</a></dfn> (Character)</dt>
+<dt><a name="def-whitespace"><a href="https://en.wikipedia.org/wiki/Whitespace_character">Whitespace</a></a> (Character)</dt>
 <dd>In Blender, commonly a space or a tab character.</dd>
 </dl>
 
