@@ -479,7 +479,7 @@ This behavior is not allowed by the exporter because collision outside brick bou
 
 ### Defining Collision ###
 Blockland bricks only supports [AABB collision](https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box).
-In other words brick collision may only be defined using [cuboids](#def-cuboids) of varying sizes that align with the coordinate axes.
+In other words brick collision may only be defined using [cuboids](#def-cuboid) of varying sizes that align with the coordinate axes.
 You can rotate said cuboids however you want but that will not lead to rotated collision cuboids in-game.
 Only the the [axis-aligned bounding box](#def-aabb) of the collision definition objects are used.
 
@@ -1059,7 +1059,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 				</thead>
 					<tr>
-						<td rowspan="6">Multiple</td>
+						<td rowspan="4">Multiple</td>
 						<td rowspan="2">Layers</td>
 						<td>Groups</td>
 						<td>None of the groups in the current scene had any objects in the visible layers.</td>
@@ -1122,7 +1122,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 				</thead>
 					<tr>
-						<td rowspan="6">Multiple</td>
+						<td rowspan="4">Multiple</td>
 						<td rowspan="2">Layers</td>
 						<td>Groups</td>
 						<td>Ensure that your groups have objects assigned to them and that you have selected layers with objects in them.</td>
@@ -1534,3 +1534,5 @@ Normal vectors | [Optional](#round-normals)
 - [Demian Wright](https://github.com/DemianWright) - Everything else.
 
 <a name="exporter-fn-1">__*__</a> There's always a footnote, see the issue with [the TOP brick texture](#the-top-brick-texture-has-incorrect-rotation-in-blender).
+
+[:arrow_up: Back to Table of Contents](#table-of-contents)
