@@ -46,7 +46,6 @@ The add-on does not support importing .BLB files yet.
    1. [Brick Textures](#brick-textures)
 1. [UV Mapping](#uv-mapping)
 	1. [The TOP Brick Texture](#the-top-brick-texture)
-1. [Rounded Values](#rounded-values)
 1. [Troubleshooting](#troubleshooting)
 	1. [Automatically calculated UV coordinates for brick textures are distorted](#automatically-calculated-uv-coordinates-for-brick-textures-are-distorted)
 	1. [Automatically calculated UV coordinates for brick textures are rotated incorrectly](#automatically-calculated-uv-coordinates-for-brick-textures-are-rotated-incorrectly)
@@ -55,6 +54,7 @@ The add-on does not support importing .BLB files yet.
 	1. [Errors](#errors)
 		1. [Fatal Errors](#fatal-errors)
 		1. [Non-Fatal Errors](#non-fatal-errors)
+1. [Rounded Values](#rounded-values)
 1. [Contributors](#contributors)
 
 ## Features ##
@@ -404,23 +404,6 @@ If the [Calculate UVs](#calculate-uvs) property is enabled, UV coordinates will 
 ### The TOP Brick Texture ###
 Blockland automatically performs rotations on the UV coordinates of the TOP brick texture during runtime so that the lightest side of the texture is always facing towards the sun. Because of this there is no correct way of representing the TOP brick texture in Blender. As a compromise the exporter will rotate the lightest side of the TOP brick texture to face towards the axis select in the [Forward Axis](#forward-axis) property. This means the UV coordinates of the TOP brick texture in Blender may not match those in the written BLB file.
 
-## Rounded Values ##
-Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems). For example when exporting a 1x1x1 brick model at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`. This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should. The only way to get rid of this error is to round the number (vertex coordinates). Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game. The floating point errors are effectively 0. The only real benefit that comes from the rounding is nicer looking .BLB files.
-
-The default value of `0.000001` was chosen through manual testing. Rest assured that the rounding will cause no visual oddities whatsoever because the value is so small. This was manually confirmed with a sphere brick made from 524288 quads. Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
-
-:exclamation: The exporter will only ever write 16 decimal places regardless of the precision of the value.
-
-Floating Point Value | Rounded
----------------------|:------:
-Visible mesh vertex coordinates | Yes
-[Bounds object](#definition-objects-bounds) vertex coordinates | Yes
-[Collision object](#definition-objects-collision) vertex coordinates | Yes
-[Brick grid object](#defining-brick-grid) vertex coordinates | Yes
-Normal vectors | [Optional](#round-normals)
-[RGBA color](#defining-colors) values | No
-[UV coordinates](#uv-mapping) | No
-
 ## Troubleshooting ##
 Solutions to common issues with the BLB Exporter. If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again. The log file may contain warnings or errors describing issues with the models and how to fix them.
 Additional instructions on how to fix specific issues are detailed in the [Warning & Error Log Messages](#warning--error-log-messages) section.
@@ -434,7 +417,7 @@ The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the 
 ## Warning & Error Log Messages ##
 Detailed explanations of the warning and error messages logged by the program and directions on how to solve the associated issues.
 In the messages listed in this section the `#` character is used to represent a variable numerical value.
-Text surrounded by `%` describes a variable alphanumeric value.
+Text in `code tags` describes a variable alphanumeric value, commonly the name of a Blender object.
 
 ### Warnings ###
 Warning log messages can be ignored as the issues are automatically corrected, but the resulting brick may not behave or look as excepted.
@@ -442,7 +425,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Calculated bounds have a non-integer size # # #, rounding up.</samp></td>
+		<td><samp>Calculated bounds have a non-integer size <code>#</code> <code>#</code> <code>#</code>, rounding up.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -463,7 +446,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Defined bounds have a non-integer size # # #, rounding to a precision of #.</samp></td>
+		<td><samp>Defined bounds have a non-integer size <code>#</code> <code>#</code> <code>#</code>, rounding to a precision of <code>#</code>.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -535,7 +518,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp># brick grid definition(s) found but was/were not processed. Automatically generated brick grid may be undesirable.</samp></td>
+		<td><samp><code>#</code> brick grid definition(s) found but was/were not processed. Automatically generated brick grid may be undesirable.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -553,7 +536,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Collision definition object '%object name%' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.</samp></td>
+		<td><samp>Collision definition object '<code>object name</code>' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -596,7 +579,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp># collision definition(s) found but was/were not processed. Brick will have no collision.</samp></td>
+		<td><samp><code>#</code> collision definition(s) found but was/were not processed. Brick will have no collision.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -635,7 +618,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Object '%object name%' has # vertex color layers, only using the first.</samp></td>
+		<td><samp>Object '<code>object name</code>' has <code>#</code> vertex color layers, only using the first.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -689,7 +672,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp># triangles degenerated to quads.</samp></td>
+		<td><samp><code>#</code> triangles degenerated to quads.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -712,7 +695,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp># n-gons skipped.</samp></td>
+		<td><samp><code>#</code> n-gons skipped.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -843,7 +826,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Unable to store UV coordinates in object '%object name%' while it is in edit mode.</samp></td>
+		<td><samp>Unable to store UV coordinates in object '<code>object name</code>' while it is in edit mode.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1143,7 +1126,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Brick grid definition object '%object name%' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
+		<td><samp>Brick grid definition object '<code>object name</code>' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1193,7 +1176,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Brick grid definition object '%object name%' has no volume. Definition ignored.</samp></td>
+		<td><samp>Brick grid definition object '<code>object name</code>' has no volume. Definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1237,7 +1220,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Collision definition object '%object name%' has less than 2 vertices. Definition ignored.</samp></td>
+		<td><samp>Collision definition object '<code>object name</code>' has less than 2 vertices. Definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1259,7 +1242,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Collision definition object '%object name%' has no volume. Definition ignored.</samp></td>
+		<td><samp>Collision definition object '<code>object name</code>' has no volume. Definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1281,7 +1264,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Collision definition object '%object name%' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
+		<td><samp>Collision definition object '<code>object name</code>' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1306,7 +1289,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Collision definition object '%object name%' has vertices outside the bounds definition object '%object name%'. Definition ignored.</samp></td>
+		<td><samp>Collision definition object '<code>object name</code>' has vertices outside the bounds definition object '<code>object name</code>'. Definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1331,7 +1314,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Object '%object name%' cannot be used to define bounds, must be a mesh.</samp></td>
+		<td><samp>Object '<code>object name</code>' cannot be used to define bounds, must be a mesh.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1353,7 +1336,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Object '%object name%' cannot be used to define brick grid, must be a mesh.</samp></td>
+		<td><samp>Object '<code>object name</code>' cannot be used to define brick grid, must be a mesh.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1375,7 +1358,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Object '%object name%' cannot be used to define collision, must be a mesh.</samp></td>
+		<td><samp>Object '<code>object name</code>' cannot be used to define collision, must be a mesh.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1397,7 +1380,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Multiple bounds definitions found. '%object name%' definition ignored.</samp></td>
+		<td><samp>Multiple bounds definitions found. '<code>object name</code>' definition ignored.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1419,7 +1402,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Multiple brick grid definitions in object '%object name%', only the first one is used.</samp></td>
+		<td><samp>Multiple brick grid definitions in object '<code>object name</code>', only the first one is used.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1441,7 +1424,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>More than 4 color values defined for object '%object name%', only the first 4 values (RGBA) are used.</samp></td>
+		<td><samp>More than 4 color values defined for object '<code>object name</code>', only the first 4 values (RGBA) are used.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1463,7 +1446,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Object '%object name%' has # section definitions, only using the first one: %section name%</samp></td>
+		<td><samp>Object '<code>object name</code>' has <code>#</code> section definitions, only using the first one: <code>section name</code></samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1485,7 +1468,7 @@ Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>More than one brick texture name found in material '%material name%', only using the first one.</samp></td>
+		<td><samp>More than one brick texture name found in material '<code>material name</code>', only using the first one.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -1504,6 +1487,23 @@ Fatal errors always lead to the program execution stopping.
 		<td>Delete the additional brick texture names.</td>
 	</tr>
 </table>
+
+## Rounded Values ##
+Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems). For example when exporting a 1x1x1 brick model at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`. This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should. The only way to get rid of this error is to round the number (vertex coordinates). Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game. The floating point errors are effectively 0. The only real benefit that comes from the rounding is nicer looking .BLB files.
+
+The default value of `0.000001` was chosen through manual testing. Rest assured that the rounding will cause no visual oddities whatsoever because the value is so small. This was manually confirmed with a sphere brick made from 524288 quads. Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
+
+:exclamation: The exporter will only ever write 16 decimal places regardless of the precision of the value.
+
+Floating Point Value | Rounded
+---------------------|:------:
+Visible mesh vertex coordinates | Yes
+[Bounds object](#definition-objects-bounds) vertex coordinates | Yes
+[Collision object](#definition-objects-collision) vertex coordinates | Yes
+[Brick grid object](#defining-brick-grid) vertex coordinates | Yes
+Normal vectors | [Optional](#round-normals)
+[RGBA color](#defining-colors) values | No
+[UV coordinates](#uv-mapping) | No
 
 ## Contributors ##
 - [Nick Smith](https://github.com/portify) - The original source code for reading, processing, and writing Blender data into the .BLB format. It has essentially been completely rewritten since.
