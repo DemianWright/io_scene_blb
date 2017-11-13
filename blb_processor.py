@@ -2626,8 +2626,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 if len(current_mesh.vertex_colors) != 0:
                     colors = []
 
-                    # Blender vertex winding order (CCW) is reversed compared to Blockland.
-                    for index in reversed(loop_vert_idxs):
+                    for index in loop_vert_idxs:
                         # Only use the first color layer.
                         # color_layer.data[index] may contain more than 4 values.
                         loop_color = current_mesh.vertex_colors[0].data[index]
