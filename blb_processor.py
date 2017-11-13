@@ -2722,6 +2722,9 @@ def __format_blb_data(blb_data, forward_axis):
     Returns:
         The formatted and rotated BLB data ready for writing.
     """
+    # The exporter internally seems to work with +Y being forward because that makes the most sense to me.
+    # The standard conversion from +Y forward (exporter) to +X forward (Blockland) is to swizzle X Y Z ("abc") to Y X Z ("bac").
+
     # Size
 
     # Swizzle the values according to the forward axis.
@@ -2732,12 +2735,19 @@ def __format_blb_data(blb_data, forward_axis):
     # Collision
 
     for index, (center, dimensions) in enumerate(blb_data.collision):
-        # Mirror center according to the forward axis. No idea why, but it works.
-        # Swizzle the values according to the forward axis.
-        if forward_axis is Axis3D.POS_Y or forward_axis is Axis3D.NEG_Y:
+        # Swizzle and rotate the values according to the forward axis.
+        # Collisions are defined by:
+        #    - a center point coordinate in the coordinate space of the brick,
+        #    - and the dimensions of the cuboid in plates.
+        if forward_axis is Axis3D.POS_Y:
+            # Still not entirely sure why I need to mirror the X coordinate here.
             blb_data.collision[index] = (common.swizzle(__mirror(center, forward_axis), "bac"), common.swizzle(dimensions, "bac"))
+        elif forward_axis is Axis3D.NEG_Y:
+            blb_data.collision[index] = (common.rotate(center, forward_axis), common.swizzle(dimensions, "bac"))
+        elif forward_axis is Axis3D.POS_X:
+            blb_data.collision[index] = (center, dimensions)
         else:
-            blb_data.collision[index] = (__mirror(center, forward_axis), dimensions)
+            blb_data.collision[index] = (common.rotate(center, forward_axis), dimensions)
 
     # Quads
 
