@@ -31,9 +31,8 @@ from math import atan, ceil, modf, pi, radians, sqrt
 import bpy
 
 from mathutils import Euler, Vector
-import numpy
-
 import bmesh
+import numpy
 
 from . import common, const, logger
 from .const import Axis3D, AxisPlane3D, X, Y, Z
@@ -2053,28 +2052,33 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
     return brick_grid
 
 
-def __process_collision_definitions(properties, bounds_data, definition_objects,):
+def __process_collision_definitions(properties, blb_data, bounds_data, definition_objects):
     """Processes the specified collision definitions.
 
     Args:
         properties (DerivateProperties): An object containing user properties.
+        blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         definition_objects (a sequence of Blender object): A sequence of Blender objects representing collision definitions.
 
     Returns:
-        A sequence of tuples : [ (center coordinates in the local space of the brick, collision cuboid dimensions), ]
+        A sequence of tuples: [ (center coordinates in the local space of the brick, collision cuboid dimensions), ]
+        Sequence can be empty.
     """
     collisions = []
     processed = 0
 
-    if len(definition_objects) > 10:
-        logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)), 1)
+    if properties.blendprop.calculate_collision:
+        logger.info("Ignoring custom collision definitions, using bounds as collision cuboid.", 1)
+        # Center of the full brick collision cuboid is at the middle of the brick.
+        # The size of the cuboid is the size of the bounds.
+        return [([0, 0, 0], blb_data.brick_size)]
 
-    for obj in definition_objects:
-        # Break the loop as soon as 10 definitions have been processed.
-        if processed > 9:
-            break
+    if len(definition_objects) > const.MAX_BRICK_COLLISION_CUBOIDS:
+        logger.error("{0} collision cuboids defined but {1} is the maximum. Only the first {1} will be processed.".format(
+            len(definition_objects), const.MAX_BRICK_COLLISION_CUBOIDS), 1)
 
+    for obj in definition_objects[:const.MAX_BRICK_COLLISION_CUBOIDS]:
         vert_count = len(obj.data.vertices)
 
         # At least two vertices are required for a valid bounding box.
@@ -2311,7 +2315,7 @@ def __process_definition_objects(properties, objects):
         else:
             # Process brick grid and collision definitions now that a bounds definition exists.
             blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects)
-            blb_data.collision = __process_collision_definitions(properties, bounds_data, collision_objects)
+            blb_data.collision = __process_collision_definitions(properties, blb_data, bounds_data, collision_objects)
 
             # Return the data.
             return (blb_data, bounds_data, mesh_objects)

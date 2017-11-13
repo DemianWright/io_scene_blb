@@ -42,6 +42,8 @@ Z = 2
 # Blockland does not accept bricks that are wide/deeper than 64 bricks or taller than 256 plates.
 MAX_BRICK_HORIZONTAL_PLATES = 64
 MAX_BRICK_VERTICAL_PLATES = 256
+# Blockland supports up to 10 collision cuboids per BLB.
+MAX_BRICK_COLLISION_CUBOIDS = 10
 
 
 class BLBQuadSection(IntEnum):
@@ -72,6 +74,7 @@ class BrickTexture(Enum):
     def as_list(cls):
         """Returns the names of the members of this enum as a list of uppercase strings."""
         return [member.name for member in BrickTexture]
+
 
 # BLB file strings.
 BLB_BRICK_TYPE_SPECIAL = "SPECIAL"

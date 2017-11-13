@@ -36,6 +36,7 @@ def __write_sequence(file, sequence, new_line=True, decimal_digits=const.MAX_FP_
         decimal_digits (int): The number of decimal digits to write if the sequence contains floating point values or None to ignore. (Default: const.MAX_FP_DECIMALS_TO_WRITE)
                               The default value prevents very small values from being written in scientific notation, which the game does not understand.
     """
+    # TODO: Convert this into a string builder?
     for index, value in enumerate(sequence):
         if index != 0:
             # Write a space before each value except the first one.
@@ -87,24 +88,14 @@ def write_file(properties, filepath, blb_data):
         # ---------
         # Collision
         # ---------
-        if len(blb_data.collision) == 0:
-            # TODO: Move to blb_processor.
-            if properties.blendprop.calculate_collision:
-                # Write default collision.
-                # Center of the cuboid is at the middle of the brick.
-                file.write("1\n\n0 0 0\n")
-
-                # The size of the cuboid is the size of the bounds.
-                __write_sequence(file, blb_data.brick_size)
-            else:
-                # No collision.
-                file.write("0\n")
+        if len(blb_data.collision) < 1:
+            # No collision.
+            file.write("0\n")
         else:
-            # Write defined collisions.
-
             # Write the number of collision cuboids.
             file.write("{}\n".format(str(len(blb_data.collision))))
 
+            # Write the defined collision cuboids.
             for (center, dimensions) in blb_data.collision:
                 file.write("\n")
                 __write_sequence(file, center)
