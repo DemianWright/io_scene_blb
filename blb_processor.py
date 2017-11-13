@@ -2489,9 +2489,9 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 # Does the user want to round normals?
                 if properties.blendprop.round_normals:
                     # ROUND & CAST
-                    normals = [__to_decimal(__loop_index_to_normal_vector(obj, mesh, vert_idx)) for vert_idx in reversed(loop_vert_idxs)]
+                    normals = [__to_decimal(__loop_index_to_normal_vector(obj, mesh, vert_idx)) for vert_idx in loop_vert_idxs]
                 else:
-                    normals = [__loop_index_to_normal_vector(obj, mesh, vert_idx) for vert_idx in reversed(loop_vert_idxs)]
+                    normals = [__loop_index_to_normal_vector(obj, mesh, vert_idx) for vert_idx in loop_vert_idxs]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
