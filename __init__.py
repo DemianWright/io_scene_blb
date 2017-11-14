@@ -46,6 +46,7 @@ bl_info = {
 # TODO: Panels in the UI?
 # TODO: Check that all docstrings and comments are still up to date.
 # TODO: Quad sorting is per object but BLBs support per-quad sorting: the exporter does not support quad sorting for smoothed objects.
+# TODO: Serialize props to the start of the log?
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
@@ -175,10 +176,18 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ---------
     # Collision
     # ---------
-    calculate_collision = BoolProperty(
-        name="Calculate Collision",
-        description="Calculate cuboid collision for the brick if nothing is defined manually",
-        default=True,
+    custom_collision = BoolProperty(
+        name="Custom Collision",
+        description="Use custom collision definition objects (if any)",
+        default=False,
+    )
+
+    default_collision = EnumProperty(
+        items=[("BOUNDS", "Bounds", "Use brick bounds as collision"),
+               ("AABB", "AABB", "Calculate axis-aligned bounding box collision from visible meshes")],
+        name="Default Collision",
+        description="Collision type to use if no custom definitions exist",
+        default="BOUNDS"
     )
 
     # --------
@@ -676,8 +685,14 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # BLB
         # ===
 
-        # Properties: Collision
-        layout.prop(self, "calculate_collision")
+        # Property: Custom Collision
+        layout.prop(self, "custom_collision")
+
+        # Property: Default Collision
+        row = layout.row()
+        row.label("Default Collision:")
+        row = layout.row()
+        row.prop(self, "default_collision", expand=True)
 
         # Properties: Coverage
         layout.prop(self, "calculate_coverage")

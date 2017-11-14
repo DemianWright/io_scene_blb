@@ -447,9 +447,11 @@ class BrickBounds(object):
     Stores the following data:
         - Blender object name,
         - object dimensions,
-        - object's location in world coordinates,
-        - minimum vertex world coordinate,
-        - and maximum vertex world coordinate.
+        - object center world coordinates,
+        - minimum vertex world coordinates,
+        - maximum vertex world coordinates,
+        - dimensions of the axis-aligned bounding box of visual meshes,
+        - and world center coordinates of the axis-aligned bounding box of visual meshes.
     """
 
     def __init__(self):
@@ -465,9 +467,14 @@ class BrickBounds(object):
         self.world_coords_min = []
         self.world_coords_max = []
 
+        # TODO: Consider moving to another object?
+        # The axis-aligned bounding box of visual meshes of this brick.
+        self.aabb_dimensions = []
+        self.aabb_world_center = []
+
     def __repr__(self):
-        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(
-            self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
+        return "<BrickBounds object_name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{} aabb_dimensions:{} aabb_world_center:{}>".format(
+            self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max, self.aabb_dimensions, self.aabb_world_center)
 
 
 class BLBData(object):
@@ -986,6 +993,23 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     return blb_data
 
 
+def __calculate_bounding_box_size(min_coords, max_coords):
+    """Calculates the XYZ dimensions of a cuboid with the specified minimum and maximum coordinates.
+
+    Args:
+        min_coords (sequence of numbers): The minimum coordinates as a sequence: [X, Y, Z]
+        max_coords (sequence of numbers): The maximum coordinates as a sequence: [X, Y, Z]
+
+    Returns:
+        A sequence with the [X, Y, Z] dimensions of a cuboid as Decimal values.
+    """
+    # Get the dimensions defined by the vectors.
+    # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
+    return __to_decimal((max_coords[X] - min_coords[X],
+                         max_coords[Y] - min_coords[Y],
+                         max_coords[Z] - min_coords[Z]))
+
+
 def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinates):
     """Calculates the brick bounds data from the recorded minimum and maximum vertex world coordinates.
 
@@ -999,23 +1023,20 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
     """
     bounds_data = BrickBounds()
 
-    # USER SCALE: Multiply by user defined scale.
-    min_coord = __multiply_sequence(export_scale, min_world_coordinates)
-    max_coord = __multiply_sequence(export_scale, max_world_coordinates)
-
-    # Get the dimensions defined by the vectors.
-    # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
-    bounds_size = __to_decimal((max_coord[X] - min_coord[X],
-                                max_coord[Y] - min_coord[Y],
-                                max_coord[Z] - min_coord[Z]))
-
-    bounds_data.dimensions = bounds_size
-
     # ROUND & CAST: The minimum and maximum calculated world coordinates.
-    bounds_data.world_coords_min = __to_decimal(min_coord)
-    bounds_data.world_coords_max = __to_decimal(max_coord)
+    # USER SCALE: Multiply by user defined scale.
+    min_coords = __to_decimal(__multiply_sequence(export_scale, min_world_coordinates))
+    max_coords = __to_decimal(__multiply_sequence(export_scale, max_world_coordinates))
 
-    bounds_data.world_center = __calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
+    bounds_data.world_coords_min = min_coords
+    bounds_data.world_coords_max = max_coords
+
+    # USER SCALE: Multiply by user defined scale.
+    bounds_data.dimensions = __calculate_bounding_box_size(min_coords, max_coords)
+    bounds_data.world_center = __calculate_center(min_coords, bounds_data.dimensions)
+
+    bounds_data.aabb_dimensions = bounds_data.dimensions
+    bounds_data.aabb_world_center = bounds_data.world_center
 
     return bounds_data
 
@@ -1992,17 +2013,17 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
                 logger.error("Brick grid definition object '{}' has no volume. Definition ignored.".format(grid_obj.name))
 
     # Log messages for brick grid definitions.
-    if total_definitions == 0:
+    if total_definitions < 1:
         logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.", 1)
     elif total_definitions == 1:
-        if processed == 0:
+        if processed < 1:
             logger.warning(
                 "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
         else:
             logger.info("Processed {} of {} brick grid definition.".format(processed, total_definitions), 1)
     else:
         # Found more than one.
-        if processed == 0:
+        if processed < 1:
             logger.warning(
                 "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
         else:
@@ -2021,7 +2042,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
     # Initialize the brick grid with the empty symbol with the dimensions of the brick.
     brick_grid = [[[const.GRID_OUTSIDE for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
 
-    if total_definitions == 0:
+    if total_definitions < 1:
         # Write the default brick grid.
         for d in range(grid_depth):
             for h in range(grid_height):
@@ -2068,98 +2089,98 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
     collisions = []
     processed = 0
 
-    if properties.blendprop.calculate_collision:
-        logger.info("Ignoring custom collision definitions, using bounds as collision cuboid.", 1)
-        # Center of the full brick collision cuboid is at the middle of the brick.
-        # The size of the cuboid is the size of the bounds.
-        return [([0, 0, 0], blb_data.brick_size)]
+    if properties.blendprop.custom_collision:
+        if len(definition_objects) > const.MAX_BRICK_COLLISION_CUBOIDS:
+            logger.error("{0} collision cuboids defined but {1} is the maximum. Only the first {1} will be processed.".format(
+                len(definition_objects), const.MAX_BRICK_COLLISION_CUBOIDS), 1)
 
-    if len(definition_objects) > const.MAX_BRICK_COLLISION_CUBOIDS:
-        logger.error("{0} collision cuboids defined but {1} is the maximum. Only the first {1} will be processed.".format(
-            len(definition_objects), const.MAX_BRICK_COLLISION_CUBOIDS), 1)
+        for obj in definition_objects[:const.MAX_BRICK_COLLISION_CUBOIDS]:
+            vert_count = len(obj.data.vertices)
 
-    for obj in definition_objects[:const.MAX_BRICK_COLLISION_CUBOIDS]:
-        vert_count = len(obj.data.vertices)
-
-        # At least two vertices are required for a valid bounding box.
-        if vert_count < 2:
-            logger.error("Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name), 1)
-            # Skip the rest of the loop and return to the beginning.
-            continue
-        elif vert_count > 8:
-            logger.warning(
-                "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(obj.name), 1)
-            # The mesh is still valid.
-
-        # Find the minimum and maximum coordinates for the collision object.
-        col_min, col_max = __get_world_min_max(obj)
-
-        # ROUND & CAST
-        # USER SCALE: Multiply by user defined scale.
-        col_min = __multiply_sequence(properties.scale, __to_decimal(col_min))
-        col_max = __multiply_sequence(properties.scale, __to_decimal(col_max))
-
-        # Recenter the coordinates to the bounds. (Also rounds the values.)
-        col_min = __world_to_local(col_min, bounds_data.world_center)
-        col_max = __world_to_local(col_max, bounds_data.world_center)
-
-        # Technically collision outside brick bounds is not invalid but the collision is also horribly broken and as such is not allowed.
-        if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
-            if not __has_volume(col_min, col_max):
-                logger.error("Collision definition object '{}' has no volume. Definition ignored.".format(obj.name), 1)
-                # Skip the rest of the loop.
+            # At least two vertices are required for a valid bounding box.
+            if vert_count < 2:
+                logger.error("Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name), 1)
+                # Skip the rest of the loop and return to the beginning.
                 continue
+            elif vert_count > 8:
+                logger.warning(
+                    "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(obj.name), 1)
+                # The mesh is still valid.
 
-            center = []
-            dimensions = []
-
-            # Find the center coordinates and dimensions of the cuboid.
-            for index, value in enumerate(col_max):
-                center.append((value + col_min[index]) * const.DECIMAL_HALF)
-                dimensions.append(value - col_min[index])
-
-            processed += 1
+            # Find the minimum and maximum coordinates for the collision object.
+            col_min, col_max = __get_world_min_max(obj)
 
             # ROUND & CAST
-            # Add the center and dimensions to the definition data as a tuple.
-            # The coordinates and dimensions are in plates.
-            collisions.append((__sequence_z_to_plates(center, properties.plate_height), __sequence_z_to_plates(dimensions, properties.plate_height)))
-        else:
-            if bounds_data.object_name is None:
-                logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name), 1)
-            else:
-                logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                    obj.name, bounds_data.object_name), 1)
+            # USER SCALE: Multiply by user defined scale.
+            col_min = __multiply_sequence(properties.scale, __to_decimal(col_min))
+            col_max = __multiply_sequence(properties.scale, __to_decimal(col_max))
 
-    defcount = len(definition_objects)
-    # Log messages for collision definitions.
-    if defcount == 0:
-        if properties.blendprop.calculate_collision:
-            logger.warning("No collision definitions found. Calculating full brick collision.", 1)
-        else:
-            logger.warning("No collision definitions found. Brick will have no collision.", 1)
-    elif defcount == 1:
-        if processed == 0:
-            if properties.blendprop.calculate_collision:
-                logger.warning(
-                    "{} collision definition found but was not processed. Calculating full brick collision.".format(defcount), 1)
-            else:
-                logger.warning(
-                    "{} collision definition found but was not processed. Brick will have no collision.".format(defcount), 1)
+            # Recenter the coordinates to the bounds. (Also rounds the values.)
+            col_min = __world_to_local(col_min, bounds_data.world_center)
+            col_max = __world_to_local(col_max, bounds_data.world_center)
 
-        else:
-            logger.info("Processed {} of {} collision definition.".format(processed, defcount), 1)
-    else:
-        # Found more than one.
-        if processed == 0:
-            if properties.blendprop.calculate_collision:
-                logger.warning(
-                    "{} collision definitions found but were not processed. Calculating full brick collision.".format(defcount), 1)
+            # Technically collision outside brick bounds is not invalid but the collision is also horribly broken and as such is not allowed.
+            if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
+                if not __has_volume(col_min, col_max):
+                    logger.error("Collision definition object '{}' has no volume. Definition ignored.".format(obj.name), 1)
+                    # Skip the rest of the loop.
+                    continue
+
+                center = []
+                dimensions = []
+
+                # Find the center coordinates and dimensions of the cuboid.
+                for index, value in enumerate(col_max):
+                    center.append((value + col_min[index]) * const.DECIMAL_HALF)
+                    dimensions.append(value - col_min[index])
+
+                # ROUND & CAST
+                # Add the center and dimensions to the definition data as a tuple.
+                # The center coordinates and dimensions are in plate coordinates.
+                collisions.append((__sequence_z_to_plates(center, properties.plate_height), __sequence_z_to_plates(dimensions, properties.plate_height)))
+
+                processed += 1
             else:
-                logger.warning(
-                    "{} collision definitions found but were not processed. Brick will have no collision.".format(defcount), 1)
+                if bounds_data.object_name is None:
+                    logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name), 1)
+                else:
+                    logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
+                        obj.name, bounds_data.object_name), 1)
+
+        defcount = len(definition_objects)
+
+        # Log messages for collision definitions.
+        if defcount < 1:
+            logger.warning("No custom collision definitions found.", 1)
+        elif defcount == 1:
+            if processed < 1:
+                logger.warning("{} collision definition found but was not processed.".format(defcount), 1)
+
+            else:
+                logger.info("Processed {} of {} collision definition.".format(processed, defcount), 1)
         else:
-            logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
+            # Found more than one.
+            if processed < 1:
+                logger.warning("{} collision definitions found but were not processed. Calculating full brick collision.".format(defcount), 1)
+            else:
+                logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
+
+    if processed < 1:
+        if properties.blendprop.default_collision == "BOUNDS":
+            logger.info("Using bounds as the collision cuboid.", 1)
+            # Center of the full brick collision cuboid is at the middle of the brick.
+            # The size of the cuboid is the size of the bounds.
+            collisions.append(([0, 0, 0], blb_data.brick_size))
+        else:
+            # properties.blendprop.default_collision == "AABB"
+            logger.info("Using the axis-aligned bounding box of visual meshes as the collision cuboid.", 1)
+            collisions.append(
+                (__world_to_local(
+                    bounds_data.aabb_world_center,
+                    bounds_data.world_center),
+                    __sequence_z_to_plates(
+                    bounds_data.aabb_dimensions,
+                    properties.plate_height)))
 
     return collisions
 
@@ -2185,6 +2206,22 @@ def __process_definition_objects(properties, objects):
             2. A sequence of mesh objects that will be exported as visible 3D models.
         Or an error message to be displayed to the user.
     """
+    def calculate_aabb(bounds_data, min_world_coord, max_world_coord):
+        """Calculates the axis-aligned bounding box data for the specified minimum and maximum world coordinates of visual meshes and stores them to the specified bounds_data object.
+
+        Args:
+            bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
+            min_coords (sequence of numbers): The minimum coordinates as a sequence: [X, Y, Z]
+            max_coords (sequence of numbers): The maximum coordinates as a sequence: [X, Y, Z]
+        """
+        min_coord = __multiply_sequence(properties.scale, __to_decimal(min_world_coord))
+        max_coord = __multiply_sequence(properties.scale, __to_decimal(max_world_coord))
+
+        bounds_data.aabb_dimensions = __calculate_bounding_box_size(min_coord, max_coord)
+        bounds_data.aabb_world_center = __calculate_center(min_coord, bounds_data.aabb_dimensions)
+
+        print("Calculated AABB. Min:", min_coord, "Max:", max_coord, "Size:", bounds_data.aabb_dimensions, "Center:", bounds_data.aabb_world_center)
+
     blb_data = BLBData()
     bounds_data = None
     collision_objects = []
@@ -2269,15 +2306,12 @@ def __process_definition_objects(properties, objects):
             # Append the current definition object into the appropriate list.
             brick_grid_objects[index].append(obj)
 
-        # Else the object must be a regular mesh that is exported as a 3D model.
+        # Else the object must be a regular visible mesh that is exported as a 3D model.
         else:
             mesh_objects.append(obj)
 
-            # If no bounds object has been defined.
-            if bounds_data is None:
-                # Record min/max world coordinates for calculating the bounds.
-                min_world_coordinates, max_world_coordinates = __get_world_min_max(obj, min_world_coordinates, max_world_coordinates)
-            # Else a bounds object has been defined, recording the min/max coordinates is pointless.
+            # Record min/max world coordinates for calculating the axis-aligned bounding box.
+            min_world_coordinates, max_world_coordinates = __get_world_min_max(obj, min_world_coordinates, max_world_coordinates)
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
@@ -2305,6 +2339,9 @@ def __process_definition_objects(properties, objects):
                                                                                        blb_data.brick_size[Y],
                                                                                        logger.build_countable_message("", bricks, (" brick", " bricks")),
                                                                                        logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
+    else:
+        # Manually defined bounds found, store the axis-aligned bounding box of the visible meshes.
+        calculate_aabb(bounds_data, min_world_coordinates, max_world_coordinates)
 
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
@@ -2702,7 +2739,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
     count_quads = sum([len(sec) for sec in quads])
 
-    if count_quads == 0:
+    if count_quads < 1:
         # RETURN ON ERROR
         return "No faces to export."
     else:
