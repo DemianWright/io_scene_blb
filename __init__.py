@@ -616,30 +616,30 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # When doing multi-brick export, swap the brick name and objects properties and add in the brick definition property.
         if multi_export:
-            brickgroups = self.brick_definition == "GROUPS"
+            bricks_in_groups = self.brick_definition == "GROUPS"
 
             # Property: Brick Name Multiple
             row = layout.row()
-            row.active = multi_export
+            row.enabled = multi_export
             row.label("Brick Names from:")
 
             row = layout.row()
             # Disable selecting values when bricks are in layers.
-            row.active = multi_export and brickgroups
+            row.enabled = multi_export and bricks_in_groups
             row.prop(self, "brick_name_source_multi", expand=True)
 
-            if not brickgroups:
+            if not bricks_in_groups:
                 # If bricks are defined by layers, the brick names must come from bounds objects.
                 # Otherwise you need to put all objects in every layer in their own group to define the name which defeats the purpose.
                 self.brick_name_source_multi = "BOUNDS"
 
             # Property: Brick Definition
             row = layout.row()
-            row.active = multi_export
+            row.enabled = multi_export
             row.label("Bricks Defined by:")
 
             row = layout.row()
-            row.active = multi_export
+            row.enabled = multi_export
             row.prop(self, "brick_definition", expand=True)
 
             # Property: Export Objects Multi
@@ -652,11 +652,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         else:
             # Property: Brick Name
             row = layout.row()
-            row.active = not multi_export
+            row.enabled = not multi_export
             row.label("Brick Name From:")
 
             row = layout.row()
-            row.active = not multi_export
+            row.enabled = not multi_export
             row.prop(self, "brick_name_source", expand=True)
 
             # Property: Export Objects
@@ -686,7 +686,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         if self.custom_definitions:
             box = layout.box()
             box.label("Definition Tokens", icon="EDIT_VEC")
-            box.active = self.custom_definitions
+            box.enabled = self.custom_definitions
 
             def draw_definition_property(label_text, prop_name):
                 """A helper function for drawing the definition properties."""
@@ -805,7 +805,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         if self.calculate_coverage:
             box = layout.box()
             box.label("Coverage Options", icon="GROUP")
-            box.active = self.calculate_coverage
+            box.enabled = self.calculate_coverage
 
             def draw_coverage_property(label_text):
                 """A helper function for drawing the coverage properties."""
@@ -867,7 +867,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Store UVs
         split = split.split()
-        split.active = self.calculate_uvs
+        split.enabled = self.calculate_uvs
+
+        if not self.calculate_uvs:
+            self.store_uvs = False
+
         col = split.column()
         col.prop(self, "store_uvs")
 
@@ -900,7 +904,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         split = split.split()
 
         # The "Only on Warnings" option is grayed out when "Write Log" is not enabled.
-        split.active = self.write_log
+        split.enabled = self.write_log
+
+        if not self.write_log:
+            self.write_log_warnings = False
+
         col = split.column()
         col.prop(self, "write_log_warnings")
 
