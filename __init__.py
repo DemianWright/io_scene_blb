@@ -597,6 +597,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # ==========
         # Processing
         # ==========
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label("Blender Properties", icon="SCENE_DATA")
 
         # Property: Export Count
         row = layout.row()
@@ -684,6 +687,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # ===
         # BLB
         # ===
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label("BLB Properties", icon="MESH_CUBE")
 
         # Property: Custom Collision
         layout.prop(self, "custom_collision")
@@ -861,6 +867,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # =======
         # Writing
         # =======
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label("File Writing", icon="TEXT")
 
         # Property: Terse Mode
         layout.prop(self, "terse_mode")
