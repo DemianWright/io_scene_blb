@@ -866,11 +866,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         col.prop(self, "calculate_uvs")
 
         # Property: Store UVs
-        if self.calculate_uvs:
-            split = split.split()
-            split.active = self.calculate_uvs
-            col = split.column()
-            col.prop(self, "store_uvs")
+        split = split.split()
+        split.active = self.calculate_uvs
+        col = split.column()
+        col.prop(self, "store_uvs")
 
         # Property: Round Normals
         layout.prop(self, "round_normals")
@@ -898,12 +897,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Write Log on Warnings
         # Only show when Write Log is checked.
-        if self.write_log:
-            split = split.split()
-            # The "Only on Warnings" option is grayed out when "Write Log" is not enabled.
-            split.active = self.write_log
-            col = split.column()
-            col.prop(self, "write_log_warnings")
+        split = split.split()
+
+        # The "Only on Warnings" option is grayed out when "Write Log" is not enabled.
+        split.active = self.write_log
+        col = split.column()
+        col.prop(self, "write_log_warnings")
 
 # =============
 # Blender Stuff
