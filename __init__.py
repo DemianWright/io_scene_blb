@@ -63,9 +63,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # Properties
     # ==========
 
-    # ==========
-    # Processing
-    # ==========
+    # ==================
+    # Blender Properties
+    # ==================
 
     # ------------
     # Export Count
@@ -170,167 +170,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     use_modifiers = BoolProperty(
         name="Apply Modifiers",
         description="Take modifiers into account (at preview settings) when exporting objects, does not apply the modifiers in the interface",
-        default=True,
-    )
-
-    # ---------
-    # Collision
-    # ---------
-    custom_collision = BoolProperty(
-        name="Custom Collision",
-        description="Use custom collision definition objects (if any)",
-        default=False,
-    )
-
-    default_collision = EnumProperty(
-        items=[("BOUNDS", "Bounds", "Use brick bounds as collision"),
-               ("AABB", "AABB", "Calculate axis-aligned bounding box collision from visible meshes")],
-        name="Default Collision",
-        description="Collision type to use if no custom definitions exist",
-        default="BOUNDS"
-    )
-
-    # --------
-    # Coverage
-    # --------
-    calculate_coverage = BoolProperty(
-        name="Coverage",
-        description="Calculate brick coverage. Coverage relies on the quad section data to be of any use. The coverage system intelligently hides (non-omni) quads on the side of the brick when it is covered by other bricks.",
-        default=False,
-    )
-
-    coverage_top_calculate = BoolProperty(
-        name="Hide Own Top Faces",
-        description="Hide the top faces of this brick when the entire top side of this brick is covered",
-        default=False,
-    )
-
-    coverage_top_hide = BoolProperty(
-        name="Hide Adjacent Top Faces",
-        description="Hide the bottom faces of the adjacent brick(s) covering the top side of this brick",
-        default=False,
-    )
-
-    coverage_bottom_calculate = BoolProperty(
-        name="Hide Own Bottom Faces",
-        description="Hide the bottom faces of this brick when the entire bottom side of this brick is covered",
-        default=False,
-    )
-
-    coverage_bottom_hide = BoolProperty(
-        name="Hide Adjacent Bottom Faces",
-        description="Hide the top faces of the adjacent brick(s) covering the bottom side of this brick",
-        default=False,
-    )
-
-    coverage_north_calculate = BoolProperty(
-        name="Hide Own North Faces",
-        description="Hide the north faces of this brick when the entire north side of this brick is covered",
-        default=False,
-    )
-
-    coverage_north_hide = BoolProperty(
-        name="Hide Adjacent North Faces",
-        description="Hide the adjacent side faces of the adjacent brick(s) covering the north side of this brick",
-        default=False,
-    )
-
-    coverage_east_calculate = BoolProperty(
-        name="Hide Own East Faces",
-        description="Hide the east faces of this brick when the entire east side of this brick is covered",
-        default=False,
-    )
-
-    coverage_east_hide = BoolProperty(
-        name="Hide Adjacent East Faces",
-        description="Hide the adjacent side faces of the adjacent brick(s) covering the east side of this brick",
-        default=False,
-    )
-
-    coverage_south_calculate = BoolProperty(
-        name="Hide Own South Faces",
-        description="Hide the south faces of this brick when the entire south side of this brick is covered",
-        default=False,
-    )
-
-    coverage_south_hide = BoolProperty(
-        name="Hide Adjacent South Faces",
-        description="Hide the adjacent side faces of the adjacent brick(s) covering the south side of this brick",
-        default=False,
-    )
-
-    coverage_west_calculate = BoolProperty(
-        name="Hide Own West Faces",
-        description="Hide the west faces of this brick when the entire west side of this brick is covered",
-        default=False,
-    )
-
-    coverage_west_hide = BoolProperty(
-        name="Hide Adjacent West Faces",
-        description="Hide the adjacent side faces of the adjacent brick(s) covering the west side of this brick",
-        default=False,
-    )
-
-    # -------
-    # Sorting
-    # -------
-    auto_sort_quads = BoolProperty(
-        name="Automatic Quad Sorting",
-        description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
-        default=True,
-    )
-
-    # -------------
-    # Use Materials
-    # -------------
-    use_materials = BoolProperty(
-        name="Use Material Colors",
-        description="Read quad colors from materials (recommended method, overrides object colors)",
-        default=False,
-    )
-
-    # -----------------
-    # Use Vertex Colors
-    # -----------------
-    use_vertex_colors = BoolProperty(
-        name="Use Vertex Colors",
-        description="Read quad colors from the first vertex color layer (overrides material colors)",
-        default=False,
-    )
-
-    # -----------------
-    # Use Object Colors
-    # -----------------
-    use_object_colors = BoolProperty(
-        name="Parse Object Colors",
-        description="Parse quad colors from object names using the definition token (intended as legacy support)",
-        default=False,
-    )
-
-    # -------------
-    # Calculate UVs
-    # -------------
-    calculate_uvs = BoolProperty(
-        name="Calculate UVs",
-        description="Calculate correct UV coordinates based on the brick texture name specified in the material name",
-        default=True,
-    )
-
-    # ---------
-    # Store UVs
-    # ---------
-    store_uvs = BoolProperty(
-        name="Store UVs",
-        description="Write calculated UVs into Blender objects (data in existing generated UV layers will be overwritten)",
-        default=True,
-    )
-
-    # -------------
-    # Round Normals
-    # -------------
-    round_normals = BoolProperty(
-        name="Round Normals",
-        description="Round vertex normal values to the precision defined below, if disabled normals will be written using up to 16 decimals whenever possible",
         default=True,
     )
 
@@ -497,6 +336,184 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="csub",
     )
 
+    # ==============
+    # BLB Properties
+    # ==============
+
+    # ---------
+    # Collision
+    # ---------
+    custom_collision = BoolProperty(
+        name="Custom Collision",
+        description="Use custom collision definition objects (if any)",
+        default=False,
+    )
+
+    default_collision = EnumProperty(
+        items=[("BOUNDS", "Bounds", "Use brick bounds as collision"),
+               ("AABB", "AABB", "Calculate axis-aligned bounding box collision from visible meshes")],
+        name="Default Collision",
+        description="Collision type to use if no custom definitions exist",
+        default="BOUNDS"
+    )
+
+    # --------
+    # Coverage
+    # --------
+    calculate_coverage = BoolProperty(
+        name="Coverage",
+        description="Calculate brick coverage. Coverage relies on quad section data to be of any use. The coverage system intelligently hides non-omni quads on the side of the brick when it is covered by other bricks.",
+        default=False,
+    )
+
+    coverage_top_calculate = BoolProperty(
+        name="Hide Own Top Faces",
+        description="Hide the top faces of this brick when the entire top side of this brick is covered",
+        default=False,
+    )
+
+    coverage_top_hide = BoolProperty(
+        name="Hide Adjacent Top Faces",
+        description="Hide the bottom faces of the adjacent brick(s) covering the top side of this brick",
+        default=False,
+    )
+
+    coverage_bottom_calculate = BoolProperty(
+        name="Hide Own Bottom Faces",
+        description="Hide the bottom faces of this brick when the entire bottom side of this brick is covered",
+        default=False,
+    )
+
+    coverage_bottom_hide = BoolProperty(
+        name="Hide Adjacent Bottom Faces",
+        description="Hide the top faces of the adjacent brick(s) covering the bottom side of this brick",
+        default=False,
+    )
+
+    coverage_north_calculate = BoolProperty(
+        name="Hide Own North Faces",
+        description="Hide the north faces of this brick when the entire north side of this brick is covered",
+        default=False,
+    )
+
+    coverage_north_hide = BoolProperty(
+        name="Hide Adjacent North Faces",
+        description="Hide the adjacent side faces of the adjacent brick(s) covering the north side of this brick",
+        default=False,
+    )
+
+    coverage_east_calculate = BoolProperty(
+        name="Hide Own East Faces",
+        description="Hide the east faces of this brick when the entire east side of this brick is covered",
+        default=False,
+    )
+
+    coverage_east_hide = BoolProperty(
+        name="Hide Adjacent East Faces",
+        description="Hide the adjacent side faces of the adjacent brick(s) covering the east side of this brick",
+        default=False,
+    )
+
+    coverage_south_calculate = BoolProperty(
+        name="Hide Own South Faces",
+        description="Hide the south faces of this brick when the entire south side of this brick is covered",
+        default=False,
+    )
+
+    coverage_south_hide = BoolProperty(
+        name="Hide Adjacent South Faces",
+        description="Hide the adjacent side faces of the adjacent brick(s) covering the south side of this brick",
+        default=False,
+    )
+
+    coverage_west_calculate = BoolProperty(
+        name="Hide Own West Faces",
+        description="Hide the west faces of this brick when the entire west side of this brick is covered",
+        default=False,
+    )
+
+    coverage_west_hide = BoolProperty(
+        name="Hide Adjacent West Faces",
+        description="Hide the adjacent side faces of the adjacent brick(s) covering the west side of this brick",
+        default=False,
+    )
+
+    # -------
+    # Sorting
+    # -------
+    auto_sort_quads = BoolProperty(
+        name="Automatic Quad Sorting",
+        description="Automatically sorts the quads of the meshes into the 7 sections. Coverage must be enabled for this to be of any use.",
+        default=True,
+    )
+
+    # -------------
+    # Use Materials
+    # -------------
+    use_materials = BoolProperty(
+        name="Use Material Colors",
+        description="Read quad colors from materials (recommended method, overrides object colors)",
+        default=False,
+    )
+
+    # -----------------
+    # Use Vertex Colors
+    # -----------------
+    use_vertex_colors = BoolProperty(
+        name="Use Vertex Colors",
+        description="Read quad colors from the first vertex color layer (overrides material colors)",
+        default=False,
+    )
+
+    # -----------------
+    # Use Object Colors
+    # -----------------
+    use_object_colors = BoolProperty(
+        name="Parse Object Colors",
+        description="Parse quad colors from object names using the definition token (intended as legacy support)",
+        default=False,
+    )
+
+    # -------------
+    # Calculate UVs
+    # -------------
+    calculate_uvs = BoolProperty(
+        name="Calculate UVs",
+        description="Calculate correct UV coordinates based on the brick texture name specified in the material name",
+        default=True,
+    )
+
+    # ---------
+    # Store UVs
+    # ---------
+    store_uvs = BoolProperty(
+        name="Store UVs",
+        description="Write calculated UVs into Blender objects (data in existing generated UV layers will be overwritten)",
+        default=True,
+    )
+
+    # -------------
+    # Round Normals
+    # -------------
+    round_normals = BoolProperty(
+        name="Round Normals",
+        description="Round vertex normal values to the precision defined below, if disabled normals will be written using up to 16 decimals whenever possible",
+        default=True,
+    )
+
+    # ---------
+    # Precision
+    # ---------
+    # Smaller values will increase floating point errors in the exported brick.
+    # Larger values will decrease the quality of the visuals as vertex positions will become more deformed
+    # Setting to 0 actually uses the minimum precision of 1e-16 since only 16 decimals are ever written to file.
+    # Some floats (like UV coordinates) are not rounded.
+    float_precision = StringProperty(
+        name="Precision",
+        description="The precision to round most floating point values (e.g. vertex coordinates) to. Changing this value is discouraged unless you know what you're doing. 16 decimal places supported. Use 0 to disable.",
+        default="0.000001",
+    )
+
     # =======
     # Writing
     # =======
@@ -506,7 +523,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # ----------
     terse_mode = BoolProperty(
         name="Terse Mode",
-        description="Exclude optional text from the BLB file making it slightly smaller and harder to read (not recommended, size difference is negligible)",
+        description="Exclude optional text from the BLB file making it slightly smaller and harder to read (not recommended, file size difference is negligible)",
         default=False,
     )
 
@@ -524,19 +541,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         name="Only on Warnings",
         description="Only write a log file if warnings were generated",
         default=True,
-    )
-
-    # ---------
-    # Precision
-    # ---------
-    # Smaller values will increase floating point errors in the exported brick.
-    # Larger values will decrease the quality of the visuals as vertex positions will become more deformed
-    # Setting to 0 actually uses the minimum precision of 1e-16 since only 16 decimals are ever written to file.
-    # Some floats (like UV coordinates) are not rounded.
-    float_precision = StringProperty(
-        name="Precision",
-        description="The precision to round most floating point values (e.g. vertex coordinates) to. Changing this value is discouraged unless you know what you're doing. 16 decimal places supported. Use 0 to disable.",
-        default="0.000001",
     )
 
     # ===============
@@ -594,9 +598,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         """Draws the UI in the export menu."""
         layout = self.layout
 
-        # ==========
-        # Processing
-        # ==========
+        # ==================
+        # Blender Properties
+        # ==================
         row = layout.row()
         row.alignment = "CENTER"
         row.label("Blender Properties", icon="SCENE_DATA")
@@ -663,12 +667,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             row.enabled = not multi_export
             row.prop(self, "export_objects", expand=True)
 
-        layout.separator()
-
-        # ==================
-        # Blender Properties
-        # ==================
-
         # Property: BLB Forward Axis
         row = layout.row()
         row.label("Forward Axis:")
@@ -681,6 +679,107 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: Use Modifiers.
         layout.prop(self, "use_modifiers")
+
+        # Properties: Custom Definition Tokens
+        layout.prop(self, "custom_definitions")
+
+        if self.custom_definitions:
+            box = layout.box()
+            box.label("Definition Tokens", icon="EDIT_VEC")
+            box.active = self.custom_definitions
+
+            def draw_definition_property(label_text, prop_name):
+                """A helper function for drawing the definition properties."""
+                row = box.row()
+
+                split = row.split(percentage=0.6)
+                col = split.column()
+                col.label("{}:".format(label_text))
+
+                split = split.split()
+                col = split.column()
+                col.prop(self, prop_name, "")
+
+            def draw_grid_definition_property(symbol, prop_name):
+                """A helper function for drawing the definition properties."""
+                row = box.row()
+
+                split = row.split(percentage=0.25)
+                col = split.column()
+                col.label("{}".format(symbol))
+
+                split = split.split(percentage=0.7)
+                col = split.column()
+                col.prop(self, prop_name, "")
+
+                split = split.split()
+                col = split.column()
+                col.prop(self, "{}_priority".format(prop_name), "")
+
+            # This has duplicate data but I don't know how to access the property names defined earlier since self.deftoken_bounds.name doesn't seem to work.
+            # For some reason self.deftoken_bounds = "deftoken_bounds" instead of an instance of StringProperty.
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Definition Objects", icon="OBJECT_DATA")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Token In: Object Name")
+
+            draw_definition_property("Brick Bounds", "deftoken_bounds")
+            draw_definition_property("Collision Cuboids", "deftoken_collision")
+
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Brick Grid Definition Objects", icon="GRID")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Token In: Object Name")
+
+            row = box.row()
+            split = row.split(percentage=0.25)
+            col = split.column()
+            col.label("Symbol")
+
+            split = split.split(percentage=0.7)
+            col = split.column()
+            col.label("Token")
+
+            split = split.split()
+            col = split.column()
+            col.label("Priority")
+
+            draw_grid_definition_property("b", "deftoken_gridb")
+            draw_grid_definition_property("d", "deftoken_gridd")
+            draw_grid_definition_property("u", "deftoken_gridu")
+            draw_grid_definition_property("-", "deftoken_griddash")
+            draw_grid_definition_property("x", "deftoken_gridx")
+
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Quad Sorting Tokens", icon="FACESEL")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Token In: Object Name")
+
+            draw_definition_property("Top Quads", "deftoken_quad_sort_top")
+            draw_definition_property("Bottom Quads", "deftoken_quad_sort_bottom")
+            draw_definition_property("North Quads", "deftoken_quad_sort_north")
+            draw_definition_property("East Quads", "deftoken_quad_sort_east")
+            draw_definition_property("South Quads", "deftoken_quad_sort_south")
+            draw_definition_property("West Quads", "deftoken_quad_sort_west")
+            draw_definition_property("Omni Quads", "deftoken_quad_sort_omni")
+
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Color Tokens", icon="COLOR")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label("Token In: Object/Material/Vertex Color Layer Name")
+
+            draw_definition_property("Object Colors", "deftoken_color")
+            draw_definition_property("In-Game Color", "deftoken_color_blank")
+            draw_definition_property("Additive Color", "deftoken_color_add")
+            draw_definition_property("Subtractive Color", "deftoken_color_sub")
 
         layout.separator()
 
@@ -776,91 +875,8 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Property: Round Normals
         layout.prop(self, "round_normals")
 
-        # Properties: Custom Definition Tokens
-        layout.prop(self, "custom_definitions")
-
-        if self.custom_definitions:
-            box = layout.box()
-            box.label("Definition Tokens", icon="EDIT_VEC")
-            box.active = self.custom_definitions
-
-            def draw_definition_property(label_text, prop_name):
-                """A helper function for drawing the definition properties."""
-                row = box.row()
-
-                split = row.split(percentage=0.6)
-                col = split.column()
-                col.label("{}:".format(label_text))
-
-                split = split.split()
-                col = split.column()
-                col.prop(self, prop_name, "")
-
-            def draw_grid_definition_property(symbol, prop_name):
-                """A helper function for drawing the definition properties."""
-                row = box.row()
-
-                split = row.split(percentage=0.25)
-                col = split.column()
-                col.label("{}".format(symbol))
-
-                split = split.split(percentage=0.7)
-                col = split.column()
-                col.prop(self, prop_name, "")
-
-                split = split.split()
-                col = split.column()
-                col.prop(self, "{}_priority".format(prop_name), "")
-
-            # This has duplicate data but I don't know how to access the property names defined earlier since self.deftoken_bounds.name doesn't seem to work.
-            # For some reason self.deftoken_bounds = "deftoken_bounds" instead of an instance of StringProperty.
-            row = box.row()
-            row.alignment = "CENTER"
-            row.label("Definition Objects (Object Name)")
-            draw_definition_property("Brick Bounds", "deftoken_bounds")
-            draw_definition_property("Collision Cuboids", "deftoken_collision")
-
-            row = box.row()
-            row.alignment = "CENTER"
-            row.label("Definition Objects: Brick Grid (Object Name)")
-
-            row = box.row()
-            split = row.split(percentage=0.25)
-            col = split.column()
-            col.label("Symbol")
-
-            split = split.split(percentage=0.7)
-            col = split.column()
-            col.label("Token")
-
-            split = split.split()
-            col = split.column()
-            col.label("Priority")
-
-            draw_grid_definition_property("b", "deftoken_gridb")
-            draw_grid_definition_property("d", "deftoken_gridd")
-            draw_grid_definition_property("u", "deftoken_gridu")
-            draw_grid_definition_property("-", "deftoken_griddash")
-            draw_grid_definition_property("x", "deftoken_gridx")
-
-            row = box.row()
-            row.alignment = "CENTER"
-            row.label("Quad Sorting (Object Name)")
-            draw_definition_property("Top Quads", "deftoken_quad_sort_top")
-            draw_definition_property("Bottom Quads", "deftoken_quad_sort_bottom")
-            draw_definition_property("North Quads", "deftoken_quad_sort_north")
-            draw_definition_property("East Quads", "deftoken_quad_sort_east")
-            draw_definition_property("South Quads", "deftoken_quad_sort_south")
-            draw_definition_property("West Quads", "deftoken_quad_sort_west")
-            draw_definition_property("Omni Quads", "deftoken_quad_sort_omni")
-
-            row = box.row()
-            row.alignment = "CENTER"
-            row.label("Colors (Object/Material/Vertex Color Name)")
-            draw_definition_property("Object Colors", "deftoken_color")
-            draw_definition_property("In-Game Color", "deftoken_color_blank")
-            draw_definition_property("Additive Color", "deftoken_color_add")
-            draw_definition_property("Subtractive Color", "deftoken_color_sub")
+        # Property: Precision
+        layout.prop(self, "float_precision")
 
         layout.separator()
 
@@ -888,9 +904,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
             split.active = self.write_log
             col = split.column()
             col.prop(self, "write_log_warnings")
-
-        # Property: Precision
-        layout.prop(self, "float_precision")
 
 # =============
 # Blender Stuff
