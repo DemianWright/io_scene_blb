@@ -681,7 +681,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         layout.prop(self, "use_modifiers")
 
         # Properties: Custom Definition Tokens
-        layout.prop(self, "custom_definitions")
+        layout.prop(self, "custom_definitions", text="Custom Definition Tokens...")
 
         if self.custom_definitions:
             box = layout.box()
@@ -800,7 +800,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         row.prop(self, "default_collision", expand=True)
 
         # Properties: Coverage
-        layout.prop(self, "calculate_coverage")
+        layout.prop(self, "calculate_coverage", text="Calculate Coverage...")
 
         if self.calculate_coverage:
             box = layout.box()
