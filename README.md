@@ -1270,6 +1270,28 @@ Fatal errors always lead to the program execution stopping.
 		<td>When exporting multiple bricks in groups, ensure that there are groups to export.</td>
 	</tr>
 </table>
+<table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBF010</td>
+	</tr>
+	<tr>
+		<th>Message</th>
+		<td><samp>Invalid floating point value given for floating point precision property.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The <a href="#def-string">string</a> specified in the <a href="#precision">Precision</a> property was not a numerical value.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>The numerical values that are <a href="#rounded-values">rounded</a> to combat floating point inaccuracies cannot be rounded unless the floating point precision is set.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Write a numerical value as the <a href="#precision">Precision</a> property.</td>
+	</tr>
+</table>
 
 #### Non-Fatal Errors ####
 <table>

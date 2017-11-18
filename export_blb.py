@@ -133,8 +133,7 @@ class DerivativeProperties(object):
             prec = properties.float_precision
 
             if common.to_float_or_none(prec) is None:
-                # FIXME: Concatenate message.
-                self.error_message = "Invalid floating point precision value given."
+                self.error_message = "IOBLBF010 Invalid floating point value given for floating point precision property."
             else:
                 if prec == "0":
                     logger.info("Setting floating point precision to minimum.")
@@ -335,6 +334,7 @@ def export(context, properties, export_dir, export_file, file_name):
     deriv_properties = DerivativeProperties(properties)
 
     if deriv_properties.error_message is not None:
+        # RETURN ON ERROR
         return deriv_properties.error_message
     else:
         # Determine how many bricks to export from this file and the objects in every brick.
