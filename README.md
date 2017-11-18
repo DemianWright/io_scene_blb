@@ -466,7 +466,7 @@ Definition Object | Default Token | Requirements | Maximum Count/Brick | Must Be
 ------------------|---------------|--------------|--------------------:|:-------------------:|:------------:|:------------------:|:-----------:|------------
 <a name="definition-objects-bounds">Bounds</a> | `bounds` | At least two vertices, must have volume | 1 | N/A | Yes [**(1)**](#definition-objects-fn-1) | Yes | N/A | Defines the dimensions or the size of the brick.
 <a name="definition-objects-collision">Collision</a> | `collision` | At least two vertices, must have volume | 10 | Yes [**(2)**](#definition-objects-fn-2) | Yes | No | Yes | Defines a collision [cuboid](#def-cuboid). See [Defining Collision](#defining-collision) for more info.
-Brick Grid | See [Defining Brick Grid](#defining-brick-grid) | At least two vertices, must have volume | Unlimited | Yes | Yes [**(1)**](#definition-objects-fn-1) | Yes | Yes [**(4)**](#definition-objects-fn-4) | Defines a volume in the brick grid to fill with a specific brick grid symbol.
+Brick Grid | See [Defining Brick Grid](#defining-brick-grid) | At least two vertices, must have volume | Unlimited | Yes | Yes [**(1)**](#definition-objects-fn-1) | Yes | Yes [**(3)**](#definition-objects-fn-4) | Defines a volume in the brick grid to fill with a specific brick grid symbol.
 
 <a name="definition-objects-fn-1">**(1)**</a> It is highly recommended to use [axis-aligned cuboids](#def-aac) to define bounds and the [brick grid](#def-brick-grid).
 However, if you insist on defining the size of your brick in monkey heads, you can.
@@ -475,7 +475,7 @@ Only the [axis-aligned bounding box](#def-aabb) of the bounds and brick grid obj
 <a name="definition-objects-fn-2">**(2)**</a> Collision boxes outside brick bounds are technically not invalid and the brick will function in-game.
 This behavior is not allowed by the exporter because collision outside brick bounds is horribly broken as it was never intended work in that manner.
 
-<a name="definition-objects-fn-4">**(4)**</a> See [Defining Brick Grid](#defining-brick-grid) for the specific rules about overlapping brick grid definitions.
+<a name="definition-objects-fn-3">**(3)**</a> See [Defining Brick Grid](#defining-brick-grid) for the specific rules about overlapping brick grid definitions.
 
 ### Defining Collision ###
 Blockland bricks only supports [AABB collision](https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box).
@@ -789,7 +789,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Solution</th>
-		<td>Define the alpha value in the verter color layer name.</td>
+		<td>Define the alpha value in the vertex color layer name.</td>
 	</tr>
 </table>
 <table>
@@ -844,7 +844,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 
 ### Errors ###
 Errors are separated into two categories: fatal and non-fatal errors.
-* Fatal errors cause the program execution to stop as there is insuffient or incorrect input data to process into a Blockland brick.
+* Fatal errors cause the program execution to stop as there is insufficient or incorrect input data to process into a Blockland brick.
 * Non-fatal errors occur when the exporter attempts to do something (due to invalid input data) that would have caused an error when loading or using the exported brick in game.
 Alternatively the user has attempted to do something that is explicitly not allowed by the exporter or would lead to a mathematical error.
 
