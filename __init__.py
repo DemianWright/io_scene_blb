@@ -459,7 +459,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     use_materials = BoolProperty(
         name="Use Material Colors",
         description="Read quad colors from materials (recommended method, overrides object colors)",
-        default=False,
+        default=True,
     )
 
     # -----------------
