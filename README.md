@@ -658,28 +658,6 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>Collision definition object '<code>object name</code>' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>A <a href="#definition-objects-collision">collision definition object</a> contained more than 8 vertices.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>No effect other this warning message.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Ensure that all collision definition objects have 2-8 vertices only.</td>
-	</tr>
-	<tr>
-		<th>Notes</th>
-		<td>This warning message exists to promote good modeling standards. The exporter uses the axis-aligned bounding box of a collision definition object as the BLB collision cuboid so from a technical standpoint the shape of the mesh is irrelevant. However from a practical standpoint, it does not make sense to use a shape other than a cuboid made from 8 vertices (or merely 2 vertices if you're being minimal) to represent a collision <em>cuboid</em>.</td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
 		<td><samp>No collision definitions found. Brick will have no collision.</samp></td>
 	</tr>
 	<tr>

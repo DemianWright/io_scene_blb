@@ -2100,8 +2100,10 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
                 # Skip the rest of the loop and return to the beginning.
                 continue
             elif vert_count > 8:
-                logger.warning(
-                    "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(obj.name), 1)
+                logger.info(
+                    "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(
+                        obj.name),
+                    1)
                 # The mesh is still valid.
 
             # Find the minimum and maximum coordinates for the collision object.
