@@ -39,6 +39,12 @@ X = 0
 Y = 1
 Z = 2
 
+# Humans have wibbly-wobbly hands.
+HUMAN_BRICK_GRID_ERROR = Decimal("0.1")
+
+# The defined height of a Blockland plate at 100% scale.
+DEFAULT_PLATE_HEIGHT = Decimal("0.4")
+
 # Blockland does not accept bricks that are wide/deeper than 64 bricks or taller than 256 plates.
 MAX_BRICK_HORIZONTAL_PLATES = 64
 MAX_BRICK_VERTICAL_PLATES = 256
@@ -111,6 +117,7 @@ BRICK_TEXTURE_RESOLUTION = 512
 DEFAULT_UV_COORDINATES = ((0.5, 0.5),) * 4
 
 # Often used Decimal values.
+DECIMAL_ONE = Decimal("1.0")
 DECIMAL_HALF = Decimal("0.5")
 
 # Useful angles in radians.

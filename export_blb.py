@@ -62,7 +62,7 @@ class DerivativeProperties(object):
         quad_sort_definitions (sequence): A sequence containing the user-defined definitions for quad sorting.
         scale (Decimal): The scale to export the brick at. Value is in range [0.0,1.0].
         plate_height (Decimal): The height of one Blockland plate in Blender units.
-        human_error (Decimal): Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
+        human_brick_grid_error (Decimal): Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
         precision (String): The precision to round floating point numbers to when performing calculations.
     """
 
@@ -116,16 +116,13 @@ class DerivativeProperties(object):
             # ==========================
             # Plate Height & Human Error
             # ==========================
-            if properties.export_scale == 100.0:
-                # A 1x1 Blockland plate is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
-                self.plate_height = Decimal("0.4")
+            # Used for rounding vertex positions to the brick grid.
+            self.human_brick_grid_error = const.HUMAN_BRICK_GRID_ERROR
+            # A 1x1 Blockland plate is equal to 1.0 x 1.0 x 0.4 Blender units (X,Y,Z)
+            self.plate_height = const.DEFAULT_PLATE_HEIGHT
 
-                # Used for rounding vertex positions to the brick grid.
-                self.human_error = Decimal("0.1")
-            else:
-                # FIXME: Typo? Shouldn't I define self.human_error and self.plate_height?
-                properties.human_error = properties.human_error * self.scale
-                properties.plate_height = properties.plate_heigh * self.scale
+            if self.scale != const.DECIMAL_ONE:
+                self.plate_height = self.plate_height * self.scale
 
             # =========
             # Precision

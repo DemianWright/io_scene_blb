@@ -112,7 +112,7 @@ def __to_decimal(val, quantize=None):
             raise ValueError("__to_decimal(value) quantize must be a string or a Decimal, was '{}'.".format(type(quantize)))
 
         # Calculate the fraction that will be used to do the rounding to an arbitrary number.
-        fraction = Decimal("1.0") / quantize
+        fraction = const.DECIMAL_ONE / quantize
 
         # If the value is not a Decimal, convert the value to string and create a Decimal out of the formatted string.
         # Using strings is the only way to create Decimals accurately from numbers as the Decimal representation of
@@ -126,7 +126,7 @@ def __to_decimal(val, quantize=None):
         # Divide with the Decimal fraction.
         # Quantize the result to get the correct number of decimal digits.
         # Result: value is rounded to the nearest value of quantize (half rounded up)
-        return ((value * fraction).quantize(Decimal("1")) / fraction).quantize(quantize)
+        return ((value * fraction).quantize(const.DECIMAL_ONE) / fraction).quantize(quantize)
 
     result = []
 
@@ -944,11 +944,11 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             logger.warning("IOBLBW001", "Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[X],
                                                                                                                                  bounds_size[Y],
                                                                                                                                  bounds_size[Z],
-                                                                                                                                 properties.human_error), 1)
+                                                                                                                                 properties.human_brick_grid_error), 1)
 
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
-                bounds_size[index] = round(properties.human_error * round(value / properties.human_error))
+                bounds_size[index] = round(properties.human_brick_grid_error * round(value / properties.human_brick_grid_error))
                 # FIXME: Force to integer size?
 
     # The value type must be int because you can't have partial plates. Returns a list.
