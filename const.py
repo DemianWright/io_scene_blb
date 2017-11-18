@@ -90,8 +90,6 @@ BLB_HEADER_NORMALS = "NORMALS:"
 # The maximum area a brick's side can cover is 64 * 256 = 16384 plates.
 DEFAULT_COVERAGE = 99999
 
-# TODO: Refactor to use enum/dictionary for brick symbols.
-
 # Brick grid symbols.
 GRID_INSIDE = "x"  # Disallow building inside brick.
 GRID_OUTSIDE = "-"  # Allow building in empty space.
