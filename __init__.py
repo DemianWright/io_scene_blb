@@ -44,7 +44,6 @@ bl_info = {
 # TODO: Exporting DTS collision.
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
-# TODO: Panels in the UI?
 # TODO: Check that all docstrings and comments are still up to date.
 # TODO: Quad sorting is per object but BLBs support per-quad sorting: the exporter does not support quad sorting for smoothed objects.
 # TODO: Serialize props to the start of the log?
@@ -54,8 +53,6 @@ bl_info = {
 # TODO: Consider reformatting readme to have one sentence per line for nicer diffs.
 # TODO: Consider refactoring readme for consistent use of mesh, model, and object words.
 # TODO: Clarify brick grid and brick grid placement rules.
-# TODO: Clarify which errors occur when autogenerating brick grid.
-# TODO: Calculate Bounds property.
 
 
 class ExportBLB(bpy.types.Operator, ExportHelper):

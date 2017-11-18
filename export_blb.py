@@ -270,11 +270,8 @@ def export(context, properties, export_dir, export_file, file_name):
 
             logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "No objects in visible layers."), 1)
 
-        # If user wants to export the whole scene.
-        # Or if user wanted to export only the selected objects or layers but they contained nothing.
-        # Get all scene objects.
-        # TODO: Remove len(objects) == 0 condition.
-        if properties.blendprop.export_objects == "SCENE" or len(objects) == 0:
+        # Use the whole scene?
+        if properties.blendprop.export_objects == "SCENE":
             logger.info("Exporting scene to BLB.")
             objects = context.scene.objects
             logger.info(logger.build_countable_message("Found ", len(objects), (" object.", " objects."), "", "Scene has no objects."), 1)
