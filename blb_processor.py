@@ -960,7 +960,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                     "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
                 # Brick name follows the bounds definition, spaces are not allowed.
-                blb_data.brick_name = name_elements[name_elements.index(properties.blendprop.deftoken_bounds) + 1]
+                blb_data.brick_name = name_elements[name_elements.index(properties.deftokens.bounds) + 1]
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
     elif properties.blendprop.export_count == "MULTIPLE" and properties.blendprop.brick_name_source_multi == "BOUNDS":
         if bounds_data.object_name is None:
@@ -983,7 +983,7 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                         "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
             else:
                 # Brick name follows the bounds definition, spaces are not allowed.
-                blb_data.brick_name = name_elements[name_elements.index(properties.blendprop.deftoken_bounds) + 1]
+                blb_data.brick_name = name_elements[name_elements.index(properties.deftokens.bounds) + 1]
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
 
     return blb_data
@@ -2213,18 +2213,18 @@ def __process_definition_objects(properties, objects):
 
         # Ignore non-mesh objects
         if obj.type != "MESH":
-            if obj_name.startswith(properties.blendprop.deftoken_bounds):
+            if obj_name.startswith(properties.deftokens.bounds):
                 logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
             elif obj_name.startswith(properties.grid_def_obj_token_priority):
                 logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
-            elif obj_name.startswith(properties.blendprop.deftoken_collision):
+            elif obj_name.startswith(properties.deftokens.collision):
                 logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
             continue
 
         # Is the current object a bounds definition object?
-        elif properties.blendprop.deftoken_bounds in obj_name_tokens:
+        elif properties.deftokens.bounds in obj_name_tokens:
             if bounds_data is None:
                 bounds_data = __process_bounds_object(properties.scale, obj)
                 blb_data = __record_bounds_data(properties, blb_data, bounds_data)
@@ -2251,7 +2251,7 @@ def __process_definition_objects(properties, objects):
                 continue
 
         # Is the current object a collision definition object?
-        elif properties.blendprop.deftoken_collision in obj_name_tokens:
+        elif properties.deftokens.collision in obj_name_tokens:
             # Collision definition objects cannot be processed until after the bounds have been defined.
             collision_objects.append(obj)
 
@@ -2371,9 +2371,9 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             tokens = __split_object_string_to_tokens(object_name, True)
 
             # Does the object name contain the color definition token signifying that it defines the object's color?
-            if properties.blendprop.deftoken_color in tokens:
+            if properties.deftokens.color in tokens:
                 # Parse floats from the expected color values.
-                floats = __get_color_values(tokens[tokens.index(properties.blendprop.deftoken_color) + 1:])
+                floats = __get_color_values(tokens[tokens.index(properties.deftokens.color) + 1:])
                 size = len(floats)
 
                 # Did user define at least 4 numerical values?
@@ -2518,10 +2518,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
                     if texcount > 1:
                         logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
-
-            if brick_texture is None:
-                # If no texture is specified, use the SIDE texture as it allows for blank brick textures.
-                brick_texture = const.BrickTexture.SIDE
+            # else: No material name or a brick texture was not specified. Keep None to skip automatic UV generation.
 
             # ===
             # UVs
@@ -2557,15 +2554,21 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     # Blender UV (and vertex) coordinates are in reverse order compared to Blockland so their order needs to be reversed.
                     uvs = __bl_blender_uv_origin_swap(uv_data[1])[::-1]
 
+                    if brick_texture is None:
+                        # Fall back to SIDE texture if nothing was specified.
+                        brick_texture = const.BrickTexture.SIDE
+                        logger.warning("Please specify a brick texture if also specifying UV coordinates, using SIDE by default.", 2)
+
                     # Do we have UV coordinates for a tri?
                     if len(uvs) == 3:
                         # Repeat last coordinate.
                         uvs = uvs + [uvs[2]]
                 # else: UV data is generated, overwrite data.
-            # else: No UV data, generate or use defaults.
+            # else: No UV data, generate UVs, or use defaults.
 
             if uvs is None:
-                if properties.blendprop.calculate_uvs:
+                # Calculating UVs and a brick texture was specified
+                if properties.blendprop.calculate_uvs and brick_texture is not None:
                     uvs = __calculate_uvs(brick_texture, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
 
                     if properties.blendprop.store_uvs:
@@ -2584,6 +2587,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     # No UVs present, no calculation: use the defaults.
                     # These UV coordinates with the SIDE texture lead to a blank textureless face.
                     uvs = const.DEFAULT_UV_COORDINATES
+                    brick_texture = const.BrickTexture.SIDE
 
             # ===============
             # Material Colors
@@ -2596,13 +2600,13 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     tokens = __split_object_string_to_tokens(material.name)
 
                     if material is not None:
-                        if properties.blendprop.deftoken_color_add in tokens:
+                        if properties.deftokens.color_add in tokens:
                             # Negative alpha.
                             colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, -material.alpha)] * 4)
-                        elif properties.blendprop.deftoken_color_sub in tokens:
+                        elif properties.deftokens.color_sub in tokens:
                             # Negative everything.
                             colors = ([(-material.diffuse_color.r, -material.diffuse_color.g, -material.diffuse_color.b, -material.alpha)] * 4)
-                        elif properties.blendprop.deftoken_color_blank in tokens:
+                        elif properties.deftokens.color_blank in tokens:
                             # If the material name is "blank", use the spray can color by not defining any color for this quad.
                             # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
                             colors = None
@@ -2628,13 +2632,13 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                         layer_name = current_mesh.vertex_colors[0].name.replace(",", ".")
                         tokens = __split_object_string_to_tokens(layer_name)
 
-                        if properties.blendprop.deftoken_color_add in tokens:
+                        if properties.deftokens.color_add in tokens:
                             addsub = 1
                             # Remove the token and only leave the alpha value.
-                            tokens.remove(properties.blendprop.deftoken_color_add)
-                        elif properties.blendprop.deftoken_color_sub in tokens:
+                            tokens.remove(properties.deftokens.color_add)
+                        elif properties.deftokens.color_sub in tokens:
                             addsub = -1
-                            tokens.remove(properties.blendprop.deftoken_color_sub)
+                            tokens.remove(properties.deftokens.color_sub)
                         else:
                             addsub = 0
 
