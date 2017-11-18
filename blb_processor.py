@@ -469,8 +469,8 @@ class BrickBounds(object):
 
         # TODO: Consider moving to another object?
         # The axis-aligned bounding box of visual meshes of this brick.
-        self.aabb_dimensions = []
-        self.aabb_world_center = []
+        self.aabb_dimensions = None
+        self.aabb_world_center = None
 
     def __repr__(self):
         return "<BrickBounds object_name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{} aabb_dimensions:{} aabb_world_center:{}>".format(
@@ -2166,6 +2166,8 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
                 logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
 
     if processed < 1:
+        # No custom collision definitions.
+
         if properties.blendprop.default_collision == "BOUNDS":
             logger.info("Using bounds as the collision cuboid.", 1)
             # Center of the full brick collision cuboid is at the middle of the brick.
@@ -2178,9 +2180,9 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
                 (__world_to_local(
                     bounds_data.aabb_world_center,
                     bounds_data.world_center),
-                    __sequence_z_to_plates(
-                    bounds_data.aabb_dimensions,
-                    properties.plate_height)))
+                 __sequence_z_to_plates(
+                     bounds_data.aabb_dimensions,
+                     properties.plate_height)))
 
     return collisions
 
@@ -2219,8 +2221,7 @@ def __process_definition_objects(properties, objects):
 
         bounds_data.aabb_dimensions = __calculate_bounding_box_size(min_coord, max_coord)
         bounds_data.aabb_world_center = __calculate_center(min_coord, bounds_data.aabb_dimensions)
-
-        print("Calculated AABB. Min:", min_coord, "Max:", max_coord, "Size:", bounds_data.aabb_dimensions, "Center:", bounds_data.aabb_world_center)
+        # print("Calculated AABB. Min:", min_coord, "Max:", max_coord, "Size:", bounds_data.aabb_dimensions, "Center:", bounds_data.aabb_world_center)
 
     blb_data = BLBData()
     bounds_data = None
@@ -2339,8 +2340,8 @@ def __process_definition_objects(properties, objects):
                                                                                        blb_data.brick_size[Y],
                                                                                        logger.build_countable_message("", bricks, (" brick", " bricks")),
                                                                                        logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
-    else:
-        # Manually defined bounds found, store the axis-aligned bounding box of the visible meshes.
+    elif len(mesh_objects) > 0:
+        # Manually defined bounds found, store the axis-aligned bounding box of the visible meshes, provided there are any.
         calculate_aabb(bounds_data, min_world_coordinates, max_world_coordinates)
 
     # Bounds have been defined, check that brick size is within the limits.
