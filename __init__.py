@@ -41,13 +41,22 @@ bl_info = {
     "tracker_url": "",
     "category": "Import-Export"}
 
+# TODO: Exporting DTS collision.
 # TODO: Importing BLB files.
 # TODO: Render brick preview.
 # TODO: Panels in the UI?
 # TODO: Check that all docstrings and comments are still up to date.
 # TODO: Quad sorting is per object but BLBs support per-quad sorting: the exporter does not support quad sorting for smoothed objects.
 # TODO: Serialize props to the start of the log?
-
+# TODO: Add a section about brick size to the readme.
+# TODO: Add a section about brick grid to the readme.
+# TODO: Make the capitalization consistent in the readme.
+# TODO: Consider reformatting readme to have one sentence per line for nicer diffs.
+# TODO: Consider refactoring readme for consistent use of mesh, model, and object words.
+# TODO: Consider using unique IDs for errors and warnings? [WARNING:IOBLBW0000] and [ERROR:IOBLBE0000]?
+# TODO: Clarify brick grid and brick grid placement rules.
+# TODO: Clarify which errors occur when autogenerating brick grid.
+# TODO: Calculate Bounds property.
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
@@ -238,7 +247,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="qo",
     )
 
-    # Brick Grid
+       # Brick Grid
 
     deftoken_gridx = StringProperty(
         name="Brick Grid x",
@@ -310,7 +319,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
-    # Colors
+        # Colors
 
     deftoken_color = StringProperty(
         name="Object Color",
@@ -357,12 +366,12 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="BOUNDS"
     )
 
-    # --------
+     # --------
     # Coverage
     # --------
     calculate_coverage = BoolProperty(
         name="Coverage",
-        description="Calculate brick coverage. Coverage relies on quad section data to be of any use. The coverage system intelligently hides non-omni quads on the side of the brick when it is covered by other bricks.",
+        description="Calculate brick coverage. Coverage relies on the quad section data to be of any use. The coverage system intelligently hides (non-omni) quads on the side of the brick when it is covered by other bricks.",
         default=False,
     )
 

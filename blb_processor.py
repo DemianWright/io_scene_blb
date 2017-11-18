@@ -108,7 +108,7 @@ def __to_decimal(val, quantize=None):
         elif isinstance(quantize, Decimal):
             pass
         else:
-            # Development error.
+            # EXCEPTION
             raise ValueError("__to_decimal(value) quantize must be a string or a Decimal, was '{}'.".format(type(quantize)))
 
         # Calculate the fraction that will be used to do the rounding to an arbitrary number.
@@ -748,7 +748,7 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_grid=Non
                         area += __count_occurrences(const.GRID_OUTSIDE, row, True)
 
                 else:
-                    # Development error.
+                    # EXCEPTION
                     raise RuntimeError("Invalid quad section index '{}'.".format(index))
 
             else:
@@ -949,18 +949,18 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
                 bounds_size[index] = round(properties.human_error * round(value / properties.human_error))
+                # FIXME: Force to integer size?
 
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
 
     if properties.blendprop.export_count == "SINGLE" and properties.blendprop.brick_name_source == "BOUNDS":
         if bounds_data.object_name is None:
-            logger.warning(
-                "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
+            logger.warning("Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
-                logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
+                logger.warning("Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.",
+                               1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -973,16 +973,16 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                 # RETURN ON ERROR
                 return "When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick."
             else:
-                logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
+                # TODO: Does this work? Does it actually export multiple bricks or overwrite the first one?
+                logger.warning("Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
                 if properties.blendprop.brick_definition == "LAYERS":
                     # RETURN ON ERROR
-                    return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name."
+                    return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition token (separated with a space) in the bounds definition object name."
                 else:
-                    logger.warning(
-                        "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
+                    logger.warning("Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.",
+                                   1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -1418,7 +1418,7 @@ def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
     """
     # The angle could easily be normalized here, but doing this has helped me track a couple of mistakes in the code.
     if angle < 0 or angle > const.TWO_PI:
-        # Development error.
+        # EXCEPTION
         raise ValueError("__get_2d_angle_axis(angle) expects angle to be normalized to range [0,2pi], value was:", angle)
 
     if angle >= const.RAD_315_DEG or angle >= 0 and angle < const.RAD_45_DEG:
@@ -1458,7 +1458,7 @@ def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
 
 
 def __get_normal_axis(normal):
-    """Determines the closes axis of the specified normal vector.
+    """Determines the closest axis of the specified normal vector.
 
     Args:
         normal (Vector): A normal vector in XYZ-space.
@@ -1561,8 +1561,8 @@ def __get_normal_axis(normal):
             plane = None
 
     if point:
-        logger.error("Normal vector is point and has no direction. Returning +X axis by default.")
-        return Axis3D.POS_X
+        # EXCEPTION
+        raise ValueError("__get_normal_axis(normal) expects a vector, point '{}' given instead.".format(normal))
 
     if plane is None:
         # TODO: Z-axis is ignored for now. Assume XY-plane.
@@ -1673,7 +1673,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
     # Sanity check.
     if len(vert_coords) < 4:
-        # Development error.
+        # EXCEPTION
         raise ValueError("__calculate_uvs(brick_texture, vert_coords, normal) function expects a quad, input polygon was not a quad.")
 
     idx_coord = [(idx, coord) for idx, coord in enumerate(vert_coords)]
@@ -1845,7 +1845,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (h, w))
 
     else:
-        # Development error.
+        # EXCEPTION
         raise ValueError("Unknown texture name '{}'".format(brick_texture))
 
     #print("__calculate_uvs | uvs_sorted:")
@@ -2004,8 +2004,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
                 processed += 1
             except OutOfBoundsException:
                 if bounds_data.object_name is None:
-                    logger.error(
-                        "Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name), 1)
+                    logger.error("Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name), 1)
                 else:
                     logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
                         grid_obj.name, bounds_data.object_name))
@@ -2014,18 +2013,16 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
 
     # Log messages for brick grid definitions.
     if total_definitions < 1:
-        logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.", 1)
+        logger.warning("No brick grid definitions found. Full cuboid brick grid may be undesirable.", 1)
     elif total_definitions == 1:
         if processed < 1:
-            logger.warning(
-                "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
+            logger.warning("{} brick grid definition found but was not processed. Full cuboid brick grid may be undesirable.".format(total_definitions), 1)
         else:
             logger.info("Processed {} of {} brick grid definition.".format(processed, total_definitions), 1)
     else:
         # Found more than one.
         if processed < 1:
-            logger.warning(
-                "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
+            logger.warning("{} brick grid definitions found but were not processed. Full cuboid brick grid may be undesirable.".format(total_definitions), 1)
         else:
             logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions), 1)
 
@@ -2150,6 +2147,7 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
         defcount = len(definition_objects)
 
         # Log messages for collision definitions.
+        # FIXME: Skip collision processing if calculating collision!
         if defcount < 1:
             logger.warning("No custom collision definitions found.", 1)
         elif defcount == 1:
@@ -2254,11 +2252,11 @@ def __process_definition_objects(properties, objects):
         # Ignore non-mesh objects
         if obj.type != "MESH":
             if obj_name.upper().startswith(properties.deftokens.bounds):
-                logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
+                logger.error("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
             elif obj_name.upper().startswith(properties.grid_def_obj_token_priority):
-                logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
+                logger.error("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
             elif obj_name.upper().startswith(properties.deftokens.collision):
-                logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
+                logger.error("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
             continue
@@ -2287,7 +2285,7 @@ def __process_definition_objects(properties, objects):
                                                                                                     "", bricks, (" brick", " bricks")),
                                                                                                 logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
             else:
-                logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
+                logger.error("Bounds already defined by '{}', bounds definition '{}' ignored.".format(bounds_data.object_name, obj_name), 1)
                 continue
 
         # Is the current object a collision definition object?
@@ -2298,7 +2296,7 @@ def __process_definition_objects(properties, objects):
         # Is the current object a brick grid definition object?
         elif len(object_grid_definitions) > 0:
             if len(object_grid_definitions) > 1:
-                logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
+                logger.error("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
 
             # Get the priority index of this grid definition.
             index = properties.grid_def_obj_token_priority.index(object_grid_definitions[0])
@@ -2316,7 +2314,7 @@ def __process_definition_objects(properties, objects):
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
-        logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.", 1)
+        logger.warning("No brick bounds definition found. Calculated brick size may be undesirable.", 1)
 
         # ROUND & CAST
         bounds_data = __calculate_bounds(properties.scale, __to_decimal(min_world_coordinates), __to_decimal(max_world_coordinates))
@@ -2347,7 +2345,10 @@ def __process_definition_objects(properties, objects):
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
             Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[Z] <= const.MAX_BRICK_VERTICAL_PLATES:
+        # Multiply the dimensions of the bounding box together: if any dimension is 0.0 the product is 0.0.
         if __sequence_product(blb_data.brick_size) < 1.0:
+            # TODO: Actually test this.
+            # TODO: Round 0 brick size up to 1?
             # RETURN ON ERROR
             return "Brick has no volume, brick could not be rendered in-game."
         else:
@@ -2419,7 +2420,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 # Did user define at least 4 numerical values?
                 if size >= 4:
                     if size > 4:
-                        logger.info("More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name), 2)
+                        logger.error("More than 4 color values defined for object '{}', only the first 4 values (RGBA) are used.".format(object_name), 2)
 
                         # We're only interested in the first 4 values: R G B A
                         floats = floats[:4]
@@ -2448,7 +2449,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         if section_count >= 1:
             section = const.BLBQuadSection(properties.quad_sort_definitions.index(quad_sections[0]))
             if section_count > 1:
-                logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
+                logger.error("Object '{}' has {} section definitions, only using the first one: {}".format(
                     object_name, section_count, section), 2)
 
             # TODO: Do forward axis rotation of section in the format_blb_data function?
@@ -2557,7 +2558,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     brick_texture = const.BrickTexture[texnames[0]]
 
                     if texcount > 1:
-                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
+                        logger.error("More than one brick texture name found in material '{}', only using the first one.".format(matname), 2)
             # else: No material name or a brick texture was not specified. Keep None to skip automatic UV generation.
 
             # ===
@@ -2597,7 +2598,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     if brick_texture is None:
                         # Fall back to SIDE texture if nothing was specified.
                         brick_texture = const.BrickTexture.SIDE
-                        logger.warning("Please specify a brick texture if also specifying UV coordinates, using SIDE by default.", 2)
+                        logger.warning("Face has UV coordinates but no brick texture was set in the material name, using SIDE by default.", 2)
 
                     # Do we have UV coordinates for a tri?
                     if len(uvs) == 3:
@@ -2686,6 +2687,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
                         name = common.to_float_or_none(" ".join(tokens))
 
+                        # FIXME: vertex_color_alpha is never assigned.
                         if vertex_color_alpha is None:
                             if name is None:
                                 vertex_color_alpha = 1.0
@@ -2706,16 +2708,16 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
             # Sanity check.
             if not len(positions) is len(normals) is len(uvs) is 4:
-                # RETURN ON ERROR
-                return "Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
+                # EXCEPTION
+                raise ValueError("Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
                     len(positions),
                     len(normals),
-                    len(uvs))
+                    len(uvs)))
 
             if colors is not None:
                 if len(colors) is not 4:
-                    # RETURN ON ERROR
-                    return "Quad color data only defined for {} vertices, 4 required.".format(len(colors))
+                    # EXCEPTION
+                    raise ValueError("Quad color data only defined for {} vertices, 4 required.".format(len(colors)))
 
                 # ROUND & CAST: Color values.
                 colors = __to_decimal(colors)
@@ -2733,7 +2735,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         bpy.data.meshes.remove(mesh)
 
         if count_tris > 0:
-            logger.warning("{} triangles degenerated to quads.".format(count_tris), 2)
+            logger.warning("{} triangles converted to quads.".format(count_tris), 2)
 
         if count_ngon > 0:
             logger.warning("{} n-gons skipped.".format(count_ngon), 2)
@@ -2741,6 +2743,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
     count_quads = sum([len(sec) for sec in quads])
 
     if count_quads < 1:
+        # TODO: Test if an invisible brick works and remove this error.
         # RETURN ON ERROR
         return "No faces to export."
     else:
