@@ -352,7 +352,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     custom_collision = BoolProperty(
         name="Custom Collision",
         description="Use custom collision definition objects (if any)",
-        default=False,
+        default=True,
     )
 
     default_collision = EnumProperty(
