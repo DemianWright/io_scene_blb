@@ -1647,6 +1647,11 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                     logger.info(
                         "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
 
+        # Vertex color layer message.
+        if len(current_data.vertex_colors) > 1:
+            logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
+                object_name, len(current_data.vertex_colors)), 2)
+
         # ===================
         # Manual Quad Sorting
         # ===================
@@ -1731,15 +1736,24 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
             if poly.use_smooth:
                 # Smooth shading.
                 # For every loop index in the loop_indices, calculate the vertex normal and add it to the list.
-                # Do not round smooth shaded normals, that would cause visual errors.
-                normals = [__loop_index_to_normal_vector(obj, mesh, loop_index) for loop_index in reversed(loop_indices)]
+
+                # Does the user want to round normals?
+                if properties.blendprop.round_normals:
+                    normals = [__to_decimals(__loop_index_to_normal_vector(obj, mesh, loop_index)) for loop_index in reversed(loop_indices)]
+                else:
+                    normals = [__loop_index_to_normal_vector(obj, mesh, loop_index) for loop_index in reversed(loop_indices)]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
                 # Note for future: I initially though it would be ideal to NOT round the normal values in order to acquire the most accurate results but this is actually false.
                 # Vertex coordinates are rounded. The old normals are no longer valid even though they are very close to the actual value.
                 # Multiplying the normals with the world matrix gets rid of the OBJECT's rotation from the MESH NORMALS.
-                normals = [__normalize_vector(obj, poly.normal), ] * 4
+
+                # Does the user want to round normals?
+                if properties.blendprop.round_normals:
+                    normals = [__to_decimals(__normalize_vector(obj, poly.normal)), ] * 4
+                else:
+                    normals = [__normalize_vector(obj, poly.normal), ] * 4
 
             # ===
             # UVs
@@ -1762,11 +1776,18 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                 # Object has material slots?
                 if len(obj.material_slots) > 0:
                     material = obj.material_slots[poly.material_index].material
+                    tokens = __split_object_name_to_tokens(material.name)
 
                     if material is not None:
-                        # If the material name is "blank", use the spray can color by not defining any color for this quad.
-                        # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
-                        if "blank" in __split_object_name_to_tokens(material.name):
+                        if properties.blendprop.deftoken_color_add in tokens:
+                            # Negative alpha.
+                            colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, -material.alpha)] * 4)
+                        elif properties.blendprop.deftoken_color_sub in tokens:
+                            # Negative everything.
+                            colors = ([(-material.diffuse_color.r, -material.diffuse_color.g, -material.diffuse_color.b, -material.alpha)] * 4)
+                        elif properties.blendprop.deftoken_color_blank in tokens:
+                            # If the material name is "blank", use the spray can color by not defining any color for this quad.
+                            # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
                             colors = None
                         else:
                             # 4 vertices per quad.
@@ -1784,18 +1805,26 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
 
                     # Vertex winding order is reversed compared to Blockland.
                     for index in reversed(loop_indices):
-                        if len(current_data.vertex_colors) > 1:
-                            logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
-                                object_name, len(current_data.vertex_colors)), 2)
-
                         # Only use the first color layer.
                         # color_layer.data[index] may contain more than 4 values.
                         loop_color = current_data.vertex_colors[0].data[index]
+                        layer_name = current_data.vertex_colors[0].name.replace(",", ".")
+                        tokens = __split_object_name_to_tokens(layer_name)
+
+                        if properties.blendprop.deftoken_color_add in tokens:
+                            addsub = 1
+                            # Remove the token and only leave the alpha value.
+                            tokens.remove(properties.blendprop.deftoken_color_add)
+                        elif properties.blendprop.deftoken_color_sub in tokens:
+                            addsub = -1
+                            tokens.remove(properties.blendprop.deftoken_color_sub)
+                        else:
+                            addsub = 0
 
                         # Use the color layer name as the value for alpha, if it is numerical.
                         # This does limit the alpha to be per-face but Blockland does not support per-vertex alpha anyway.
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
-                        name = common.to_float_or_none(current_data.vertex_colors[0].name.replace(",", "."))
+                        name = common.to_float_or_none(" ".join(tokens))
 
                         if vertex_color_alpha is None:
                             if name is None:
@@ -1805,7 +1834,15 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects):
                                 vertex_color_alpha = name
                                 logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
 
-                        colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
+                        if addsub > 0:
+                            # Negative alpha.
+                            colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, -vertex_color_alpha))
+                        elif addsub < 0:
+                            # Negative everything.
+                            colors.append((-loop_color.color.r, -loop_color.color.g, -loop_color.color.b, -vertex_color_alpha))
+                        else:
+                            # Normal color.
+                            colors.append((loop_color.color.r, loop_color.color.g, loop_color.color.b, vertex_color_alpha))
 
             # ================
             # BLB texture name
