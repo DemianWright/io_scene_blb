@@ -355,10 +355,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
-    default_collision = EnumProperty(
+    fallback_collision = EnumProperty(
         items=[("BOUNDS", "Bounds", "Use brick bounds as collision"),
                ("AABB", "AABB", "Calculate axis-aligned bounding box collision from visible meshes")],
-        name="Default Collision",
+        name="Fallback Collision",
         description="Collision type to use if no custom definitions exist",
         default="BOUNDS"
     )
@@ -799,11 +799,11 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # Property: Custom Collision
         layout.prop(self, "custom_collision")
 
-        # Property: Default Collision
+        # Property: Fallback Collision
         row = layout.row()
-        row.label("Default Collision:")
+        row.label("Fallback Collision:")
         row = layout.row()
-        row.prop(self, "default_collision", expand=True)
+        row.prop(self, "fallback_collision", expand=True)
 
         # Properties: Coverage
         layout.prop(self, "calculate_coverage", text="Calculate Coverage...")

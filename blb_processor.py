@@ -2173,8 +2173,7 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
 
     if processed < 1:
         # No custom collision definitions.
-
-        if properties.blendprop.default_collision == "BOUNDS":
+        if properties.blendprop.fallback_collision == "BOUNDS":
             logger.info("Using bounds as the collision cuboid.", 1)
             # Center of the full brick collision cuboid is at the middle of the brick.
             # The size of the cuboid is the size of the bounds.
