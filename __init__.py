@@ -53,10 +53,10 @@ bl_info = {
 # TODO: Make the capitalization consistent in the readme.
 # TODO: Consider reformatting readme to have one sentence per line for nicer diffs.
 # TODO: Consider refactoring readme for consistent use of mesh, model, and object words.
-# TODO: Consider using unique IDs for errors and warnings? [WARNING:IOBLBW0000] and [ERROR:IOBLBE0000]?
 # TODO: Clarify brick grid and brick grid placement rules.
 # TODO: Clarify which errors occur when autogenerating brick grid.
 # TODO: Calculate Bounds property.
+
 
 class ExportBLB(bpy.types.Operator, ExportHelper):
     """Export Blockland brick data."""
@@ -247,7 +247,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="qo",
     )
 
-       # Brick Grid
+    # Brick Grid
 
     deftoken_gridx = StringProperty(
         name="Brick Grid x",
@@ -319,7 +319,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         max=4,
     )
 
-        # Colors
+    # Colors
 
     deftoken_color = StringProperty(
         name="Object Color",
@@ -366,7 +366,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="BOUNDS"
     )
 
-     # --------
+    # --------
     # Coverage
     # --------
     calculate_coverage = BoolProperty(
@@ -584,7 +584,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         if isinstance(message, str):
             # Log the message in case the user missed it.
-            logger.error(message)
+            logger.fatal(message)
 
             # Show an error popup in the UI.
             self.report({"ERROR"}, message)

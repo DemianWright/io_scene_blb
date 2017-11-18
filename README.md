@@ -546,6 +546,10 @@ Warning log messages can be ignored as the issues are automatically corrected, b
 It is recommended to manually adjust the brick until no warning messages are present in the output log.
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBW000</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Calculated bounds have a non-integer size <code>#</code> <code>#</code> <code>#</code>, rounding up.</samp></td>
 	</tr>
@@ -567,6 +571,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBW001</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Defined bounds have a non-integer size <code>#</code> <code>#</code> <code>#</code>, rounding to a precision of <code>#</code>.</samp></td>
 	</tr>
@@ -584,6 +592,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBW002</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.</samp></td>
@@ -603,6 +615,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBW003</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.</samp></td>
 	</tr>
@@ -620,6 +636,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBW004</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>No brick grid definitions found. Full cuboid brick grid may be undesirable.</samp></td>
@@ -639,6 +659,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBW005</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp><code>#</code> brick grid definition(s) found but was/were not processed. Full cuboid brick grid may be undesirable.</samp></td>
 	</tr>
@@ -656,6 +680,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBW006</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp><code>#</code> collision definition(s) found but was/were not processed.</samp></td>
@@ -678,6 +706,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBW007</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>No brick bounds definition found. Calculated brick size may be undesirable.</samp></td>
 	</tr>
@@ -695,6 +727,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBW008</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>Object '<code>object name</code>' has <code>#</code> vertex color layers, only using the first.</samp></td>
@@ -714,6 +750,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBW009</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Face has UV coordinates but no brick texture was set in the material name, using SIDE by default.</samp></td>
 	</tr>
@@ -732,6 +772,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBW010</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>No alpha value set in vertex color layer name, using 1.0.</samp></td>
 	</tr>
@@ -749,6 +793,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBW011</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp><code>#</code> triangles converted to quads.</samp></td>
@@ -772,6 +820,10 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBW012</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp><code>#</code> n-gons skipped.</samp></td>
@@ -802,23 +854,9 @@ It is recommended to manually adjust the brick until no error messages are prese
 Fatal errors always lead to the program execution stopping.
 <table>
 	<tr>
-		<th>Message</th>
-		<td><samp>Two or more brick grid definitions had the same priority.</samp></td>
+		<th>Code</th>
+		<td>IOBLBF000</td>
 	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>Two or more <a href="#custom-definition-tokens">user defined</a> <a href="#defining-brick-grid">brick grid definition tokens</a> had the same priority number.</td>
-	</tr>
-	<tr>
-		<th>Reason</th>
-		<td>The user-intended priority order of the tokens cannot be automatically determined.</td>
-	</tr>
-	<tr>
-		<th>Solution</th>
-		<td>Ensure that all custom brick grid definition tokens have a unique priority number.</td>
-	</tr>
-</table>
-<table>
 	<tr>
 		<th>Message</th>
 		<td><samp>When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick.</samp></td>
@@ -862,6 +900,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBF001</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>When exporting multiple bricks in separate layers, the brick name must be after the bounds definition token (separated with a space) in the bounds definition object name.</samp></td>
 	</tr>
@@ -904,6 +946,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBF002</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Unable to store UV coordinates in object '<code>object name</code>' while it is in edit mode.</samp></td>
 	</tr>
@@ -921,6 +967,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBF003</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>Brick has no volume, brick could not be rendered in-game.</samp></td>
@@ -940,6 +990,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBF004</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Brick size (<code>#</code>x<code>#</code>x<code>#</code>) exceeds the maximum brick size of 64 wide 64 deep and 256 plates tall.</samp></td>
 	</tr>
@@ -958,6 +1012,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBF005</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>No faces to export.</samp></td>
 	</tr>
@@ -975,6 +1033,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBF006</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>No objects to export.</samp></td>
@@ -1102,9 +1164,35 @@ Fatal errors always lead to the program execution stopping.
 		</td>
 	</tr>
 </table>
+<table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBF007</td>
+	</tr>
+	<tr>
+		<th>Message</th>
+		<td><samp>Two or more brick grid definitions had the same priority.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>Two or more <a href="#custom-definition-tokens">user defined</a> <a href="#defining-brick-grid">brick grid definition tokens</a> had the same priority number.</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>The user-intended priority order of the tokens cannot be automatically determined.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Ensure that all custom brick grid definition tokens have a unique priority number.</td>
+	</tr>
+</table>
 
 #### Non-Fatal Errors ####
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBE000</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>Brick grid definition object '<code>object name</code>' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
@@ -1131,6 +1219,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE001</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Brick grid definition object '<code>object name</code>' has vertices outside the bounds definition object '<code>object name</code>'. Definition ignored.</samp></td>
 	</tr>
@@ -1156,6 +1248,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE002</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Brick grid definition object '<code>object name</code>' has no volume. Definition ignored.</samp></td>
 	</tr>
@@ -1177,6 +1273,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBE003</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp><code>#</code> collision cuboids defined but 10 is the maximum, only using the first 10.</samp></td>
@@ -1200,6 +1300,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE004</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Collision definition object '<code>object name</code>' has less than 2 vertices. Definition ignored.</samp></td>
 	</tr>
@@ -1222,6 +1326,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE005</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Collision definition object '<code>object name</code>' has no volume. Definition ignored.</samp></td>
 	</tr>
@@ -1243,6 +1351,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBE006</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>Collision definition object '<code>object name</code>' has vertices outside the calculated brick bounds. Definition ignored.</samp></td>
@@ -1269,6 +1381,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE007</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Collision definition object '<code>object name</code>' has vertices outside the bounds definition object '<code>object name</code>'. Definition ignored.</samp></td>
 	</tr>
@@ -1294,6 +1410,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE008</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Object '<code>object name</code>' cannot be used to define bounds, must be a mesh.</samp></td>
 	</tr>
@@ -1315,6 +1435,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBE009</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>Object '<code>object name</code>' cannot be used to define brick grid, must be a mesh.</samp></td>
@@ -1338,6 +1462,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE010</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Object '<code>object name</code>' cannot be used to define collision, must be a mesh.</samp></td>
 	</tr>
@@ -1359,6 +1487,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBE011</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>Bounds already defined by '<code>object name</code>', bounds definition '<code>object name</code>' ignored.</samp></td>
@@ -1382,6 +1514,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE012</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Multiple brick grid definitions in object '<code>object name</code>', only the first one is used.</samp></td>
 	</tr>
@@ -1403,6 +1539,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBE013</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>More than 4 color values defined for object '<code>object name</code>', only the first 4 values (RGBA) are used.</samp></td>
@@ -1426,6 +1566,10 @@ Fatal errors always lead to the program execution stopping.
 </table>
 <table>
 	<tr>
+		<th>Code</th>
+		<td>IOBLBE014</td>
+	</tr>
+	<tr>
 		<th>Message</th>
 		<td><samp>Object '<code>object name</code>' has <code>#</code> section definitions, only using the first one: <code>section name</code></samp></td>
 	</tr>
@@ -1447,6 +1591,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 </table>
 <table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBE015</td>
+	</tr>
 	<tr>
 		<th>Message</th>
 		<td><samp>More than one brick texture name found in material '<code>material name</code>', only using the first one.</samp></td>

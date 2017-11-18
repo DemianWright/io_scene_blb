@@ -45,17 +45,23 @@ def configure(write_file, write_only_on_warnings):
     __ON_WARNINGS_ONLY = write_only_on_warnings
 
 
-def __log(message, is_warning, indents=0):
+def __log(log_type, code, message, is_warning, indents=0):
     """Prints the given message to the console and additionally to a log file if so specified at logger configuration.
 
     Args:
+        log_type (string): Log type label.
+        code (string): Unique code for the message.
         message (string): Log message.
         is_warning (bool): Is the message a warning?
         indents (int): The number of indents to add in front of the message. (Default: 0)
     """
     global __HAS_WARNINGS
 
-    message = "{}{}".format(const.LOG_INDENT * indents, message)
+    if log_type is None:
+        message = "{}{}".format(const.LOG_INDENT * indents, message)
+    else:
+        message = "{}[{}:{}] {}".format(const.LOG_INDENT * indents, log_type, code, message)
+
     print(message)
 
     # If log will be written to a file, append the message to the sequence for writing later.
@@ -73,27 +79,39 @@ def info(message, indents=0):
         message (string): Log message.
         indents (int): The number of indents to add in front of the message. (Default: 0)
     """
-    __log(message, False, indents)
+    __log(None, None, message, False, indents)
 
 
-def warning(message, indents=0):
-    """Prefixes the message with '[WARNING] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
+def warning(code, message, indents=0):
+    """Prefixes the message with '[WARNING:<code>] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
 
     Args:
+        code (string): Unique warning code.
         message (string): Log message.
         indents (int): The number of indents to add in front of the message. (Default: 0)
     """
-    __log("[WARNING] " + message, True, indents)
+    __log("WARNING", code, message, True, indents)
 
 
-def error(message, indents=0):
-    """Prefixes the message with '[ERROR] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
+def error(code, message, indents=0):
+    """Prefixes the message with '[ERROR:<code>] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
 
     Args:
+        code (string): Unique error code.
         message (string): Log message.
         indents (int): The number of indents to add in front of the message. (Default: 0)
     """
-    __log("[ERROR] " + message, True, indents)
+    __log("ERROR", code, message, True, indents)
+
+
+def fatal(message):
+    """Prefixes the message with '[FATAL:<code>] ', prints it to the console (and additionally to a log file if so specified at logger configuration), and logs the message as a warning.
+
+    Args:
+        message (string): The unique code followed by the log message after a space character.
+    """
+    space_pos = message.index(" ")
+    __log("FATAL", message[:space_pos], message[space_pos + 1:], True, 0)
 
 
 def build_countable_message(message_start, count, alternatives, message_end="", message_zero=None):

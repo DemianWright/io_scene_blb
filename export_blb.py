@@ -167,7 +167,7 @@ class DerivativeProperties(object):
         tokens[properties.deftoken_gridb_priority] = properties.deftoken_gridb.upper()
 
         if None in tokens:
-            return "Two or more brick grid definitions had the same priority."
+            return "IOBLBF007 Two or more brick grid definitions had the same priority."
         else:
             symbols = [None] * 5
 
@@ -350,7 +350,8 @@ def export(context, properties, export_dir, export_file, file_name):
             if deriv_properties.blendprop.brick_definition == "GROUPS":
                 if len(bpy.data.groups) == 0:
                     # RETURN ON ERROR
-                    return "No groups to export."
+                    # TODO: Add to readme.
+                    return "IOBLBF006 No groups to export."
                 else:
                     # For all groups in the scene.
                     for group in bpy.data.groups:
@@ -407,4 +408,5 @@ def export(context, properties, export_dir, export_file, file_name):
 
                 if exported == 0:
                     # RETURN ON ERROR
-                    return "Nothing to export in layers."
+                    # TODO: Add to readme.
+                    return "IOBLBF007 Nothing to export in layers."
