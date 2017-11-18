@@ -215,6 +215,7 @@ def __has_object_in_visible_layer(context, objects):
         for index, layer in enumerate(context.scene.layers):
             # List's first object is in current layer.
             # Current layer is visible.
+            # TODO: Clarify condition.
             if True is objects[0].layers[index] == layer:
                 # List has at least one object in visible layer.
                 return True
@@ -345,10 +346,9 @@ def export(context, properties, export_dir, export_file, file_name):
             logger.info("Exporting multiple bricks.")
             # Bricks in groups.
             if deriv_properties.blendprop.brick_definition == "GROUPS":
-                if len(bpy.data.groups) == 0:
+                if len(bpy.data.groups) < 1:
                     # RETURN ON ERROR
-                    # TODO: Add to readme.
-                    return "IOBLBF006 No groups to export."
+                    return "IOBLBF008 No groups to export in the current scene."
                 else:
                     # For all groups in the scene.
                     for group in bpy.data.groups:
@@ -362,7 +362,7 @@ def export(context, properties, export_dir, export_file, file_name):
                             # Group has at least one object in a visible layer, export group.
                         # Else: Export all groups in the scene, no need to check anything.
 
-                        # TODO: Is the newline intentional or left from development?
+                        # TODO: Add the same header to all logs, not just the first.
                         logger.info("\nExporting group '{}'.".format(group.name))
 
                         # Objects in multiple groups will be exported more than once.
@@ -380,30 +380,31 @@ def export(context, properties, export_dir, export_file, file_name):
             else:
                 # Bricks in layers.
                 exported = 0
-                # Blender has 20 layers, check every one.
-                for layer_idx in range(0, 19):
+                # Check all layers in the current scene.
+                for layer_idx in range(0, const.BLENDER_MAX_LAYER_IDX):
                     # Add to list if object is in the layer.
                     # Objects on multiple layers will be exported more than once.
                     layer_objects = [ob for ob in bpy.context.scene.objects if ob.layers[layer_idx]]
 
                     if deriv_properties.blendprop.export_objects_multi == "LAYERS":
                         if not __has_object_in_visible_layer(context, layer_objects):
-                            # This group didn't have objects in visible layers.
+                            # This visible layer did not have any objects.
                             # Skip the rest of the loop.
                             continue
                         # Layer has at least one object in a visible layer, export layer objects.
 
-                    # TODO: Is the newline intentional or left from development?
+                    # TODO: Add the same header to all logs, not just the first.
                     logger.info("\nExporting layer {}.".format(layer_idx + 1))
                     # Get brick name from bounds.
                     message = export_brick(context, deriv_properties, export_dir, None, file_name, layer_objects)
                     exported += 1
 
+                    # TODO: Do not fail if one export fails.
                     # If something went wrong stop export and return the error message.
                     if message is not None:
                         return message
 
-                if exported == 0:
+                if exported < 1:
                     # RETURN ON ERROR
                     # TODO: Add to readme.
-                    return "IOBLBF007 Nothing to export in layers."
+                    return "IOBLBF009 Nothing to export in layers of the current scene."

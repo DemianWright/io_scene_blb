@@ -97,6 +97,9 @@ GRID_UP = "u"  # Allow placing bricks above this plate.
 GRID_DOWN = "d"  # Allow placing bricks below this plate.
 GRID_BOTH = "b"  # Allow placing bricks above and below this plate.
 
+# Blender has 20 layers.
+BLENDER_MAX_LAYER_IDX = 19
+
 # Maximum number of decimal places to write to file.
 MAX_FP_DECIMALS_TO_WRITE = 16
 

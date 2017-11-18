@@ -1186,6 +1186,90 @@ Fatal errors always lead to the program execution stopping.
 		<td>Ensure that all custom brick grid definition tokens have a unique priority number.</td>
 	</tr>
 </table>
+<table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBF008</td>
+	</tr>
+	<tr>
+		<th>Message</th>
+		<td><samp>No groups to export in the current scene.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+			<table>
+				<thead>
+					<tr>
+						<th>Property</th>
+						<th>Value</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><a href="#bricks-to-export">Bricks to Export</a></td>
+						<td>Multiple</td>
+					</tr>
+					<tr>
+						<td><a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></td>
+						<td>Groups</td>
+					</tr>
+				</tbody>
+			</table>
+			And the current scene does not contain any groups with objects in visible layers.
+		</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>No data to export, nothing to do.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>When exporting multiple bricks in groups, ensure that there are groups to export.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBF009</td>
+	</tr>
+	<tr>
+		<th>Message</th>
+		<td><samp>Nothing to export in layers of the current scene.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+			<table>
+				<thead>
+					<tr>
+						<th>Property</th>
+						<th>Value</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><a href="#bricks-to-export">Bricks to Export</a></td>
+						<td>Multiple</td>
+					</tr>
+					<tr>
+						<td><a href="#bricks-defined-by-multiple-export">Bricks Defined by (Multiple Export)</a></td>
+						<td>Layers</td>
+					</tr>
+				</tbody>
+			</table>
+			And the current scene does not contain any objects in visible layers.
+		</td>
+	</tr>
+	<tr>
+		<th>Reason</th>
+		<td>No data to export, nothing to do.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>When exporting multiple bricks in groups, ensure that there are groups to export.</td>
+	</tr>
+</table>
 
 #### Non-Fatal Errors ####
 <table>
