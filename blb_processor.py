@@ -949,7 +949,6 @@ def __record_bounds_data(properties, blb_data, bounds_data):
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
                 bounds_size[index] = round(properties.human_brick_grid_error * round(value / properties.human_brick_grid_error))
-                # FIXME: Force to integer size?
 
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
@@ -2422,11 +2421,11 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             if properties.deftokens.color in tokens:
                 # Parse floats from the expected color values.
                 floats = __get_color_values(tokens[tokens.index(properties.deftokens.color) + 1:])
-                size = len(floats)
+                num_count = len(floats)
 
                 # Did user define at least 4 numerical values?
-                if size >= 4:
-                    if size > 4:
+                if num_count >= 4:
+                    if num_count > 4:
                         logger.error("IOBLBE013", "More than 4 color values defined for object '{}', only the first 4 values (RGBA) are used.".format(object_name), 2)
 
                         # We're only interested in the first 4 values: R G B A
@@ -2434,9 +2433,9 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
                     # Add the RGBA values to the colors, 4 vertices per quad.
                     colors = ([tuple(floats)] * 4)
-                elif size > 0:
+                elif num_count > 0:
                     logger.info(
-                        "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
+                        "Object '{}' is named as if it has custom color but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
 
         # Vertex color layer message.
         if len(current_mesh.vertex_colors) > 1:
@@ -2694,7 +2693,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
                         name = common.to_float_or_none(" ".join(tokens))
 
-                        # FIXME: vertex_color_alpha is never assigned.
+                        # Only log the vertex alpha message once per object: vertex color layers are per-object.
                         if vertex_color_alpha is None:
                             if name is None:
                                 vertex_color_alpha = 1.0
