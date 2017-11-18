@@ -1,7 +1,8 @@
 # Blender BLB Exporter #
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://img.shields.io/badge/License-GPL%20v2-blue.svg)
 
-A [Blender](https://www.blender.org/) add-on written in Python 3 for exporting [Blockland](http://blockland.us/) bricks (.<abbr title="Blockland brick">BLB</abbr> files) directly from Blender 2.67 and newer without the need for intermediary formats or external programs. It works on the principle of "what you see is what you get", the brick will look exactly the same in-game as it does in the 3D viewport<sup>[__*__](#exporter-fn-1)</sup>.
+A [Blender](https://www.blender.org/) add-on written in Python 3 for exporting [Blockland](http://blockland.us/) bricks (.<abbr title="Blockland brick">BLB</abbr> files) directly from Blender 2.67 and newer without the need for intermediary formats or external programs.
+It works on the principle of "what you see is what you get", the brick will look exactly the same in-game as it does in the 3D viewport<sup>[__*__](#exporter-fn-1)</sup>.
 
 The add-on does not support importing .BLB files yet.
 
@@ -295,7 +296,8 @@ Layers | Export all bricks in the layers that are currently visible. (Default)
 Scene | Export all bricks in the current scene. I.e. all bricks in all layers regardless of the layer visibility.
 
 #### Forward Axis ####
-The Blender 3D axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it. Does not change the rotation of the objects in the Blender scene.
+The Blender 3D axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it.
+Does not change the rotation of the objects in the Blender scene.
 
 Value | Description
 ------|------------
@@ -305,54 +307,97 @@ Value | Description
 -Y | Negative Y-axis: back
 
 #### Scale ####
-The scale of the brick in-game. Values outside the the range of 0.001–400.0 may be typed in manually. Does not change the scale of the objects in the Blender scene. (Default: <code>100%</code>)
+The scale of the brick in-game.
+Values outside the the range of 0.001–400.0 may be typed in manually.
+Does not change the scale of the objects in the Blender scene.
+(Default: <code>100%</code>)
 
-:exclamation: Be aware that at 100% scale a 1x1x1 Blockland brick is defined to be 1.0 x 1.0 x 1.2 Blender units on the X, Y, and Z axes. In other words a 1x1f plate would be 1.0 x 1.0 x 0.4 Blender units.
+:exclamation: Be aware that at 100% scale a 1x1x1 Blockland brick is defined to be 1.0 x 1.0 x 1.2 Blender units on the X, Y, and Z axes.
+In other words a 1x1f plate would be 1.0 x 1.0 x 0.4 Blender units.
 
 #### Apply Modifiers ####
-Applies any modifiers on the object before exporting. Does not change the modifiers of the objects in the Blender scene. (Default: <code>True</code>)
+Applies any modifiers on the object before exporting.
+Does not change the modifiers of the objects in the Blender scene.
+(Default: <code>True</code>)
 
-#### Calculate Collision ####
-If no manual collision definition objects exist, calculates a cuboid collision that is the same size as the brick bounds. If disabled and no collision is defined, brick will have no collision. (Default: <code>True</code>)
+#### Custom Collision ####
+Export custom collision definitions if there are any.
+See [Defining Collision](#defining-collision).
+(Default: <code>True</code>)
+
+#### Fallback Collision ####
+The type of collision to calculate for the brick if no custom collision definitions are found.
+
+Value | Description
+------|------------
+Bounds | Use the defined or calculated [bounds](#definition-objects-bounds) of the brick as the collision cuboid. (Default)
+AABB | Calculate the [axis-aligned bounding box](#def-aabb) of all [visible objects](#def-visible-object) and use that as the collision cuboid.
 
 #### Coverage ####
-Enable coverage calculations. Shows additional settings when selected. This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition. See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information. (Default: <code>False</code>)
+Enable coverage calculations.
+Shows additional settings when selected.
+This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition.
+See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information.
+(Default: <code>False</code>)
 
 #### Automatic Quad Sorting ####
-Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object. This is pointless unless [Coverage](#coverage) is enabled. (Default: <code>True</code>)
+Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object.
+This is pointless unless [Coverage](#coverage) is enabled.
+(Default: <code>True</code>)
 
 #### Use Material Colors ####
-Get object colors from object materials. (Default: <code>False</code>)
+Get object colors from object materials.
+(Default: <code>False</code>)
 
 #### Use Vertex Colors ####
-Get object colors from vertex color layers. (Default: <code>False</code>)
+Get object colors from vertex color layers.
+(Default: <code>False</code>)
 
 #### Parse Object Colors ####
-Get object colors from object names. (Default: <code>False</code>)
+Get object colors from object names.
+(Default: <code>False</code>)
 
 #### Calculate UVs ####
-Automatically calculate correct UV coordinates based on the brick texture name specified in the material name. See [UV Mapping](#uv-mapping) for more information. (Default: <code>True</code>)
+Automatically calculate correct UV coordinates based on the brick texture name specified in the material name.
+See [UV Mapping](#uv-mapping) for more information.
+(Default: <code>True</code>)
 
 #### Store UVs ####
-Write calculated UVs into Blender objects. Data in existing generated UV layers will be overwritten. See [UV Mapping](#uv-mapping) for a list of generated UV layer names. (Default: <code>True</code>)
+Write calculated UVs into Blender objects.
+Data in existing generated UV layers will be overwritten.
+See [UV Mapping](#uv-mapping) for a list of generated UV layer names.
+(Default: <code>True</code>)
 
 #### Round Normals ####
-Round vertex normals to the user-defined floating point value precision. If disabled normals will be written as accurately as possible but extraneous zeros will still be removed. (Default: <code>False</code>)
+Round vertex normals to the user-defined floating point value precision.
+If disabled normals will be written as accurately as possible but extraneous zeros will still be removed.
+(Default: <code>False</code>)
 
 #### Custom Definition Tokens ####
-Allows you to specify the definition tokens the exporter uses. Shows additional settings when selected. See [Definition Tokens](#definition-tokens) for more information. (Default: <code>False</code>)
+Allows you to specify the definition tokens the exporter uses.
+Shows additional settings when selected.
+See [Definition Tokens](#definition-tokens) for more information.
+(Default: <code>False</code>)
 
 #### Terse Mode ####
-When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections. Using this option is not recommended as it makes the .BLB file harder to read and understand. Although the file is shorter, the difference in file size is negligible. (Default: <code>False</code>)
+When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections.
+Using this option is not recommended as it makes the .BLB file harder to read and understand.
+Although the file is shorter, the difference in file size is negligible.
+(Default: <code>False</code>)
 
 #### Write Log ####
-Write a log file to the same folder as the exported brick detailing the export process. Shows additional settings when selected. (Default: <code>True</code>)
+Write a log file to the same folder as the exported brick detailing the export process.
+Shows additional settings when selected.
+(Default: <code>True</code>)
 
 #### Only on Warnings ####
-Write a log file only if warnings or errors occurred during the export process. (Default: <code>True</code>)
+Write a log file only if warnings or errors occurred during the export process.
+(Default: <code>True</code>)
 
 #### Precision ####
-Allows you to specify a custom precision for floating point numbers. See [Rounded Values](#rounded-values) for more details. (Default: <code>0.000001</code>)
+Allows you to specify a custom precision for floating point numbers.
+See [Rounded Values](#rounded-values) for more details.
+(Default: <code>0.000001</code>)
 
 ## Definition Tokens ##
 [Definition tokens](#def-definition-token) are special [strings](#def-string) added to the names of objects, materials, and other Blender data objects that have a name.
@@ -453,14 +498,18 @@ The exporter understands two ways of defining an RGBA color using text.
 :exclamation: Please note that you **must** use a comma character (`,`) as the decimal separator for floating point numbers.
 
 1. The commonly used method of writing 4 integers that are in the range 0–255, where 0 is black, separated with a whitespace character such as a space.
-For example `127 255 10 191` for a yellow-green color that is 25% transparent. A full object name could be for example `glass c 240 255 255 128.001`.
+For example `127 255 10 191` for a yellow-green color that is 25% transparent.
+A full object name could be for example `glass c 240 255 255 128.001`.
    - In the above example the running index `.001` that Blender added at the end would be removed by the exporter.
-1. Writing 4 decimals in the range 0.0–1.0, where 0.0 is black, separated with a whitespace character such as a space. An object could have a name such as `c 0,125 0,0 0,5 1,0 flower`, for example.
+1. Writing 4 decimals in the range 0.0–1.0, where 0.0 is black, separated with a whitespace character such as a space.
+An object could have a name such as `c 0,125 0,0 0,5 1,0 flower`, for example.
    - The leading zero may be omitted.
    - Up to 16 decimals are supported.
 
 ## Definition Objects ##
-When a definition object token is read in an object's name it is treated as a definition object. Definition objects are never exported as visual 3D models, in fact they are not exported at all. Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
+When a definition object token is read in an object's name it is treated as a definition object.
+Definition objects are never exported as visual 3D models, in fact they are not exported at all.
+Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
 
 Definition Object | Default Token | Requirements | Maximum Count/Brick | Must Be Within [**Bounds**](#definition-objects-bounds)  | Axis-Aligned | Brick Grid Aligned | Can Overlap | Description
 ------------------|---------------|--------------|--------------------:|:-------------------:|:------------:|:------------------:|:-----------:|------------
@@ -486,7 +535,10 @@ Only the the [axis-aligned bounding box](#def-aabb) of the collision definition 
 :bulb: Using any other shape than an axis-aligned cuboid to define collision is not recommended as it makes the Blender file more difficult to understand and also breaks the "what you see is what you get" principle.
 
 ### Defining Brick Grid ###
-Brick grid definitions represent a 3D volume in the 3D space the brick grid encompasses. You can imagine it as if the entire cuboidal shape of the brick would be filled with 1x1f plates and these volumes define the properties of all the 1x1f plates within that volume. Each brick grid definition has their own priority. When two or more brick grid definition objects overlap in 3D space, the one with the **higher** priority takes precedence and will overwrite the symbols in the brick grid that any definitions with lower priorities would have written.
+Brick grid definitions represent a 3D volume in the 3D space the brick grid encompasses.
+You can imagine it as if the entire cuboidal shape of the brick would be filled with 1x1f plates and these volumes define the properties of all the 1x1f plates within that volume.
+Each brick grid definition has their own priority.
+When two or more brick grid definition objects overlap in 3D space, the one with the **higher** priority takes precedence and will overwrite the symbols in the brick grid that any definitions with lower priorities would have written.
 
 :exclamation: Be aware that if your brick does not contain a `brickd` definition on the bottom of the brick, the brick cannot be planted on other bricks or the ground.
 
@@ -499,7 +551,8 @@ Default Token | Brick Grid Symbol | Description
 `gridx` | `x` | Bricks may not be placed inside this volume.
 
 ## Brick Textures ##
-Defining brick textures is done using Blender materials. To assign a brick texture to a face, assign a material to it containing a valid brick texture name (case insensitive):
+Defining brick textures is done using Blender materials.
+To assign a brick texture to a face, assign a material to it containing a valid brick texture name (case insensitive):
 - `bottomedge`
 - `bottomloop`
 - `print`
@@ -507,7 +560,9 @@ Defining brick textures is done using Blender materials. To assign a brick textu
 - `side`
 - `top`
 
-If no brick texture is defined, `side` is used. Material name may contain other words as long as the brick texture name is separated from them with one whitespace character such as a space. A common combination is to define a brick texture name and the [definition token `blank`](#defining-colors-blank) (e.g. `blank ramp` or `side blank`) to allow the player to color the face in-game using the spray can.
+If no brick texture is defined, `side` is used.
+Material name may contain other words as long as the brick texture name is separated from them with one whitespace character such as a space.
+A common combination is to define a brick texture name and the [definition token `blank`](#defining-colors-blank) (e.g. `blank ramp` or `side blank`) to allow the player to color the face in-game using the spray can.
 
 ## UV Mapping ##
 Manually defined UV coordinates must be stored in one or more UV layers that do not share a name with one of the automatically generated UV layers:
@@ -519,22 +574,36 @@ Manually defined UV coordinates must be stored in one or more UV layers that do 
 
 Any data in UV layers with one the names above will the overwritten during automatic UV calculation.
 
-:exclamation: Note that BLB files only support storing quads. As such, any tris with UV coordinates will have their last UV coordinate duplicated to transform it into a quad. This may or may not cause visual distortion in the UV mapping.
+:exclamation: Note that BLB files only support storing quads.
+As such, any tris with UV coordinates will have their last UV coordinate duplicated to transform it into a quad.
+This may or may not cause visual distortion in the UV mapping.
 
-If the [Calculate UVs](#calculate-uvs) property is enabled, UV coordinates will be automatically calculated based on the dimensions of the quad and the name of the material assigned to it. (See [Brick Textures](#brick-textures) to learn how to define brick textures with materials.) The generated coordinates are only guaranteed to be correct for strictly rectangular quads, for any other shapes the results may not be satisfactory. If using brick textures on non-rectangular quads it is recommended to manually define the UV coordinates for best results.
+If the [Calculate UVs](#calculate-uvs) property is enabled, UV coordinates will be automatically calculated based on the dimensions of the quad and the name of the material assigned to it.
+(See [Brick Textures](#brick-textures) to learn how to define brick textures with materials.)
+The generated coordinates are only guaranteed to be correct for strictly rectangular quads, for any other shapes the results may not be satisfactory.
+If using brick textures on non-rectangular quads it is recommended to manually define the UV coordinates for best results.
 
 ## Troubleshooting ##
-Solutions to common issues with the BLB Exporter. If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again. The log file may contain warnings or errors describing issues with the models and how to fix them.
+Solutions to common issues with the BLB Exporter.
+If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again.
+The log file may contain warnings or errors describing issues with the models and how to fix them.
 Additional instructions on how to fix specific issues are detailed in the [Warning & Error Log Messages](#warning--error-log-messages) section.
 
 ### Automatically calculated UV coordinates for brick textures are distorted ###
-The automatic UV calculation is only designed to work with rectangular quads. Manually define UV coordinates for non-rectangular quads.
+The automatic UV calculation is only designed to work with rectangular quads.
+Manually define UV coordinates for non-rectangular quads.
 
 ### Automatically calculated UV coordinates for brick textures are rotated incorrectly ###
-The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the SIDE texture pointing sideways instead of up) is not a perfect rectangle. Even one vertex being off by some minuscule, visually indistinguishable amount from a perfectly rectangular shape can cause the automatic UV calculation to incorrectly determine the rotation of the quad. Double check all 4 coordinates of the quad and manually correct any floating point errors. If working on axis-aligned quads or if the vertices should be on grid points snapping the coordinates of the problem quad to grid coordinates using `Mesh > Snap > Snap Selection to Grid` usually fixes floating point errors.
+The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the SIDE texture pointing sideways instead of up) is not a perfect rectangle.
+Even one vertex being off by some minuscule, visually indistinguishable amount from a perfectly rectangular shape can cause the automatic UV calculation to incorrectly determine the rotation of the quad.
+Double check all 4 coordinates of the quad and manually correct any floating point errors.
+If working on axis-aligned quads or if the vertices should be on grid points snapping the coordinates of the problem quad to grid coordinates using `Mesh > Snap > Snap Selection to Grid` usually fixes floating point errors.
 
 ### The TOP brick texture has incorrect rotation in Blender ###
-Blockland automatically performs rotations on the UV coordinates of the TOP brick texture during runtime so that the lightest side of the texture is always facing towards the sun. Because of this there is no correct way of representing the TOP brick texture in Blender. As a compromise the exporter will rotate the lightest side of the TOP brick texture to face towards the axis select in the [Forward Axis](#forward-axis) property. This means the UV coordinates of the TOP brick texture in Blender may not match those in the written BLB file.
+Blockland automatically performs rotations on the UV coordinates of the TOP brick texture during runtime so that the lightest side of the texture is always facing towards the sun.
+Because of this there is no correct way of representing the TOP brick texture in Blender.
+As a compromise the exporter will rotate the lightest side of the TOP brick texture to face towards the axis select in the [Forward Axis](#forward-axis) property.
+This means the UV coordinates of the TOP brick texture in Blender may not match those in the written BLB file.
 
 ## Warning & Error Log Messages ##
 Detailed explanations of the warning and error messages logged by the program and directions on how to solve the associated issues.
@@ -650,7 +719,8 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>A full block brick grid will be generated. Brick will act as if it were a basic cuboid brick of that size.</td>
+		<td>A full block brick grid will be generated.
+		Brick will act as if it were a basic cuboid brick of that size.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -672,7 +742,8 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>A full block brick grid will be generated. Brick will act as if it were a basic cuboid brick of that size.</td>
+		<td>A full block brick grid will be generated.
+		Brick will act as if it were a basic cuboid brick of that size.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -807,7 +878,8 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>The triangle is forcefully converted into a quad by copying the first vertex and using that as the last vertex of a quad. This conversion has three different outcomes:
+		<td>The triangle is forcefully converted into a quad by copying the first vertex and using that as the last vertex of a quad.
+		This conversion has three different outcomes:
 		<ul>
 			<li>If flat shading is used for the face there is no change visually and the face will look like a triangle in game.</li>
 			<li>If the face and adjacent connected faces are planar and smooth shading is used there are no visual anomalies.</li>
@@ -1056,7 +1128,8 @@ Fatal errors always lead to the program execution stopping.
 					<tr>
 						<td rowspan="3">Single</td>
 						<td>Selection</td>
-						<td>No objects were selected. Selected objects have an orange outline.</td>
+						<td>No objects were selected.
+						Selected objects have an orange outline.</td>
 					</tr>
 					<tr>
 						<td>Layers</td>
@@ -1064,7 +1137,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 					<tr>
 						<td>Scene</td>
-						<td>There are no objects in the current scene. In other words none of the layers in the current scene contained objects.</td>
+						<td>None of the layers in the current scene contained any objects.</td>
 					</tr>
 				</tbody>
 			</table>
@@ -1127,7 +1200,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 					<tr>
 						<td>Scene</td>
-						<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
+						<td>Add objects to a layer in the scene or check that you are not in the wrong scene.</td>
 					</tr>
 				</tbody>
 			</table>
@@ -1157,7 +1230,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 					<tr>
 						<td>Layers</td>
-						<td>You are attempting to export an empty scene. Either add some objects to a layer in the scene or ensure that you are not in the wrong scene.</td>
+						<td>Add objects to a layer in the scene or check that you are not in the wrong scene.</td>
 					</tr>
 				</tbody>
 			</table>
@@ -1724,9 +1797,18 @@ Fatal errors always lead to the program execution stopping.
 </table>
 
 ## Rounded Values ##
-Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems). For example when exporting a 1x1x1 brick model at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`. This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should. The only way to get rid of this error is to round the number (vertex coordinates). Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game. The floating point errors are effectively 0. The only real benefit that comes from the rounding is nicer looking .BLB files.
+Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems).
+For example when exporting a 1x1x1 brick model at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`.
+This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should.
+The only way to get rid of this error is to round the number (vertex coordinates).
+Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game.
+The floating point errors are effectively 0.
+The only real benefit that comes from the rounding is nicer looking .BLB files.
 
-The default value of `0.000001` was chosen through manual testing. Rest assured that the rounding will cause no visual oddities whatsoever because the value is so small. This was manually confirmed with a sphere brick made from 524288 quads. Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
+The default value of `0.000001` was chosen through manual testing.
+Rest assured that the rounding will cause no visual oddities whatsoever because the value is so small.
+This was manually confirmed with a sphere brick made from 524288 quads.
+Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
 
 :exclamation: The exporter will only ever write 16 decimal places regardless of the precision of the value.
 
@@ -1741,7 +1823,8 @@ Normal vectors | [Optional](#round-normals)
 [UV coordinates](#uv-mapping) | No
 
 ## Contributors ##
-- [Nick Smith](https://github.com/qoh) - The original source code for reading, processing, and writing Blender data into the .BLB format. A majority of his code has been rewritten since.
+- [Nick Smith](https://github.com/qoh) - The original source code for reading, processing, and writing Blender data into the .BLB format.
+A majority of his code has been rewritten since.
 - [Demian Wright](https://github.com/DemianWright) - Significant extensions and rewrites to Nick's original code and everything else.
 
 <a name="exporter-fn-1">__*__</a> There's always a footnote, see the issue with [the TOP brick texture](#the-top-brick-texture-has-incorrect-rotation-in-blender).

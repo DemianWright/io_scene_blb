@@ -50,7 +50,6 @@ bl_info = {
 # TODO: Add a section about brick size to the readme.
 # TODO: Add a section about brick grid to the readme.
 # TODO: Make the capitalization consistent in the readme.
-# TODO: Consider reformatting readme to have one sentence per line for nicer diffs.
 # TODO: Consider refactoring readme for consistent use of mesh, model, and object words.
 # TODO: Clarify brick grid and brick grid placement rules.
 
@@ -357,7 +356,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
     fallback_collision = EnumProperty(
         items=[("BOUNDS", "Bounds", "Use brick bounds as collision"),
-               ("AABB", "AABB", "Calculate axis-aligned bounding box collision from visible meshes")],
+               ("AABB", "AABB", "Calculate axis-aligned bounding box collision from visible objects")],
         name="Fallback Collision",
         description="Collision type to use if no custom definitions exist",
         default="BOUNDS"
