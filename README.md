@@ -36,6 +36,7 @@ The add-on does not support importing .BLB files yet.
    1. [Write Log](#write-log)
    1. [Only on Warnings](#only-on-warnings)
    1. [Precision](#precision)
+1. [Brick Scale](#brick-scale)
 1. [Definition Tokens](#definition-tokens)
    1. [Mesh Definition Tokens](#mesh-definition-tokens)
       1. [Defining Quad Sections & Coverage](#defining-quad-sections--coverage)
@@ -105,7 +106,7 @@ The exporter supports all BLB features.
 ### Planned Features ###
 These features may or may not be implemented at some unspecified time in the future.
 
-- Exporting DTS collision using Nick Smith's [io_scene_dts](https://github.com/qoh/io_scene_dts) Blender plugin.
+- Exporting DTS collision using Nick Smith's [io_scene_dts](https://github.com/qoh/io_scene_dts) Blender add-on.
 - Importing .BLB files
 - Export-time brick rotation on the Z-axis
 - Automatic rendering of the brick preview icon
@@ -251,7 +252,7 @@ How many bricks to export in one go from the file.
 
 Value | Description
 ------|------------
-Single | Export only one brick. (Default)
+Single | Export only one brick. **(Default)**
 Multiple | Export one or more bricks. Shows additional settings when selected.
 
 #### Brick Name from (Single Export) ####
@@ -259,7 +260,7 @@ Where the .BLB file name is defined.
 
 Value | Description
 ------|------------
-Bounds | Brick name is defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. (Default)
+Bounds | Brick name is defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. **(Default)**
 File | Brick name is the same as the file name. Can be manually set in the export file dialog.
 
 #### Export Only (Single Export) ####
@@ -267,7 +268,7 @@ Which objects to process and export to the .BLB file.
 
 Value | Description
 ------|------------
-Selection | Objects that are selected and have an orange outline. (Default)
+Selection | Objects that are selected and have an orange outline. **(Default)**
 Layers | All objects in the layers that are currently visible, regardless of selection.
 Scene | All objects in the current scene. I.e. all objects in all layers regardless of the layer visibility.
 
@@ -276,7 +277,7 @@ Where the names of the .BLB files are defined.
 
 Value | Description
 ------|------------
-Bounds | Brick names are defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. (Default)
+Bounds | Brick names are defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. **(Default)**
 Groups | Brick names are the same as the names of the groups name. Export file dialog is only used set to directory.
 
 #### Bricks Defined by (Multiple Export) ####
@@ -284,7 +285,7 @@ How is a single brick defined.
 
 Value | Description
 ------|------------
-Groups | Each brick is in its own group. Objects in multiple groups belong to multiple bricks. (Default)
+Groups | Each brick is in its own group. Objects in multiple groups belong to multiple bricks. **(Default)**
 Layers | Each brick is in its own layer. Objects in multiple layers belong to multiple bricks. When selected brick names must be defined in the [Bounds object](#definition-objects-bounds).
 
 #### Export Bricks in (Multiple Export) ####
@@ -292,45 +293,43 @@ Which bricks to process and export to .BLB files.
 
 Value | Description
 ------|------------
-Layers | Export all bricks in the layers that are currently visible. (Default)
+Layers | Export all bricks in the layers that are currently visible. **(Default)**
 Scene | Export all bricks in the current scene. I.e. all bricks in all layers regardless of the layer visibility.
 
 #### Forward Axis ####
-The Blender 3D axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it.
+The Blender coordinate axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it.
 Does not change the rotation of the objects in the Blender scene.
 
 Value | Description
 ------|------------
-+X | Positive X-axis: right
-+Y | Positive Y-axis: forward (Default)
--X | Negative X-axis: left
--Y | Negative Y-axis: back
++X | Positive X-axis
++Y | Positive Y-axis **(Default)**
+-X | Negative X-axis
+-Y | Negative Y-axis
 
 #### Scale ####
 The scale of the brick in-game.
 Values outside the the range of 0.001–400.0 may be typed in manually.
 Does not change the scale of the objects in the Blender scene.
-(Default: <code>100%</code>)
-
-:exclamation: Be aware that at 100% scale a 1x1x1 Blockland brick is defined to be 1.0 x 1.0 x 1.2 Blender units on the X, Y, and Z axes.
-In other words a 1x1f plate would be 1.0 x 1.0 x 0.4 Blender units.
+See [Brick Scale](#brick-scale) for additional information.
+(Default: `100%`)
 
 #### Apply Modifiers ####
 Applies any modifiers on the object before exporting.
 Does not change the modifiers of the objects in the Blender scene.
-(Default: <code>True</code>)
+(Default: `True`)
 
 #### Custom Collision ####
 Export custom collision definitions if there are any.
 See [Defining Collision](#defining-collision).
-(Default: <code>True</code>)
+(Default: `True`)
 
 #### Fallback Collision ####
 The type of collision to calculate for the brick if no custom collision definitions are found.
 
 Value | Description
 ------|------------
-Bounds | Use the defined or calculated [bounds](#definition-objects-bounds) of the brick as the collision cuboid. (Default)
+Bounds | Use the defined or calculated [bounds](#definition-objects-bounds) of the brick as the collision cuboid. **(Default)**
 AABB | Calculate the [axis-aligned bounding box](#def-aabb) of all [visible objects](#def-visible-object) and use that as the collision cuboid.
 
 #### Coverage ####
@@ -338,66 +337,73 @@ Enable coverage calculations.
 Shows additional settings when selected.
 This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition.
 See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information.
-(Default: <code>False</code>)
+(Default: `False`)
 
 #### Automatic Quad Sorting ####
 Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object.
 This is pointless unless [Coverage](#coverage) is enabled.
-(Default: <code>True</code>)
+(Default: `True`)
 
 #### Use Material Colors ####
 Get object colors from object materials.
-(Default: <code>False</code>)
+(Default: `False`)
 
 #### Use Vertex Colors ####
 Get object colors from vertex color layers.
-(Default: <code>False</code>)
+(Default: `False`)
 
 #### Parse Object Colors ####
 Get object colors from object names.
-(Default: <code>False</code>)
+(Default: `False`)
 
 #### Calculate UVs ####
 Automatically calculate correct UV coordinates based on the brick texture name specified in the material name.
 See [UV Mapping](#uv-mapping) for more information.
-(Default: <code>True</code>)
+(Default: `True`)
 
 #### Store UVs ####
 Write calculated UVs into Blender objects.
 Data in existing generated UV layers will be overwritten.
 See [UV Mapping](#uv-mapping) for a list of generated UV layer names.
-(Default: <code>True</code>)
+(Default: `True`)
 
 #### Round Normals ####
 Round vertex normals to the user-defined floating point value precision.
 If disabled normals will be written as accurately as possible but extraneous zeros will still be removed.
-(Default: <code>False</code>)
+(Default: `False`)
 
 #### Custom Definition Tokens ####
 Allows you to specify the definition tokens the exporter uses.
 Shows additional settings when selected.
 See [Definition Tokens](#definition-tokens) for more information.
-(Default: <code>False</code>)
+(Default: `False`)
 
 #### Terse Mode ####
 When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections.
 Using this option is not recommended as it makes the .BLB file harder to read and understand.
 Although the file is shorter, the difference in file size is negligible.
-(Default: <code>False</code>)
+(Default: `False`)
 
 #### Write Log ####
 Write a log file to the same folder as the exported brick detailing the export process.
 Shows additional settings when selected.
-(Default: <code>True</code>)
+(Default: `True`)
 
 #### Only on Warnings ####
 Write a log file only if warnings or errors occurred during the export process.
-(Default: <code>True</code>)
+(Default: `True`)
 
 #### Precision ####
 Allows you to specify a custom precision for floating point numbers.
 See [Rounded Values](#rounded-values) for more details.
-(Default: <code>0.000001</code>)
+(Default: `0.000001`)
+
+## Brick Scale ##
+This add-on defines a `1x1x1` Blockland brick to be exactly `1.0 1.0 1.2` Blender units on the X, Y, and Z axes.
+Likewise a `1x1f` Blockland plate is defined to be exactly `1.0 1.0 0.4` Blender units.
+However, the final scale of the exported brick can be changed with the [Scale](#scale) property.
+For example setting the [Scale](#scale) property to `150%` means that during the exporting process, the [meshes](#def-mesh) are scaled by `1.5`.
+This is particularly useful when exporting 3D models created for another BLB exporter/converter that has defined the size of a `1x1f` plate to be different from this exporter.
 
 ## Definition Tokens ##
 [Definition tokens](#def-definition-token) are special [strings](#def-string) added to the names of objects, materials, and other Blender data objects that have a name.

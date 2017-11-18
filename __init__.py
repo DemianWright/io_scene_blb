@@ -47,7 +47,6 @@ bl_info = {
 # TODO: Check that all docstrings and comments are still up to date.
 # TODO: Quad sorting is per object but BLBs support per-quad sorting: the exporter does not support quad sorting for smoothed objects.
 # TODO: Serialize props to the start of the log?
-# TODO: Add a section about brick size to the readme.
 # TODO: Add a section about brick grid to the readme.
 # TODO: Make the capitalization consistent in the readme.
 # TODO: Consider refactoring readme for consistent use of mesh, model, and object words.
