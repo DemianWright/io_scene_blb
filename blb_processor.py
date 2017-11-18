@@ -2149,9 +2149,8 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
         defcount = len(definition_objects)
 
         # Log messages for collision definitions.
-        # FIXME: Skip collision processing if calculating collision!
         if defcount < 1:
-            logger.warning("No custom collision definitions found.", 1)
+            logger.info("No custom collision definitions found.", 1)
         elif defcount == 1:
             if processed < 1:
                 logger.warning("{} collision definition found but was not processed.".format(defcount), 1)
@@ -2161,7 +2160,7 @@ def __process_collision_definitions(properties, blb_data, bounds_data, definitio
         else:
             # Found more than one.
             if processed < 1:
-                logger.warning("{} collision definitions found but were not processed. Calculating full brick collision.".format(defcount), 1)
+                logger.warning("{} collision definitions found but were not processed.".format(defcount), 1)
             else:
                 logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
 

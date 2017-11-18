@@ -658,28 +658,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 <table>
 	<tr>
 		<th>Message</th>
-		<td><samp>No collision definitions found. Brick will have no collision.</samp></td>
-	</tr>
-	<tr>
-		<th>Cause</th>
-		<td>No <a href="#definition-objects-collision">collision definition objects</a> were found and the <a href="#calculate-collision">Calculate Collision</a> <a href="#blender-export-properties">export property</a> was disabled.</td>
-	</tr>
-	<tr>
-		<th>Effect</th>
-		<td>The brick will have no collision data and it cannot be interacted with in game in any way.</td>
-	</tr>
-	<tr>
-		<th>Solutions</th>
-		<td><ol>
-			<li>Manually define collision objects.</li>
-			<li>Enable the Calculate Collision export property.</li>
-		</ol></td>
-	</tr>
-</table>
-<table>
-	<tr>
-		<th>Message</th>
-		<td><samp><code>#</code> collision definition(s) found but was/were not processed. Brick will have no collision.</samp></td>
+		<td><samp><code>#</code> collision definition(s) found but was/were not processed.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
@@ -687,7 +666,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>The brick will have no collision data and it cannot be interacted with in game in any way.</td>
+		<td>The fallback collision will be used.</td>
 	</tr>
 	<tr>
 		<th>Solutions</th>
