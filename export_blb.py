@@ -391,20 +391,20 @@ def export(context, properties, export_dir, export_file, file_name):
                             # This visible layer did not have any objects.
                             # Skip the rest of the loop.
                             continue
-                        # Layer has at least one object in a visible layer, export layer objects.
+                        # Else: Layer has at least one object in a visible layer, export layer objects.
 
-                    # TODO: Add the same header to all logs, not just the first.
-                    logger.info("\nExporting layer {}.".format(layer_idx + 1))
-                    # Get brick name from bounds.
-                    message = export_brick(context, deriv_properties, export_dir, None, file_name, layer_objects)
-                    exported += 1
+                    if len(layer_objects) > 0:
+                        # TODO: Add the same header to all logs, not just the first.
+                        logger.info("\nExporting layer {}.".format(layer_idx + 1))
+                        # Get brick name from bounds.
+                        message = export_brick(context, deriv_properties, export_dir, None, file_name, layer_objects)
+                        exported += 1
 
-                    # TODO: Do not fail if one export fails.
-                    # If something went wrong stop export and return the error message.
-                    if message is not None:
-                        return message
+                        # TODO: Do not fail if one export fails.
+                        # If something went wrong stop export and return the error message.
+                        if message is not None:
+                            return message
 
                 if exported < 1:
                     # RETURN ON ERROR
-                    # TODO: Add to readme.
-                    return "IOBLBF009 Nothing to export in layers of the current scene."
+                    return "IOBLBF009 Nothing to export in the visible layers of the current scene."

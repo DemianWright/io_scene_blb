@@ -1235,7 +1235,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Message</th>
-		<td><samp>Nothing to export in layers of the current scene.</samp></td>
+		<td><samp>Nothing to export in the visible layers of the current scene.</samp></td>
 	</tr>
 	<tr>
 		<th>Cause</th>
