@@ -12,30 +12,35 @@ The add-on does not support importing .BLB files yet.
 1. [Installation](#installation)
    1. [Updating](#updating)
 1. [Terminology](#terminology)
-1. [Blender Export Properties](#blender-export-properties)
-   1. [Bricks to Export](#bricks-to-export)
-   1. [Brick Name from (Single Export)](#brick-name-from-single-export)
-   1. [Export Only (Single Export)](#export-only-single-export)
-   1. [Brick Names from (Multiple Export)](#brick-names-from-multiple-export)
-   1. [Bricks Defined by (Multiple Export)](#bricks-defined-by-multiple-export)
-   1. [Export Bricks in (Multiple Export)](#export-bricks-in-multiple-export)
-   1. [Forward Axis](#forward-axis)
-   1. [Scale](#scale)
-   1. [Apply Modifiers](#apply-modifiers)
-   1. [Calculate Collision](#calculate-collision)
-   1. [Coverage](#coverage)
-   1. [Automatic Quad Sorting](#automatic-quad-sorting)
-   1. [Use Material Colors](#use-material-colors)
-   1. [Use Vertex Colors](#use-vertex-colors)
-   1. [Parse Object Colors](#parse-object-colors)
-   1. [Calculate UVs](#calculate-uvs)
-   1. [Store UVs](#store-uvs)
-   1. [Round Normals](#round-normals)
-   1. [Custom Definition Tokens](#custom-definition-tokens)
-   1. [Terse Mode](#terse-mode)
-   1. [Write Log](#write-log)
-   1. [Only on Warnings](#only-on-warnings)
-   1. [Precision](#precision)
+1. [Export Properties](#export-properties)
+   1. [Blender Properties](#blender-properties)
+      1. [Bricks to Export](#bricks-to-export)
+      1. [Brick Name from (Single Export)](#brick-name-from-single-export)
+      1. [Export Only (Single Export)](#export-only-single-export)
+      1. [Brick Names from (Multiple Export)](#brick-names-from-multiple-export)
+      1. [Bricks Defined by (Multiple Export)](#bricks-defined-by-multiple-export)
+      1. [Export Bricks in (Multiple Export)](#export-bricks-in-multiple-export)
+      1. [Forward Axis](#forward-axis)
+      1. [Scale](#scale)
+      1. [Apply Modifiers](#apply-modifiers)
+      1. [Custom Definition Tokens](#custom-definition-tokens)
+   1. [BLB Properties](#blb-properties)
+      1. [Custom Collision](#custom-collision)
+      1. [Fallback Collision](#fallback-collision)
+      1. [Calculate Coverage](#calculate-coverage)
+      1. [Automatic Quad Sorting](#automatic-quad-sorting)
+      1. [Use Material Colors](#use-material-colors)
+      1. [Use Vertex Colors](#use-vertex-colors)
+      1. [Parse Object Colors](#parse-object-colors)
+      1. [Calculate UVs](#calculate-uvs)
+      1. [Store UVs](#store-uvs)
+      1. [Round Normals](#round-normals)
+      1. [Precision](#precision)
+   1. [File Properties](#file-properties)
+      1. [Pretty Print](#pretty-print)
+      1. [Write Log](#write-log)
+      1. [Only on Warnings](#only-on-warnings)
+      1. [Terse Mode](#terse-mode)
 1. [Brick Scale](#brick-scale)
 1. [Definition Tokens](#definition-tokens)
    1. [Mesh Definition Tokens](#mesh-definition-tokens)
@@ -244,8 +249,10 @@ Visible objects are rendered and are seen in-game as a <a href="#def-brick">bric
 <dd>In Blender, commonly a space or a tab character.</dd>
 </dl>
 
-## Blender Export Properties ##
-The following properties are present in the current version of the exporter.
+## Export Properties ##
+The following user properties are present in the current version of the exporter.
+
+### Blender Properties ###
 
 #### Bricks to Export ####
 How many bricks to export in one go from the file.
@@ -319,6 +326,15 @@ Applies any modifiers on the [object](#def-object) before exporting.
 Does not change the modifiers of the objects in the Blender scene.
 (Default: `True`)
 
+#### Custom Definition Tokens ####
+Allows you to specify the definition tokens the exporter uses.
+See [Definition Tokens](#definition-tokens) for more information.
+(Default: `False`)
+
+:bulb: Enabling this property shows additional properties.
+
+### BLB Properties ###
+
 #### Custom Collision ####
 Export custom collision definitions if there are any.
 See [Defining Collision](#defining-collision).
@@ -326,18 +342,20 @@ See [Defining Collision](#defining-collision).
 
 #### Fallback Collision ####
 The type of collision to calculate for the brick if no custom collision definitions are found.
+Enabling this property shows additional properties.
 
 Value | Description
 ------|------------
 Bounds | Use the defined or calculated [bounds](#definition-objects-bounds) of the brick as the collision cuboid. **(Default)**
 AABB | Calculate the [axis-aligned bounding box](#def-aabb) of all [visible objects](#def-visible-object) and use that as the collision cuboid.
 
-#### Coverage ####
+#### Calculate Coverage ####
 Enable coverage calculations.
-Shows additional settings when selected.
 This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one [object](#def-object) has a quad sorting definition.
 See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information.
 (Default: `False`)
+
+:bulb: Enabling this property shows additional properties.
 
 #### Automatic Quad Sorting ####
 Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object.
@@ -372,23 +390,18 @@ Round vertex normals to the user-defined floating point value precision.
 If disabled normals will be written as accurately as possible but extraneous zeros will still be removed.
 (Default: `False`)
 
-#### Custom Definition Tokens ####
-Allows you to specify the definition tokens the exporter uses.
-Shows additional settings when selected.
-See [Definition Tokens](#definition-tokens) for more information.
-(Default: `False`)
+#### Precision ####
+Allows you to specify a custom precision for floating point numbers.
+See [Rounded Values](#rounded-values) for more details.
+(Default: `0.000001`)
+
+### File Properties ###
 
 #### Pretty Print ####
 When enabled does not write extraneous zeros to the end of floating point numbers.
 Additionally if a numerical value is exactly equal to an integer, no decimal places are written.
 If disabled will write all floating point numbers using as many decimal places as used in the [Precision](#precision) property. 
 (Default: `True`)
-
-#### Terse Mode ####
-When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections.
-Using this option is not recommended as it makes the .BLB file harder to read and understand.
-Although the file is shorter, the difference in file size is negligible.
-(Default: `False`)
 
 #### Write Log ####
 Write a log file to the same folder as the exported brick detailing the export process.
@@ -399,10 +412,11 @@ Shows additional settings when selected.
 Write a log file only if warnings or errors occurred during the export process.
 (Default: `True`)
 
-#### Precision ####
-Allows you to specify a custom precision for floating point numbers.
-See [Rounded Values](#rounded-values) for more details.
-(Default: `0.000001`)
+#### Terse Mode ####
+When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections.
+Using this option is not recommended as it makes the .BLB file harder to read and understand.
+Although the file is shorter, the difference in file size is negligible.
+(Default: `False`)
 
 ## Brick Scale ##
 This add-on defines a `1x1x1` Blockland brick to be exactly `1.0 1.0 1.2` Blender units on the X, Y, and Z axes.
@@ -682,7 +696,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to <strong>Bounds</strong> but no manually defined <a href="#definition-objects-bounds">bounds object</a> was found.</td>
+		<td>The "Brick Name(s) from" <a href="#export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to <strong>Bounds</strong> but no manually defined <a href="#definition-objects-bounds">bounds object</a> was found.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -704,7 +718,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The "Brick Name(s) from" <a href="#blender-export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to <strong>Bounds</strong> but no string was found after the bounds <a href="#definition-tokens">definition token</a> in the name of the <a href="#definition-objects-bounds">bounds object</a>.</td>
+		<td>The "Brick Name(s) from" <a href="#export-properties">export property</a> (either in <a href="#brick-name-from-single-export">single</a> or <a href="#brick-names-from-multiple-export">multiple</a> brick export mode) value was set to <strong>Bounds</strong> but no string was found after the bounds <a href="#definition-tokens">definition token</a> in the name of the <a href="#definition-objects-bounds">bounds object</a>.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -968,7 +982,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+		<td>The following <a href="#export-properties">export properties</a> are set:
 			<table>
 				<thead>
 					<tr>
@@ -1014,7 +1028,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+		<td>The following <a href="#export-properties">export properties</a> are set:
 			<table>
 				<thead>
 					<tr>
@@ -1151,7 +1165,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Causes</th>
-		<td>Depends on the values of various <a href="#blender-export-properties">export properties</a>.
+		<td>Depends on the values of various <a href="#export-properties">export properties</a>.
 			<table>
 				<thead>
 					<tr>
@@ -1215,7 +1229,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Solutions</th>
-		<td>Depends on the values of various <a href="#blender-export-properties">export properties</a>.
+		<td>Depends on the values of various <a href="#export-properties">export properties</a>.
 			<table>
 				<thead>
 					<tr>
@@ -1306,7 +1320,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+		<td>The following <a href="#export-properties">export properties</a> are set:
 			<table>
 				<thead>
 					<tr>
@@ -1348,7 +1362,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The following <a href="#blender-export-properties">export properties</a> are set:
+		<td>The following <a href="#export-properties">export properties</a> are set:
 			<table>
 				<thead>
 					<tr>

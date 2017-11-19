@@ -137,9 +137,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default="LAYERS"
     )
 
-    # --------
-    # Rotation
-    # --------
+    # ------------
+    # Forward Axis
+    # ------------
     # For whatever reason BLB coordinates are rotated 90 degrees counter-clockwise to Blender coordinates.
     # I.e. -X is facing you when the brick is planted and +X is the brick north instead of +Y which makes more sense to me.
     # TODO: Support Z axis remapping.
@@ -530,15 +530,6 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
-    # ----------
-    # Terse Mode
-    # ----------
-    terse_mode = BoolProperty(
-        name="Terse Mode",
-        description="Exclude optional text from the BLB file making it slightly smaller and harder to read (not recommended, file size difference is negligible)",
-        default=False,
-    )
-
     # ---
     # Log
     # ---
@@ -553,6 +544,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         name="Only on Warnings",
         description="Only write a log file if warnings were generated",
         default=True,
+    )
+
+    # ----------
+    # Terse Mode
+    # ----------
+    terse_mode = BoolProperty(
+        name="Terse Mode",
+        description="Exclude optional text from the BLB file making it slightly smaller and harder to read (not recommended, file size difference is negligible)",
+        default=False,
     )
 
     # ===============
@@ -900,13 +900,10 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         # =======
         row = layout.row()
         row.alignment = "CENTER"
-        row.label("File Writing", icon="TEXT")
+        row.label("File Properties", icon="TEXT")
 
         # Property: Pretty Print
         layout.prop(self, "pretty_print")
-
-        # Property: Terse Mode
-        layout.prop(self, "terse_mode")
 
         # Property: Write Log
         row = layout.row()
@@ -926,6 +923,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         col = split.column()
         col.prop(self, "write_log_warnings")
+
+        # Property: Terse Mode
+        layout.prop(self, "terse_mode")
 
 # =============
 # Blender Stuff
