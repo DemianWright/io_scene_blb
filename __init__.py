@@ -521,6 +521,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     # Writing
     # =======
 
+    # ------------
+    # Pretty Print
+    # ------------
+    pretty_print = BoolProperty(
+        name="Pretty Print",
+        description="Trim unnecessary zeros from the end of all numbers and if a number is an integer, do not write any decimal places. If false will write as many decimal places as set in the Precision property.",
+        default=True,
+    )
+
     # ----------
     # Terse Mode
     # ----------
@@ -892,6 +901,9 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
         row = layout.row()
         row.alignment = "CENTER"
         row.label("File Writing", icon="TEXT")
+
+        # Property: Pretty Print
+        layout.prop(self, "pretty_print")
 
         # Property: Terse Mode
         layout.prop(self, "terse_mode")

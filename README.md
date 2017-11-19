@@ -378,6 +378,12 @@ Shows additional settings when selected.
 See [Definition Tokens](#definition-tokens) for more information.
 (Default: `False`)
 
+#### Pretty Print ####
+When enabled does not write extraneous zeros to the end of floating point numbers.
+Additionally if a numerical value is exactly equal to an integer, no decimal places are written.
+If disabled will write all floating point numbers using as many decimal places as used in the [Precision](#precision) property. 
+(Default: `True`)
+
 #### Terse Mode ####
 When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections.
 Using this option is not recommended as it makes the .BLB file harder to read and understand.
@@ -916,6 +922,28 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	<tr>
 		<th>Solution</th>
 		<td>Manually rebuild faces made from more than 4 vertices using quads.</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>Code</th>
+		<td>IOBLBW013</td>
+	</tr>
+	<tr>
+		<th>Message</th>
+		<td><samp>Precision has too many decimal digits, using 16 instead.</samp></td>
+	</tr>
+	<tr>
+		<th>Cause</th>
+		<td>The precision value set in the <a href="#precision">Precision</a> property had more than 16 decimal digits.</td>
+	</tr>
+	<tr>
+		<th>Effect</th>
+		<td>If <a href="#pretty-print">Pretty Print</a> is disabled the number of decimal digits written to the BLB file is clamped to 16.</td>
+	</tr>
+	<tr>
+		<th>Solution</th>
+		<td>Only write up to 16 decimal places in the <a href="#precision">Precision</a> value.</td>
 	</tr>
 </table>
 

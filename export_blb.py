@@ -64,6 +64,7 @@ class DerivativeProperties(object):
         plate_height (Decimal): The height of one Blockland plate in Blender units.
         human_brick_grid_error (Decimal): Error allowed for manually created definition objects, because they must lie exactly on the brick grid.
         precision (String): The precision to round floating point numbers to when performing calculations.
+        decimal_digits (int): The number of decimal digits in precision.
     """
 
     def __init__(self, properties):
@@ -72,6 +73,8 @@ class DerivativeProperties(object):
         Args:
             properties (Blender properties object): A Blender object containing user preferences.
         """
+        logger.info("Export Properties:")
+
         # ==========
         # Properties
         # ==========
@@ -111,7 +114,7 @@ class DerivativeProperties(object):
             # =====
             # export_scale is a percentage value.
             self.scale = Decimal("{0:.{1}f}".format(properties.export_scale, const.MAX_FP_DECIMALS_TO_WRITE)) * Decimal("0.01")
-            logger.info("Export at {} scale.".format(self.scale))
+            logger.info("Scale: {}".format(self.scale.normalize()), 1)
 
             # ==========================
             # Plate Height & Human Error
@@ -127,19 +130,32 @@ class DerivativeProperties(object):
             # =========
             # Precision
             # =========
-            prec = properties.float_precision
+            prec = common.to_float_or_none(properties.float_precision)
 
-            if common.to_float_or_none(prec) is None:
+            if prec is None:
                 self.error_message = "IOBLBF010 Invalid floating point value given for floating point precision property."
             else:
-                if prec == "0":
-                    logger.info("Setting floating point precision to minimum.")
-                    # We're only writing 16 decimals anyway.
-                    prec = "0.{}1".format("0" * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
+                min_prec = "0.{}1".format("0" * (const.MAX_FP_DECIMALS_TO_WRITE - 1))
+                dot_idx = properties.float_precision.find(".")
 
-                logger.info("Using floating point precision: {}".format(prec))
+                if dot_idx < 0:
+                    self.decimal_digits = 0
+                else:
+                    self.decimal_digits = len(properties.float_precision) - (dot_idx + 1)
 
-                self.precision = prec
+                if properties.float_precision == "0" or Decimal(properties.float_precision) < Decimal(min_prec):
+                    logger.info("Setting floating point precision to minimum.", 1)
+                    self.precision = min_prec
+                    self.decimal_digits = const.MAX_FP_DECIMALS_TO_WRITE
+                elif self.decimal_digits > const.MAX_FP_DECIMALS_TO_WRITE:
+                    logger.warning("IOBLBW013", "Precision has too many decimal digits, using {} instead.".format(const.MAX_FP_DECIMALS_TO_WRITE), 1)
+                    self.decimal_digits = const.MAX_FP_DECIMALS_TO_WRITE
+                    self.precision = properties.float_precision[:dot_idx] + "." + \
+                        properties.float_precision[dot_idx + 1:dot_idx + 1 + const.MAX_FP_DECIMALS_TO_WRITE]
+                else:
+                    self.precision = properties.float_precision
+
+            logger.info("Floating point precision: {}".format(self.precision), 1)
 
     @classmethod
     def __build_grid_priority_tuples(cls, properties):
