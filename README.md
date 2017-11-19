@@ -110,11 +110,12 @@ The exporter supports all BLB features.
 
 ### Planned Features ###
 These features may or may not be implemented at some unspecified time in the future.
+Listed below approximately in the order they are planned to be implemented in.
 
-- Exporting DTS collision using Nick Smith's [io_scene_dts](https://github.com/qoh/io_scene_dts) Blender add-on.
-- Importing .BLB files
-- Export-time brick rotation on the Z-axis
-- Automatic rendering of the brick preview icon
+1. Exporting DTS collision using Nick Smith's [io_scene_dts](https://github.com/qoh/io_scene_dts) Blender add-on.
+1. Importing .BLB files.
+1. Automatic rendering of the brick preview icon.
+1. Export-time brick rotation on the Z-axis.
 
 ## Installation ##
 1. Download the add-on using one of them methods below:
