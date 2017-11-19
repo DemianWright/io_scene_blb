@@ -12,6 +12,18 @@ The add-on does not support importing .BLB files yet.
 1. [Installation](#installation)
    1. [Updating](#updating)
 1. [Terminology](#terminology)
+1. [Brick Scale](#brick-scale)
+1. [Definition Tokens](#definition-tokens)
+   1. [Mesh Definition Tokens](#mesh-definition-tokens)
+      1. [Defining Quad Sections & Coverage](#defining-quad-sections--coverage)
+      1. [Defining Colors](#defining-colors)
+         1. [RGBA Color Format](#rgba-color-format)
+1. [Definition Objects](#definition-objects)
+   1. [Defining Collision](#defining-collision)
+   1. [Defining Brick Grid](#defining-brick-grid)
+1. [Brick Textures](#brick-textures)
+1. [UV Mapping](#uv-mapping)
+1. [Rounded Values](#rounded-values)
 1. [Export Properties](#export-properties)
    1. [Blender Properties](#blender-properties)
       1. [Bricks to Export](#bricks-to-export)
@@ -41,17 +53,6 @@ The add-on does not support importing .BLB files yet.
       1. [Write Log](#write-log)
       1. [Only on Warnings](#only-on-warnings)
       1. [Terse Mode](#terse-mode)
-1. [Brick Scale](#brick-scale)
-1. [Definition Tokens](#definition-tokens)
-   1. [Mesh Definition Tokens](#mesh-definition-tokens)
-      1. [Defining Quad Sections & Coverage](#defining-quad-sections--coverage)
-      1. [Defining Colors](#defining-colors)
-         1. [RGBA Color Format](#rgba-color-format)
-1. [Definition Objects](#definition-objects)
-   1. [Defining Collision](#defining-collision)
-   1. [Defining Brick Grid](#defining-brick-grid)
-1. [Brick Textures](#brick-textures)
-1. [UV Mapping](#uv-mapping)
 1. [Troubleshooting](#troubleshooting)
    1. [Automatically calculated UV coordinates for brick textures are distorted](#automatically-calculated-uv-coordinates-for-brick-textures-are-distorted)
    1. [Automatically calculated UV coordinates for brick textures are rotated incorrectly](#automatically-calculated-uv-coordinates-for-brick-textures-are-rotated-incorrectly)
@@ -61,7 +62,6 @@ The add-on does not support importing .BLB files yet.
    1. [Errors](#errors)
       1. [Fatal Errors](#fatal-errors)
       1. [Non-Fatal Errors](#non-fatal-errors)
-1. [Rounded Values](#rounded-values)
 1. [Contributors](#contributors)
 
 ## Features ##
@@ -249,175 +249,6 @@ Visible objects are rendered and are seen in-game as a <a href="#def-brick">bric
 <dt><a name="def-whitespace"><a href="https://en.wikipedia.org/wiki/Whitespace_character">Whitespace</a></a> (Character)</dt>
 <dd>In Blender, commonly a space or a tab character.</dd>
 </dl>
-
-## Export Properties ##
-The following user properties are present in the current version of the exporter.
-
-### Blender Properties ###
-
-#### Bricks to Export ####
-How many bricks to export in one go from the file.
-
-Value | Description
-------|------------
-Single | Export only one brick. **(Default)**
-Multiple | Export one or more bricks. Shows additional settings when selected.
-
-#### Brick Name from (Single Export) ####
-Where the .BLB file name is defined.
-
-Value | Description
-------|------------
-Bounds | Brick name is defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. **(Default)**
-File | Brick name is the same as the file name. Can be manually set in the export file dialog.
-
-#### Export Only (Single Export) ####
-Which [objects](#def-object) to process and export to the .BLB file.
-
-Value | Description
-------|------------
-Selection | Objects that are selected and have an orange outline. **(Default)**
-Layers | All objects in the layers that are currently visible, regardless of selection.
-Scene | All objects in the current scene. I.e. all objects in all layers regardless of the layer visibility.
-
-#### Brick Names from (Multiple Export) ####
-Where the names of the .BLB files are defined.
-
-Value | Description
-------|------------
-Bounds | Brick names are defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. **(Default)**
-Groups | Brick names are the same as the names of the groups name. Export file dialog is only used set to directory.
-
-#### Bricks Defined by (Multiple Export) ####
-How is a single brick defined.
-
-Value | Description
-------|------------
-Groups | Each brick is in its own group. [Objects](#def-object) in multiple groups belong to multiple bricks. **(Default)**
-Layers | Each brick is in its own layer. [Objects](#def-object) in multiple layers belong to multiple bricks. When selected brick names must be defined in the [Bounds object](#definition-objects-bounds).
-
-#### Export Bricks in (Multiple Export) ####
-Which bricks to process and export to .BLB files.
-
-Value | Description
-------|------------
-Layers | Export all bricks in the layers that are currently visible. **(Default)**
-Scene | Export all bricks in the current scene. I.e. all bricks in all layers regardless of the layer visibility.
-
-#### Forward Axis ####
-The Blender coordinate axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it.
-Does not change the rotation of the [objects](#def-object) in the Blender scene.
-
-Value | Description
-------|------------
-+X | Positive X-axis
-+Y | Positive Y-axis **(Default)**
--X | Negative X-axis
--Y | Negative Y-axis
-
-#### Scale ####
-The scale of the brick in-game.
-Values outside the the range of 0.001–400.0 may be typed in manually.
-Does not change the scale of the [objects](#def-object) in the Blender scene.
-See [Brick Scale](#brick-scale) for additional information.
-(Default: `100%`)
-
-#### Apply Modifiers ####
-Applies any modifiers on the [object](#def-object) before exporting.
-Does not change the modifiers of the objects in the Blender scene.
-(Default: `True`)
-
-#### Custom Definition Tokens ####
-Allows you to specify the definition tokens the exporter uses.
-See [Definition Tokens](#definition-tokens) for more information.
-(Default: `False`)
-
-:bulb: Enabling this property shows additional properties.
-
-### BLB Properties ###
-
-#### Custom Collision ####
-Export custom collision definitions if there are any.
-See [Defining Collision](#defining-collision).
-(Default: `True`)
-
-#### Fallback Collision ####
-The type of collision to calculate for the brick if no custom collision definitions are found.
-Enabling this property shows additional properties.
-
-Value | Description
-------|------------
-Bounds | Use the defined or calculated [bounds](#definition-objects-bounds) of the brick as the collision cuboid. **(Default)**
-AABB | Calculate the [axis-aligned bounding box](#def-aabb) of all [visible objects](#def-visible-object) and use that as the collision cuboid.
-
-#### Calculate Coverage ####
-Enable coverage calculations.
-This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one [object](#def-object) has a quad sorting definition.
-See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information.
-(Default: `False`)
-
-:bulb: Enabling this property shows additional properties.
-
-#### Automatic Quad Sorting ####
-Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object.
-This is pointless unless [Coverage](#coverage) is enabled.
-(Default: `True`)
-
-#### Use Material Colors ####
-Assign [face](#def-face) colors from [object](#def-object) materials.
-(Default: `False`)
-
-#### Use Vertex Colors ####
-Assign [face](#def-face)  colors from vertex color layers.
-(Default: `False`)
-
-#### Parse Object Colors ####
-Assign [face](#def-face) colors from [object](#def-object) names.
-(Default: `False`)
-
-#### Calculate UVs ####
-Automatically calculate correct UV coordinates based on the brick texture name specified in the material name.
-See [UV Mapping](#uv-mapping) for more information.
-(Default: `True`)
-
-#### Store UVs ####
-Write calculated UVs into Blender [objects](#def-object).
-Data in existing generated UV layers will be overwritten.
-See [UV Mapping](#uv-mapping) for a list of generated UV layer names.
-(Default: `True`)
-
-#### Round Normals ####
-Round vertex normals to the user-defined floating point value precision.
-If disabled normals will be written as accurately as possible but extraneous zeros will still be removed.
-(Default: `False`)
-
-#### Precision ####
-Allows you to specify a custom precision for floating point numbers.
-See [Rounded Values](#rounded-values) for more details.
-(Default: `0.000001`)
-
-### File Properties ###
-
-#### Pretty Print ####
-When enabled does not write extraneous zeros to the end of floating point numbers.
-Additionally if a numerical value is exactly equal to an integer, no decimal places are written.
-If disabled will write all floating point numbers using as many decimal places as used in the [Precision](#precision) property. 
-(Default: `True`)
-
-#### Write Log ####
-Write a log file to the same folder as the exported brick detailing the export process.
-Shows additional settings when selected.
-(Default: `True`)
-
-#### Only on Warnings ####
-Write a log file only if warnings or errors occurred during the export process.
-(Default: `True`)
-
-#### Terse Mode ####
-When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections.
-Using this option is not recommended as it makes the .BLB file harder to read and understand.
-Although the file is shorter, the difference in file size is negligible.
-(Default: `False`)
 
 ## Brick Scale ##
 This add-on defines a `1x1x1` Blockland brick to be exactly `1.0 1.0 1.2` Blender units on the X, Y, and Z axes.
@@ -608,6 +439,200 @@ If the [Calculate UVs](#calculate-uvs) property is enabled, UV coordinates will 
 (See [Brick Textures](#brick-textures) to learn how to define brick textures with materials.)
 The generated coordinates are only guaranteed to be correct for strictly rectangular quads, for any other shapes the results may not be satisfactory.
 If using brick textures on non-rectangular quads it is recommended to manually define the UV coordinates for best results.
+
+## Rounded Values ##
+Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems).
+For example when exporting a 1x1x1 brick [model](#def-model) at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`.
+This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should.
+The only way to get fix this error is to round the vertex coordinates.
+Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game.
+The only real benefit that comes from the rounding is nicer looking .BLB files.
+
+The default value of `0.000001` was chosen through manual testing.
+Rest assured that the rounding will cause no visual oddities whatsoever because the value is so small.
+This was manually confirmed with a sphere brick made from 524288 quads.
+Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
+
+:exclamation: The exporter will only ever write up to 16 decimal places regardless of the precision of the value.
+
+Floating Point Value | Rounded
+---------------------|:------:
+[Visible object](#def-visible-object) vertex coordinates | Yes
+[Bounds object](#definition-objects-bounds) vertex coordinates | Yes
+[Collision object](#definition-objects-collision) vertex coordinates | Yes
+[Brick grid object](#defining-brick-grid) vertex coordinates | Yes
+Normal vectors | [Optional](#round-normals)
+[RGBA color](#defining-colors) values | No
+[UV coordinates](#uv-mapping) | No
+
+## Export Properties ##
+The following user properties are present in the current version of the exporter.
+
+### Blender Properties ###
+
+#### Bricks to Export ####
+How many bricks to export in one go from the file.
+
+Value | Description
+------|------------
+Single | Export only one brick. **(Default)**
+Multiple | Export one or more bricks. Shows additional settings when selected.
+
+#### Brick Name from (Single Export) ####
+Where the .BLB file name is defined.
+
+Value | Description
+------|------------
+Bounds | Brick name is defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. **(Default)**
+File | Brick name is the same as the file name. Can be manually set in the export file dialog.
+
+#### Export Only (Single Export) ####
+Which [objects](#def-object) to process and export to the .BLB file.
+
+Value | Description
+------|------------
+Selection | Objects that are selected and have an orange outline. **(Default)**
+Layers | All objects in the layers that are currently visible, regardless of selection.
+Scene | All objects in the current scene. I.e. all objects in all layers regardless of the layer visibility.
+
+#### Brick Names from (Multiple Export) ####
+Where the names of the .BLB files are defined.
+
+Value | Description
+------|------------
+Bounds | Brick names are defined in the [Bounds object](#definition-objects-bounds) after the bounds definition token, separated with a whitespace character. Export file dialog is only used set to directory. **(Default)**
+Groups | Brick names are the same as the names of the groups name. Export file dialog is only used set to directory.
+
+#### Bricks Defined by (Multiple Export) ####
+How is a single brick defined.
+
+Value | Description
+------|------------
+Groups | Each brick is in its own group. [Objects](#def-object) in multiple groups belong to multiple bricks. **(Default)**
+Layers | Each brick is in its own layer. [Objects](#def-object) in multiple layers belong to multiple bricks. When selected brick names must be defined in the [Bounds object](#definition-objects-bounds).
+
+#### Export Bricks in (Multiple Export) ####
+Which bricks to process and export to .BLB files.
+
+Value | Description
+------|------------
+Layers | Export all bricks in the layers that are currently visible. **(Default)**
+Scene | Export all bricks in the current scene. I.e. all bricks in all layers regardless of the layer visibility.
+
+#### Forward Axis ####
+The Blender coordinate axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it.
+Does not change the rotation of the [objects](#def-object) in the Blender scene.
+
+Value | Description
+------|------------
++X | Positive X-axis
++Y | Positive Y-axis **(Default)**
+-X | Negative X-axis
+-Y | Negative Y-axis
+
+#### Scale ####
+The scale of the brick in-game.
+Values outside the the range of 0.001–400.0 may be typed in manually.
+Does not change the scale of the [objects](#def-object) in the Blender scene.
+See [Brick Scale](#brick-scale) for additional information.
+(Default: `100%`)
+
+#### Apply Modifiers ####
+Applies any modifiers on the [object](#def-object) before exporting.
+Does not change the modifiers of the objects in the Blender scene.
+(Default: `True`)
+
+#### Custom Definition Tokens ####
+Allows you to specify the definition tokens the exporter uses.
+See [Definition Tokens](#definition-tokens) for more information.
+(Default: `False`)
+
+:bulb: Enabling this property shows additional properties.
+
+### BLB Properties ###
+
+#### Custom Collision ####
+Export custom collision definitions if there are any.
+See [Defining Collision](#defining-collision).
+(Default: `True`)
+
+#### Fallback Collision ####
+The type of collision to calculate for the brick if no custom collision definitions are found.
+Enabling this property shows additional properties.
+
+Value | Description
+------|------------
+Bounds | Use the defined or calculated [bounds](#definition-objects-bounds) of the brick as the collision cuboid. **(Default)**
+AABB | Calculate the [axis-aligned bounding box](#def-aabb) of all [visible objects](#def-visible-object) and use that as the collision cuboid.
+
+#### Calculate Coverage ####
+Enable coverage calculations.
+This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one [object](#def-object) has a quad sorting definition.
+See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information.
+(Default: `False`)
+
+:bulb: Enabling this property shows additional properties.
+
+#### Automatic Quad Sorting ####
+Automatically calculate the correct section for quads that in the same plane as the bounding planes of the bounds object.
+This is pointless unless [Coverage](#coverage) is enabled.
+(Default: `True`)
+
+#### Use Material Colors ####
+Assign [face](#def-face) colors from [object](#def-object) materials.
+(Default: `False`)
+
+#### Use Vertex Colors ####
+Assign [face](#def-face)  colors from vertex color layers.
+(Default: `False`)
+
+#### Parse Object Colors ####
+Assign [face](#def-face) colors from [object](#def-object) names.
+(Default: `False`)
+
+#### Calculate UVs ####
+Automatically calculate correct UV coordinates based on the brick texture name specified in the material name.
+See [UV Mapping](#uv-mapping) for more information.
+(Default: `True`)
+
+#### Store UVs ####
+Write calculated UVs into Blender [objects](#def-object).
+Data in existing generated UV layers will be overwritten.
+See [UV Mapping](#uv-mapping) for a list of generated UV layer names.
+(Default: `True`)
+
+#### Round Normals ####
+Round vertex normals to the user-defined floating point value precision.
+If disabled normals will be written as accurately as possible but extraneous zeros will still be removed.
+(Default: `False`)
+
+#### Precision ####
+Allows you to specify a custom precision for floating point numbers.
+See [Rounded Values](#rounded-values) for more details.
+(Default: `0.000001`)
+
+### File Properties ###
+
+#### Pretty Print ####
+When enabled does not write extraneous zeros to the end of floating point numbers.
+Additionally if a numerical value is exactly equal to an integer, no decimal places are written.
+If disabled will write all floating point numbers using as many decimal places as used in the [Precision](#precision) property. 
+(Default: `True`)
+
+#### Write Log ####
+Write a log file to the same folder as the exported brick detailing the export process.
+Shows additional settings when selected.
+(Default: `True`)
+
+#### Only on Warnings ####
+Write a log file only if warnings or errors occurred during the export process.
+(Default: `True`)
+
+#### Terse Mode ####
+When enabled does not write optional lines to the .BLB file such as the lines marking the different quad sections.
+Using this option is not recommended as it makes the .BLB file harder to read and understand.
+Although the file is shorter, the difference in file size is negligible.
+(Default: `False`)
 
 ## Troubleshooting ##
 Solutions to common issues with the BLB Exporter.
@@ -1846,31 +1871,6 @@ Fatal errors always lead to the program execution stopping.
 		<td>Delete the additional brick texture names.</td>
 	</tr>
 </table>
-
-## Rounded Values ##
-Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems).
-For example when exporting a 1x1x1 brick [model](#def-model) at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`.
-This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should.
-The only way to get fix this error is to round the vertex coordinates.
-Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game.
-The only real benefit that comes from the rounding is nicer looking .BLB files.
-
-The default value of `0.000001` was chosen through manual testing.
-Rest assured that the rounding will cause no visual oddities whatsoever because the value is so small.
-This was manually confirmed with a sphere brick made from 524288 quads.
-Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
-
-:exclamation: The exporter will only ever write up to 16 decimal places regardless of the precision of the value.
-
-Floating Point Value | Rounded
----------------------|:------:
-[Visible object](#def-visible-object) vertex coordinates | Yes
-[Bounds object](#definition-objects-bounds) vertex coordinates | Yes
-[Collision object](#definition-objects-collision) vertex coordinates | Yes
-[Brick grid object](#defining-brick-grid) vertex coordinates | Yes
-Normal vectors | [Optional](#round-normals)
-[RGBA color](#defining-colors) values | No
-[UV coordinates](#uv-mapping) | No
 
 ## Contributors ##
 - [Nick Smith](https://github.com/qoh) - The original source code for reading, processing, and writing Blender data into the .BLB format.
