@@ -49,7 +49,6 @@ bl_info = {
 # TODO: Serialize props to the start of the log?
 # TODO: Add a section about brick grid to the readme.
 # TODO: Make the capitalization consistent in the readme.
-# TODO: Consider refactoring readme for consistent use of mesh, model, and object words.
 # TODO: Clarify brick grid and brick grid placement rules.
 
 

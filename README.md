@@ -138,7 +138,7 @@ The definitions are in the context of Blockland, Blender, and this exporter and 
 When this two-dimensional plane is viewed from either of the other two coordinate axes it disappears from view.</dd>
 
 <dt><a name="def-aabb"><a href="https://en.wikipedia.org/wiki/Minimum_bounding_box#Axis-aligned_minimum_bounding_box">Axis-Aligned Bounding Box</a></a> / Axis-Aligned Minimum Bounding Box</dt>
-<dd>A <a href="#def-cuboid">cuboid</a> that completely encompasses all vertices of one or more <a href="#def-object">objects</a>.
+<dd>A <a href="#def-cuboid">cuboid</a> that completely encompasses all vertices of one or more <a href="#def-mesh-object">mesh objects</a>.
 The faces of this cuboid are parallel with the coordinate axes.</dd>
 
 <dt><a name="def-aac">Axis-Aligned Cuboid</a></a></dt>
@@ -153,7 +153,7 @@ See <a href="#defining-brick-grid">Defining Brick Grid</a>.</li<
 
 <dt><a name="def-brick">Brick</a></dt>
 <dd><ol>
-<li>A collection of faces that acts as a single object in Blockland and all the non-visual data it contains such as collision information.</li>
+<li>A collection of <a href="#def-mesh">meshes</a> that acts as a single object in Blockland and all the non-visual data it contains such as collision information.</li>
 <li>The BLB file itself.</li>
 <li>The Blender <a href="#def-object">objects</a> that when exported produce a BLB file.</li>
 </ol>
@@ -183,7 +183,7 @@ There are three different definition objects:
 </ul></dd>
 
 <dt><a name="def-definition-token">Definition Token</a></dt>
-<dd>A special <a href="#def-token">token</a> in an <a href="#def-object">object's</a> name that tells the exporter what to do with that object.</dd>
+<dd>A special <a href="#def-token">token</a> in an <a href="#def-object">object's</a> name that tells the exporter additional information about that object or the entire brick.</dd>
 
 <dt><a name="def-face">Face</a></dt>
 <dd>A visible surface that is rendered in game and in the Blender viewport.
@@ -192,7 +192,7 @@ The surface must be bound by or created by at least three vertices (making it a 
 :exclamation: Blockland bricks only support faces made from exactly four vertices: <a href="#def-quad">quads</a>.</dd>
 
 <dt><a name="def-mesh">Mesh</a></dt>
-<dd>The vertices, edges, and faces that make up a 3D model.</dd>
+<dd>The vertices, edges, and faces that make up a 3D <a href="#def-model">model</a>.</dd>
 
 <dt><a name="def-mesh-object">Mesh Object</a></dt>
 <dd>A Blender object that contains vertices, edges, and <a href="#def-face">faces</a>.
@@ -264,7 +264,7 @@ Bounds | Brick name is defined in the [Bounds object](#definition-objects-bounds
 File | Brick name is the same as the file name. Can be manually set in the export file dialog.
 
 #### Export Only (Single Export) ####
-Which objects to process and export to the .BLB file.
+Which [objects](#def-object) to process and export to the .BLB file.
 
 Value | Description
 ------|------------
@@ -285,8 +285,8 @@ How is a single brick defined.
 
 Value | Description
 ------|------------
-Groups | Each brick is in its own group. Objects in multiple groups belong to multiple bricks. **(Default)**
-Layers | Each brick is in its own layer. Objects in multiple layers belong to multiple bricks. When selected brick names must be defined in the [Bounds object](#definition-objects-bounds).
+Groups | Each brick is in its own group. [Objects](#def-object) in multiple groups belong to multiple bricks. **(Default)**
+Layers | Each brick is in its own layer. [Objects](#def-object) in multiple layers belong to multiple bricks. When selected brick names must be defined in the [Bounds object](#definition-objects-bounds).
 
 #### Export Bricks in (Multiple Export) ####
 Which bricks to process and export to .BLB files.
@@ -298,7 +298,7 @@ Scene | Export all bricks in the current scene. I.e. all bricks in all layers re
 
 #### Forward Axis ####
 The Blender coordinate axis that will point forwards in-game when the player plants the brick directly in front of them without rotating it.
-Does not change the rotation of the objects in the Blender scene.
+Does not change the rotation of the [objects](#def-object) in the Blender scene.
 
 Value | Description
 ------|------------
@@ -310,12 +310,12 @@ Value | Description
 #### Scale ####
 The scale of the brick in-game.
 Values outside the the range of 0.001–400.0 may be typed in manually.
-Does not change the scale of the objects in the Blender scene.
+Does not change the scale of the [objects](#def-object) in the Blender scene.
 See [Brick Scale](#brick-scale) for additional information.
 (Default: `100%`)
 
 #### Apply Modifiers ####
-Applies any modifiers on the object before exporting.
+Applies any modifiers on the [object](#def-object) before exporting.
 Does not change the modifiers of the objects in the Blender scene.
 (Default: `True`)
 
@@ -335,7 +335,7 @@ AABB | Calculate the [axis-aligned bounding box](#def-aabb) of all [visible obje
 #### Coverage ####
 Enable coverage calculations.
 Shows additional settings when selected.
-This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one object has a quad sorting definition.
+This is pointless unless [Automatic Quad Sorting](#automatic-quad-sorting) is enabled or at least one [object](#def-object) has a quad sorting definition.
 See [Defining Quad Sorting & Coverage](#defining-quad-sections--coverage) for more information.
 (Default: `False`)
 
@@ -345,15 +345,15 @@ This is pointless unless [Coverage](#coverage) is enabled.
 (Default: `True`)
 
 #### Use Material Colors ####
-Get object colors from object materials.
+Assign [face](#def-face) colors from [object](#def-object) materials.
 (Default: `False`)
 
 #### Use Vertex Colors ####
-Get object colors from vertex color layers.
+Assign [face](#def-face)  colors from vertex color layers.
 (Default: `False`)
 
 #### Parse Object Colors ####
-Get object colors from object names.
+Assign [face](#def-face) colors from [object](#def-object) names.
 (Default: `False`)
 
 #### Calculate UVs ####
@@ -362,7 +362,7 @@ See [UV Mapping](#uv-mapping) for more information.
 (Default: `True`)
 
 #### Store UVs ####
-Write calculated UVs into Blender objects.
+Write calculated UVs into Blender [objects](#def-object).
 Data in existing generated UV layers will be overwritten.
 See [UV Mapping](#uv-mapping) for a list of generated UV layer names.
 (Default: `True`)
@@ -402,11 +402,11 @@ See [Rounded Values](#rounded-values) for more details.
 This add-on defines a `1x1x1` Blockland brick to be exactly `1.0 1.0 1.2` Blender units on the X, Y, and Z axes.
 Likewise a `1x1f` Blockland plate is defined to be exactly `1.0 1.0 0.4` Blender units.
 However, the final scale of the exported brick can be changed with the [Scale](#scale) property.
-For example setting the [Scale](#scale) property to `150%` means that during the exporting process, the [meshes](#def-mesh) are scaled by `1.5`.
+For example setting the [Scale](#scale) property to `150%` means that during the exporting process, the [objects](#def-object) are scaled by `1.5`.
 This is particularly useful when exporting 3D models created for another BLB exporter/converter that has defined the size of a `1x1f` plate to be different from this exporter.
 
 ## Definition Tokens ##
-[Definition tokens](#def-definition-token) are special [strings](#def-string) added to the names of objects, materials, and other Blender data objects that have a name.
+[Definition tokens](#def-definition-token) are special [strings](#def-string) added to the names of [objects](#def-object), materials, vertex color layers, and other Blender data objects that have a name.
 A name field may contain other text in addition to definition tokens as long as the tokens themselves are separated from other tokens and text by one [whitespace character](#def-whitespace) such as a space.
 The definition tokens may be changed from the defaults by selecting [Custom Definition Tokens](#custom-definition-tokens) in the export dialog.
 
@@ -443,7 +443,7 @@ Default Token | Category | Usable In | Is a [Definition Object](#def-definition-
 
 ### Mesh Definition Tokens ###
 Mesh definition tokens are a sub-category of [definition tokens](#definition-tokens) that can only be used in the names of [objects](#def-objects) but do not change the object into an invisible [definition object](#definition-objects).
-Objects that have one or more of these definition tokens are treated as [visible objects](#def-visible-object) and they govern some aspect of the [faces](#def-face) they are related to.
+Objects that have one or more of these definition tokens are treated as [visible objects](#def-visible-object) and they govern some aspect of the [faces](#def-face) of the [mesh](#def-mesh) in that object.
 
 :exclamation: Each definition token may only appear once in a name field but a name may contain both definition tokens.
 
@@ -454,9 +454,9 @@ Coverage | See [Defining Quad Sorting & Coverage](#defining-quad-sections--cover
 
 #### Defining Quad Sections & Coverage ####
 BLB files allow [mesh](#def-mesh) [faces](#def-face) to be sorted into seven sections: top, bottom, north, east, south, west, and omni.
-Quads in these sections may then be automatically hidden in-game using the [coverage system](#def-coverage), if it is defined correctly in the BLB file.
+Quads in these sections may then be automatically hidden in-game using the [coverage system](#def-coverage), if it is defined in a meaningful way in the BLB file.
 
-The coverage system allows the game to not render quads that are completely covered by adjacent bricks improving frame rate when a large number of bricks are on the screen at once.
+The coverage system allows the game to skip rendering quads that are completely covered by adjacent bricks improving the frame rate when a large number of bricks are on the screen at once.
 Quads are sorted into these sections by using one of the tokens below in the name of the [object](#def-object) containing the faces to be sorted into that section.
 If a [visible object](#def-visible-object) has no quad sorting token specified, the omni section is used.
 
@@ -468,7 +468,7 @@ Default Token | Section
 `qe` | East
 `qs` | South
 `qw` | West
-`qo` | Omni ("any" or "none", default)
+`qo` | Omni ("any" or "none", **default**)
 
 :exclamation: Sorting quads in this manner is pointless unless the [Coverage](#coverage) property in the export dialog is enabled and at least one option is enabled.
 
@@ -486,15 +486,15 @@ See [RGBA Color Format](#rgba-color-format) for a detailed explanation of how to
 
 Method | Overrides | Extent of Coloring | RGB Values | Alpha Value | Notes
 -------|-----------|--------------------|------------|-------------|------
-Object Colors | In-game paint color | Entire object (color & alpha)| In object name after the [Color token](#mesh-definition-tokens-color) | In object name after the red, green, and blue values | Implemented only to support legacy brick models, **not recommended for use**.
+Object Colors | In-game paint color | Entire object (color & alpha)| In [object](#def-object) name after the [Color token](#mesh-definition-tokens-color) | In object name after the red, green, and blue values | Implemented only to support legacy brick [models](#def-model), **not recommended for use**.
 Material Colors | Object Colors | Assigned faces (color & alpha) | In `Material` tab as `Diffuse Color` | In `Material` tab under `Transparency` in `Alpha` slider| The **recommended method** for defining color. Multiple materials may be used in a single object.
-<a name="vertex-colors">Vertex Colors</a> | Material Colors | Entire object (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
+<a name="vertex-colors">Vertex Colors</a> | Material Colors | Entire [object](#def-object) (per-vertex color), entire object (alpha) | In `Data` tab under `Vertex Color` as a vertex color layer, modified using the `Vertex Paint` mode | In `Data` tab under `Vertex Color` as the name of the vertex color layer | Creating a vertex color layers will color the entire object white, but the color of individual vertices may be changed.
 
 There are three definition tokens that are specific to dealing with colors.
 
 Token | Usable In | Description
 ------|-----------|------------
-<a name="defining-colors-blank">`blank`</a> | Material name | Ignore the material's color and do not write any color for the faces with this material assigned so they can be colored by the spray can in-game. This feature exists because an object that has a material, cannot have faces that do not have a material assigned to them.
+<a name="defining-colors-blank">`blank`</a> | Material name | Ignore the material's color and do not write any color for the faces with this material assigned so they can be colored by the spray can in-game. This feature exists because an [object](#def-object) that has a material, cannot have faces that do not have a material assigned to them.
 <a name="defining-colors-cadd">`cadd`</a> | Material name, vertex color layer name | Use this color as an additive color: add the values of this color to the spray can color in-game. For example to make the spray can color **a little lighter** use a **dark gray** color.
 <a name="defining-colors-csub">`csub`</a> | Material name, vertex color layer name | Use this color as a subtractive color: subtract the values of this color from the spray can color in-game. For example to make the spray can color **a lot darker** use a **light gray** color.
 
@@ -505,17 +505,16 @@ The exporter understands two ways of defining an RGBA color using text.
 
 1. The commonly used method of writing 4 integers that are in the range 0–255, where 0 is black, separated with a whitespace character such as a space.
 For example `127 255 10 191` for a yellow-green color that is 25% transparent.
-A full object name could be for example `glass c 240 255 255 128.001`.
+A full [object](#def-object) name could be for example `glass c 240 255 255 128.001`.
    - In the above example the running index `.001` that Blender added at the end would be removed by the exporter.
 1. Writing 4 decimals in the range 0.0–1.0, where 0.0 is black, separated with a whitespace character such as a space.
-An object could have a name such as `c 0,125 0,0 0,5 1,0 flower`, for example.
+An [object](#def-object) could have a name such as `c 0,125 0,0 0,5 1,0 flower`, for example.
    - The leading zero may be omitted.
    - Up to 16 decimals are supported.
 
 ## Definition Objects ##
-When a definition object token is read in an object's name it is treated as a definition object.
-Definition objects are never exported as visual 3D models, in fact they are not exported at all.
-Instead the data they contain in their name (or elsewhere) and the 3D space they represent is processed further to acquire the necessary information for the BLB file.
+When a specific definition token is read in an [object's](#def-object) name it is treated as a definition object.
+Definition objects contain non-visual data about the [brick](#def-brick) and as such are not exported as [visual objects](#def-visual-object)
 
 Definition Object | Default Token | Requirements | Maximum Count/Brick | Must Be Within [**Bounds**](#definition-objects-bounds)  | Axis-Aligned | Brick Grid Aligned | Can Overlap | Description
 ------------------|---------------|--------------|--------------------:|:-------------------:|:------------:|:------------------:|:-----------:|------------
@@ -592,7 +591,7 @@ If using brick textures on non-rectangular quads it is recommended to manually d
 ## Troubleshooting ##
 Solutions to common issues with the BLB Exporter.
 If you have another issue with the exporter be sure to enable the [Write Log](#write-log) property and export again.
-The log file may contain warnings or errors describing issues with the models and how to fix them.
+The log file may contain warnings or errors describing issues with the [objects](#def-object) and how to fix them.
 Additional instructions on how to fix specific issues are detailed in the [Warning & Error Log Messages](#warning--error-log-messages) section.
 
 ### Automatically calculated UV coordinates for brick textures are distorted ###
@@ -603,7 +602,7 @@ Manually define UV coordinates for non-rectangular quads.
 The quad with incorrectly rotated UV coordinates (e.g. the lightest side of the SIDE texture pointing sideways instead of up) is not a perfect rectangle.
 Even one vertex being off by some minuscule, visually indistinguishable amount from a perfectly rectangular shape can cause the automatic UV calculation to incorrectly determine the rotation of the quad.
 Double check all 4 coordinates of the quad and manually correct any floating point errors.
-If working on axis-aligned quads or if the vertices should be on grid points snapping the coordinates of the problem quad to grid coordinates using `Mesh > Snap > Snap Selection to Grid` usually fixes floating point errors.
+If working on axis-aligned quads or if the vertices should be on grid points snapping the coordinates of the problem quad to grid coordinates by selecting `Mesh > Snap > Snap Selection to Grid` in the 3D viewport toolbar usually fixes floating point errors.
 
 ### The TOP brick texture has incorrect rotation in Blender ###
 Blockland automatically performs rotations on the UV coordinates of the TOP brick texture during runtime so that the lightest side of the texture is always facing towards the sun.
@@ -630,7 +629,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>No <a href="#definition-objects-bounds">bounds object</a> was defined and the axis-aligned bounding box calculated from the visible 3D models has non-integer dimensions as a brick.</td>
+		<td>No <a href="#definition-objects-bounds">bounds object</a> was defined and the <a href="#def-aabb">axis-aligned bounding box</a> calculated from the <a href="#def-visible-object"visible objects</a> has non-integer dimensions when converted to brick space.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -640,7 +639,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 		<th>Solutions</th>
 		<td><ol>
 			<li><strong>Recommended:</strong> Manually define a bounds object.</li>
-			<li>Manually ensure that the visible parts of your brick model form an axis-aligned bounding box that has a valid size for a brick.</li>
+			<li>Manually ensure that the <a href="#def-visible-object">visible objects</a> of your brick <a href="#def-model">model</a> form an <a href="#def-aabb">axis-aligned bounding box</a> that has a valid size for a brick.</li>
 		</ol></td>
 	</tr>
 </table>
@@ -685,7 +684,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Solution</th>
-		<td>Create a bounds object and in the name of the object separate the name of the BLB file from the bounds <a href="#definition-tokens">definition token</a> with a whitespace character.</td>
+		<td>Create a bounds object and in the name of the <a href="#def-object">object</a> separate the name of the BLB file from the bounds <a href="#definition-tokens">definition token</a> with a whitespace character.</td>
 	</tr>
 </table>
 <table>
@@ -730,7 +729,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Solution</th>
-		<td>Create brick grid definitions for the model.</td>
+		<td>Create brick grid definitions for the <a href="#def-model">model</a>.</td>
 	</tr>
 </table>
 <table>
@@ -753,7 +752,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Solution</th>
-		<td>Create valid brick grid definitions for the model.</td>
+		<td>Create valid brick grid definitions for the <a href="#def-model">model</a>.</td>
 	</tr>
 </table>
 <table>
@@ -796,7 +795,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>The axis-aligned bounding box of all visible meshes will rounded to the nearest brick dimensions and used as the brick bounds.</td>
+		<td>The axis-aligned bounding box of all <a href="#def-visible-object">visible objects</a> will rounded to the nearest brick dimensions and used as the brick bounds.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -814,7 +813,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The object had more than one <a href="#vertex-colors">vertex color layer</a>.</td>
+		<td>The <a href="#def-object">object</a> had more than one <a href="#vertex-colors">vertex color layer</a>.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -880,7 +879,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>A mesh contained a triangle.</td>
+		<td>A <a href="#def-mesh">mesh</a> contained a triangle.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -894,7 +893,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Solution</th>
-		<td>Do not use triangles in any meshes.</td>
+		<td>Do not use triangles in any <a href="#def-mesh">meshes</a>.</td>
 	</tr>
 </table>
 <table>
@@ -908,7 +907,7 @@ It is recommended to manually adjust the brick until no warning messages are pre
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>A mesh contained a face made from more than 4 vertices.</td>
+		<td>A <a href="#def-mesh">mesh</a> contained a <a href="#def-face">face</a> made from more than 4 vertices.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -1033,7 +1032,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>The <a href="#store-uvs">Store UVs</a> property is enabled and the exporter attempted to write UV coordinates to a Blender object that is currently in edit mode.</td>
+		<td>The <a href="#store-uvs">Store UVs</a> property is enabled and the exporter attempted to write UV coordinates to a Blender <a href="#def-object">object</a> that is currently in edit mode.</td>
 	</tr>
 	<tr>
 		<th>Reason</th>
@@ -1063,7 +1062,10 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Solution</th>
-		<td>Ensure that the manually defined bounds definition object or if none is defined, the actual model of the brick, is larger than a 1x1 plate brick.</td>
+		<td><ul>
+		<li><strong>Recommended:</strong> Ensure that the manually defined <a href="#definition-objects-bounds">bounds definition object</a> is larger than a 1x1f plate brick.</li>
+		<li>Ensure that the <a href="#def-visible-object">visible objects</a> of the brick form an <a href="#def-aabb">axis-aligned bounding box</a> that is larger than a 1x1f plate brick.</li>
+		</ul></td>
 	</tr>
 </table>
 <table>
@@ -1099,7 +1101,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>None of the non-definition objects had any faces.</td>
+		<td>None of the <a href="#def-visible-object"visible objects</a> had any faces.</td>
 	</tr>
 	<tr>
 		<th>Reason</th>
@@ -1134,7 +1136,7 @@ Fatal errors always lead to the program execution stopping.
 					<tr>
 						<td rowspan="3">Single</td>
 						<td>Selection</td>
-						<td>No objects were selected.
+						<td>No <a href="#def-object">objects</a> were selected.
 						Selected objects have an orange outline.</td>
 					</tr>
 					<tr>
@@ -1160,7 +1162,7 @@ Fatal errors always lead to the program execution stopping.
 						<td rowspan="4">Multiple</td>
 						<td rowspan="2">Layers</td>
 						<td>Groups</td>
-						<td>None of the groups in the current scene had any objects in the visible layers.</td>
+						<td>None of the groups in the current scene had any <a href="#def-object">objects</a> in the visible layers.</td>
 					</tr>
 					<tr>
 						<td>Layers</td>
@@ -1206,7 +1208,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 					<tr>
 						<td>Scene</td>
-						<td>Add objects to a layer in the scene or check that you are not in the wrong scene.</td>
+						<td>Add <a href="#def-object">objects</a> to a layer in the scene or check that you are not in the wrong scene.</td>
 					</tr>
 				</tbody>
 			</table>
@@ -1223,7 +1225,7 @@ Fatal errors always lead to the program execution stopping.
 						<td rowspan="4">Multiple</td>
 						<td rowspan="2">Layers</td>
 						<td>Groups</td>
-						<td>Ensure that your groups have objects assigned to them and that you have selected layers with objects in them.</td>
+						<td>Ensure that your groups have <a href="#def-object">objects</a> assigned to them and that you have selected layers with objects in them.</td>
 					</tr>
 					<tr>
 						<td>Layers</td>
@@ -1295,7 +1297,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 				</tbody>
 			</table>
-			And the current scene does not contain any groups with objects in visible layers.
+			And the current scene does not contain any groups with <a href="#def-object">objects</a> in visible layers.
 		</td>
 	</tr>
 	<tr>
@@ -1337,7 +1339,7 @@ Fatal errors always lead to the program execution stopping.
 					</tr>
 				</tbody>
 			</table>
-			And the current scene does not contain any objects in visible layers.
+			And the current scene does not contain any <a href="#def-object">objects</a> in visible layers.
 		</td>
 	</tr>
 	<tr>
@@ -1398,7 +1400,7 @@ Fatal errors always lead to the program execution stopping.
 		<th>Solutions</th>
 		<td><ul>
 		<li><strong>Recommended:</strong> Manually create a <a href="#definition-objects-bounds">bounds definition object</a> that properly fits around the defined brick grid.</li>
-		<li>Ensure that the specified brick grid definition object is fully contained within the axis-aligned bounding box of the visual model.</li>
+		<li>Ensure that the specified brick grid definition object is fully contained within the <a href="#def-aabb">axis-aligned bounding box</a> of the <a href="#def-visible-object"visible objects</a>.</li>
 		</ul></td>
 	</tr>
 </table>
@@ -1476,7 +1478,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>Only the 10 oldest objects marked as collision definitions will be used.</td>
+		<td>Only the 10 oldest <a href="#def-object">objects</a> marked as collision definitions will be used.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -1560,7 +1562,7 @@ Fatal errors always lead to the program execution stopping.
 		<th>Solutions</th>
 		<td><ul>
 		<li><strong>Recommended:</strong> Manually create a <a href="#definition-objects-bounds">bounds definition object</a> that properly fits around the defined collision definition objects.</li>
-		<li>Ensure that the specified brick grid definition object is fully contained within the axis-aligned bounding box of the visual model.</li>
+		<li>Ensure that the specified brick grid definition object is fully contained within the <a href="#def-aabb">axis-aligned bounding box</a> of the <a href="#def-visible-object"visible objects</a>.</li>
 		</ul></td>
 	</tr>
 </table>
@@ -1604,15 +1606,15 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>A non-mesh object such as a camera had a bounds <a href="#definition-tokens">definition token</a> in its name.</td>
+		<td>A non-<a href="#def-mesh-object>mesh object</a> such as a camera had a bounds <a href="#definition-tokens">definition token</a> in its name.</td>
 	</tr>
 	<tr>
 		<th>Reason</th>
-		<td>Non-mesh objects do not contain data that can be used to calculate an axis-aligned bounding box.</td>
+		<td>Non-<a href="#def-mesh-object>mesh objects</a> do not contain data that can be used to calculate an <a href="#def-aabb">axis-aligned bounding box</a>.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>The specified object is ignored.</td>
+		<td>The specified <a href="#def-object">object</a> is ignored.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -1630,15 +1632,15 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>A non-mesh object such as a camera had a brick grid <a href="#definition-tokens">definition token</a> in its name.</td>
+		<td>A non-<a href="#def-mesh-object>mesh object</a> such as a camera had a brick grid <a href="#definition-tokens">definition token</a> in its name.</td>
 	</tr>
 	<tr>
 		<th>Reason</th>
-		<td>Non-mesh objects do not contain data that can be used to calculate an axis-aligned bounding box.</td>
+		<td>Non-<a href="#def-mesh-object>mesh objects</a> do not contain data that can be used to calculate an <a href="#def-aabb">axis-aligned bounding box</a>.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>The specified object is ignored.</td>
+		<td>The specified <a href="#def-object">object</a> is ignored.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -1656,15 +1658,15 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Cause</th>
-		<td>A non-mesh object such as a camera had a collision <a href="#definition-tokens">definition token</a> in its name.</td>
+		<td>A non-<a href="#def-mesh-object>mesh object</a> such as a camera had a collision <a href="#definition-tokens">definition token</a> in its name.</td>
 	</tr>
 	<tr>
 		<th>Reason</th>
-		<td>Non-mesh objects do not contain data that can be used to calculate an axis-aligned bounding box.</td>
+		<td>Non-<a href="#def-mesh-object>mesh objects</a> do not contain data that can be used to calculate an <a href="#def-aabb">axis-aligned bounding box</a>.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
-		<td>The specified object is ignored.</td>
+		<td>The specified <a href="#def-object">object</a> is ignored.</td>
 	</tr>
 	<tr>
 		<th>Solution</th>
@@ -1686,7 +1688,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Reason</th>
-		<td>Although it is technically possible to calculate the axis-aligned bounding box of multiple bounds definitions and use that as the final bounds of the brick a feature like this would be confusing for beginner users and breaks the "what you see is what you get" principle of the exporter.</td>
+		<td>Although it is technically possible to calculate the <a href="#def-aabb">axis-aligned bounding box</a> of multiple bounds definitions and use that as the final bounds of the brick a feature like this would be confusing for beginner users and breaks the "what you see is what you get" principle of the exporter.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -1712,7 +1714,7 @@ Fatal errors always lead to the program execution stopping.
 	</tr>
 	<tr>
 		<th>Reason</th>
-		<td>One definition object may only be used to define one brick placement rule.</td>
+		<td>One brick grid definition object may only be used to define one brick placement rule.</td>
 	</tr>
 	<tr>
 		<th>Effect</th>
@@ -1804,11 +1806,10 @@ Fatal errors always lead to the program execution stopping.
 
 ## Rounded Values ##
 Floating point numbers (numbers with a decimal point) contain [inherent inaccuracies](https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems).
-For example when exporting a 1x1x1 brick model at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`.
+For example when exporting a 1x1x1 brick [model](#def-model) at the maximum accuracy the vertex coordinate of one of the corners is `0.5 0.5 1.5000000596046448`.
 This causes the 1x1x1 brick to be `3.00000011920928955078125` plates tall instead of exactly `3.0` like it should.
-The only way to get rid of this error is to round the number (vertex coordinates).
+The only way to get fix this error is to round the vertex coordinates.
 Practically speaking it is impossible to visually discern the difference between a brick that is 3 plates tall versus one that is `3.00000011920928955078125` plates tall in the game.
-The floating point errors are effectively 0.
 The only real benefit that comes from the rounding is nicer looking .BLB files.
 
 The default value of `0.000001` was chosen through manual testing.
@@ -1816,11 +1817,11 @@ Rest assured that the rounding will cause no visual oddities whatsoever because 
 This was manually confirmed with a sphere brick made from 524288 quads.
 Moving the camera as close to the surface of the brick as the game was capable of rendering, the surface of the sphere appeared mathematically perfect because the distance between the vertices was less than the size of a single pixel.
 
-:exclamation: The exporter will only ever write 16 decimal places regardless of the precision of the value.
+:exclamation: The exporter will only ever write up to 16 decimal places regardless of the precision of the value.
 
 Floating Point Value | Rounded
 ---------------------|:------:
-Visible mesh vertex coordinates | Yes
+[Visible object](#def-visible-object) vertex coordinates | Yes
 [Bounds object](#definition-objects-bounds) vertex coordinates | Yes
 [Collision object](#definition-objects-collision) vertex coordinates | Yes
 [Brick grid object](#defining-brick-grid) vertex coordinates | Yes
@@ -1831,7 +1832,7 @@ Normal vectors | [Optional](#round-normals)
 ## Contributors ##
 - [Nick Smith](https://github.com/qoh) - The original source code for reading, processing, and writing Blender data into the .BLB format.
 A majority of his code has been rewritten since.
-- [Demian Wright](https://github.com/DemianWright) - Significant extensions and rewrites to Nick's original code and everything else.
+- [Demian Wright](https://github.com/DemianWright) - Significant extensions and rewrites to Nick's original code and all additional features.
 
 <a name="exporter-fn-1">__*__</a> There's always a footnote, see the issue with [the TOP brick texture](#the-top-brick-texture-has-incorrect-rotation-in-blender).
 
