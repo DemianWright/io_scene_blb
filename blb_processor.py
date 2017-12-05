@@ -31,9 +31,8 @@ from math import atan, ceil, modf, pi, radians, sqrt
 import bpy
 
 from mathutils import Euler, Vector
-import numpy
-
 import bmesh
+import numpy
 
 from . import common, const, logger
 from .const import Axis3D, AxisPlane3D, X, Y, Z
@@ -109,11 +108,11 @@ def __to_decimal(val, quantize=None):
         elif isinstance(quantize, Decimal):
             pass
         else:
-            # Development error.
+            # EXCEPTION
             raise ValueError("__to_decimal(value) quantize must be a string or a Decimal, was '{}'.".format(type(quantize)))
 
         # Calculate the fraction that will be used to do the rounding to an arbitrary number.
-        fraction = Decimal("1.0") / quantize
+        fraction = const.DECIMAL_ONE / quantize
 
         # If the value is not a Decimal, convert the value to string and create a Decimal out of the formatted string.
         # Using strings is the only way to create Decimals accurately from numbers as the Decimal representation of
@@ -127,7 +126,7 @@ def __to_decimal(val, quantize=None):
         # Divide with the Decimal fraction.
         # Quantize the result to get the correct number of decimal digits.
         # Result: value is rounded to the nearest value of quantize (half rounded up)
-        return ((value * fraction).quantize(Decimal("1")) / fraction).quantize(quantize)
+        return ((value * fraction).quantize(const.DECIMAL_ONE) / fraction).quantize(quantize)
 
     result = []
 
@@ -448,9 +447,11 @@ class BrickBounds(object):
     Stores the following data:
         - Blender object name,
         - object dimensions,
-        - object's location in world coordinates,
-        - minimum vertex world coordinate,
-        - and maximum vertex world coordinate.
+        - object center world coordinates,
+        - minimum vertex world coordinates,
+        - maximum vertex world coordinates,
+        - dimensions of the axis-aligned bounding box of visual meshes,
+        - and world center coordinates of the axis-aligned bounding box of visual meshes.
     """
 
     def __init__(self):
@@ -466,9 +467,14 @@ class BrickBounds(object):
         self.world_coords_min = []
         self.world_coords_max = []
 
+        # TODO: Consider moving to another object?
+        # The axis-aligned bounding box of visual meshes of this brick.
+        self.aabb_dimensions = None
+        self.aabb_world_center = None
+
     def __repr__(self):
-        return "<BrickBounds name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{}>".format(
-            self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max)
+        return "<BrickBounds object_name:{} dimensions:{} world_center:{} world_coords_min:{} world_coords_max:{} aabb_dimensions:{} aabb_world_center:{}>".format(
+            self.object_name, self.dimensions, self.world_center, self.world_coords_min, self.world_coords_max, self.aabb_dimensions, self.aabb_world_center)
 
 
 class BLBData(object):
@@ -742,7 +748,7 @@ def __calculate_coverage(calculate_side=None, hide_adjacent=None, brick_grid=Non
                         area += __count_occurrences(const.GRID_OUTSIDE, row, True)
 
                 else:
-                    # Development error.
+                    # EXCEPTION
                     raise RuntimeError("Invalid quad section index '{}'.".format(index))
 
             else:
@@ -927,34 +933,33 @@ def __record_bounds_data(properties, blb_data, bounds_data):
     # Are the dimensions of the bounds object not integers?
     if not __are_ints(bounds_size):
         if bounds_data.object_name is None:
-            logger.warning("Calculated bounds have a non-integer size {} {} {}, rounding up.".format(bounds_size[X],
-                                                                                                     bounds_size[Y],
-                                                                                                     bounds_size[Z]), 1)
+            logger.warning("IOBLBW000", "Calculated bounds have a non-integer size {} {} {}, rounding up.".format(bounds_size[X],
+                                                                                                                  bounds_size[Y],
+                                                                                                                  bounds_size[Z]), 1)
 
             # In case height conversion or rounding introduced floating point errors, round up to be on the safe side.
             for index, value in enumerate(bounds_size):
                 bounds_size[index] = ceil(value)
         else:
-            logger.warning("Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[X],
-                                                                                                                    bounds_size[Y],
-                                                                                                                    bounds_size[Z],
-                                                                                                                    properties.human_error), 1)
+            logger.warning("IOBLBW001", "Defined bounds have a non-integer size {} {} {}, rounding to a precision of {}.".format(bounds_size[X],
+                                                                                                                                 bounds_size[Y],
+                                                                                                                                 bounds_size[Z],
+                                                                                                                                 properties.human_brick_grid_error), 1)
 
             for index, value in enumerate(bounds_size):
                 # Round to the specified error amount.
-                bounds_size[index] = round(properties.human_error * round(value / properties.human_error))
+                bounds_size[index] = round(properties.human_brick_grid_error * round(value / properties.human_brick_grid_error))
 
     # The value type must be int because you can't have partial plates. Returns a list.
     blb_data.brick_size = __force_to_ints(bounds_size)
 
     if properties.blendprop.export_count == "SINGLE" and properties.blendprop.brick_name_source == "BOUNDS":
         if bounds_data.object_name is None:
-            logger.warning(
-                "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
+            logger.warning("IOBLBW002", "Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
-                logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
+                logger.warning("IOBLBW003", "Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.",
+                               1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -965,18 +970,18 @@ def __record_bounds_data(properties, blb_data, bounds_data):
         if bounds_data.object_name is None:
             if properties.blendprop.brick_definition == "LAYERS":
                 # RETURN ON ERROR
-                return "When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick."
+                return "IOBLBF000 When exporting multiple bricks in separate layers, a bounds definition object must exist in every layer. It is also used to provide a name for the brick."
             else:
-                logger.warning(
-                    "Brick name was to be sourced from the name of the bounds definition object but no bounds definition object exists, file name used instead.", 1)
+                # TODO: Does this work? Does it actually export multiple bricks or overwrite the first one?
+                logger.warning("IOBLBW002", "Brick name was supposed to be in the bounds definition object but no such object exists, file name used instead.", 1)
         else:
             if len(bounds_data.object_name.split()) == 1:
                 if properties.blendprop.brick_definition == "LAYERS":
                     # RETURN ON ERROR
-                    return "When exporting multiple bricks in separate layers, the brick name must be after the bounds definition (separated with a space) in the bounds definition object name."
+                    return "IOBLBF001 When exporting multiple bricks in separate layers, the brick name must be after the bounds definition token (separated with a space) in the bounds definition object name."
                 else:
-                    logger.warning(
-                        "Brick name was to be sourced from the name of the bounds definition object but no brick name was found after the bounds definition (separated with a space), file name used instead.", 1)
+                    logger.warning("IOBLBW003", "Brick name was supposed to be in the bounds definition object but no name (separated with a space) was found after the definition token, file name used instead.",
+                                   1)
             else:
                 # Brick name follows the bounds definition, must be separated by a space.
                 # Substring the object name: everything after properties.deftokens.bounds and 1 space character till the end of the name.
@@ -985,6 +990,23 @@ def __record_bounds_data(properties, blb_data, bounds_data):
                 logger.info("Found brick name from bounds definition: {}".format(blb_data.brick_name), 1)
 
     return blb_data
+
+
+def __calculate_bounding_box_size(min_coords, max_coords):
+    """Calculates the XYZ dimensions of a cuboid with the specified minimum and maximum coordinates.
+
+    Args:
+        min_coords (sequence of numbers): The minimum coordinates as a sequence: [X, Y, Z]
+        max_coords (sequence of numbers): The maximum coordinates as a sequence: [X, Y, Z]
+
+    Returns:
+        A sequence with the [X, Y, Z] dimensions of a cuboid as Decimal values.
+    """
+    # Get the dimensions defined by the vectors.
+    # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
+    return __to_decimal((max_coords[X] - min_coords[X],
+                         max_coords[Y] - min_coords[Y],
+                         max_coords[Z] - min_coords[Z]))
 
 
 def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinates):
@@ -1000,23 +1022,20 @@ def __calculate_bounds(export_scale, min_world_coordinates, max_world_coordinate
     """
     bounds_data = BrickBounds()
 
-    # USER SCALE: Multiply by user defined scale.
-    min_coord = __multiply_sequence(export_scale, min_world_coordinates)
-    max_coord = __multiply_sequence(export_scale, max_world_coordinates)
-
-    # Get the dimensions defined by the vectors.
-    # ROUND & CAST: calculated bounds object dimensions into Decimals for accuracy.
-    bounds_size = __to_decimal((max_coord[X] - min_coord[X],
-                                max_coord[Y] - min_coord[Y],
-                                max_coord[Z] - min_coord[Z]))
-
-    bounds_data.dimensions = bounds_size
-
     # ROUND & CAST: The minimum and maximum calculated world coordinates.
-    bounds_data.world_coords_min = __to_decimal(min_coord)
-    bounds_data.world_coords_max = __to_decimal(max_coord)
+    # USER SCALE: Multiply by user defined scale.
+    min_coords = __to_decimal(__multiply_sequence(export_scale, min_world_coordinates))
+    max_coords = __to_decimal(__multiply_sequence(export_scale, max_world_coordinates))
 
-    bounds_data.world_center = __calculate_center(bounds_data.world_coords_min, bounds_data.dimensions)
+    bounds_data.world_coords_min = min_coords
+    bounds_data.world_coords_max = max_coords
+
+    # USER SCALE: Multiply by user defined scale.
+    bounds_data.dimensions = __calculate_bounding_box_size(min_coords, max_coords)
+    bounds_data.world_center = __calculate_center(min_coords, bounds_data.dimensions)
+
+    bounds_data.aabb_dimensions = bounds_data.dimensions
+    bounds_data.aabb_world_center = bounds_data.world_center
 
     return bounds_data
 
@@ -1398,7 +1417,7 @@ def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
     """
     # The angle could easily be normalized here, but doing this has helped me track a couple of mistakes in the code.
     if angle < 0 or angle > const.TWO_PI:
-        # Development error.
+        # EXCEPTION
         raise ValueError("__get_2d_angle_axis(angle) expects angle to be normalized to range [0,2pi], value was:", angle)
 
     if angle >= const.RAD_315_DEG or angle >= 0 and angle < const.RAD_45_DEG:
@@ -1438,7 +1457,7 @@ def __get_2d_angle_axis(angle, plane=AxisPlane3D.XY):
 
 
 def __get_normal_axis(normal):
-    """Determines the closes axis of the specified normal vector.
+    """Determines the closest axis of the specified normal vector.
 
     Args:
         normal (Vector): A normal vector in XYZ-space.
@@ -1541,8 +1560,8 @@ def __get_normal_axis(normal):
             plane = None
 
     if point:
-        logger.error("Normal vector is point and has no direction. Returning +X axis by default.")
-        return Axis3D.POS_X
+        # EXCEPTION
+        raise ValueError("__get_normal_axis(normal) expects a vector, point '{}' given instead.".format(normal))
 
     if plane is None:
         # TODO: Z-axis is ignored for now. Assume XY-plane.
@@ -1653,7 +1672,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
     # Sanity check.
     if len(vert_coords) < 4:
-        # Development error.
+        # EXCEPTION
         raise ValueError("__calculate_uvs(brick_texture, vert_coords, normal) function expects a quad, input polygon was not a quad.")
 
     idx_coord = [(idx, coord) for idx, coord in enumerate(vert_coords)]
@@ -1825,7 +1844,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                       (h, w))
 
     else:
-        # Development error.
+        # EXCEPTION
         raise ValueError("Unknown texture name '{}'".format(brick_texture))
 
     #print("__calculate_uvs | uvs_sorted:")
@@ -1927,7 +1946,7 @@ def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
     Returns:
         None if UVs were stored successfully or a string containing an error message.
     """
-    error_string = "Unable to store UV coordinates in object '{}' while it is in edit mode.".format(mesh.name)
+    error_string = "IOBLBF002 Unable to store UV coordinates in object '{}' while it is in edit mode.".format(mesh.name)
 
     # If no UV layer exists, create one.
     if layer_name not in mesh.uv_layers.keys():
@@ -1985,27 +2004,28 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
             except OutOfBoundsException:
                 if bounds_data.object_name is None:
                     logger.error(
-                        "Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(grid_obj.name), 1)
+                        "IOBLBE000",
+                        "Brick grid definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(
+                            grid_obj.name),
+                        1)
                 else:
-                    logger.error("Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
+                    logger.error("IOBLBE001", "Brick grid definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
                         grid_obj.name, bounds_data.object_name))
             except ZeroSizeException:
-                logger.error("Brick grid definition object '{}' has no volume. Definition ignored.".format(grid_obj.name))
+                logger.error("IOBLBE002", "Brick grid definition object '{}' has no volume. Definition ignored.".format(grid_obj.name))
 
     # Log messages for brick grid definitions.
-    if total_definitions == 0:
-        logger.warning("No brick grid definitions found. Automatically generated brick grid may be undesirable.", 1)
+    if total_definitions < 1:
+        logger.warning("IOBLBW004", "No brick grid definitions found. Full cuboid brick grid may be undesirable.", 1)
     elif total_definitions == 1:
-        if processed == 0:
-            logger.warning(
-                "{} brick grid definition found but was not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
+        if processed < 1:
+            logger.warning("IOBLBW005", "{} brick grid definition found but was not processed. Full cuboid brick grid may be undesirable.".format(total_definitions), 1)
         else:
             logger.info("Processed {} of {} brick grid definition.".format(processed, total_definitions), 1)
     else:
         # Found more than one.
-        if processed == 0:
-            logger.warning(
-                "{} brick grid definitions found but were not processed. Automatically generated brick grid may be undesirable.".format(total_definitions), 1)
+        if processed < 1:
+            logger.warning("IOBLBW005", "{} brick grid definitions found but were not processed. Full cuboid brick grid may be undesirable.".format(total_definitions), 1)
         else:
             logger.info("Processed {} of {} brick grid definitions.".format(processed, total_definitions), 1)
 
@@ -2022,7 +2042,7 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
     # Initialize the brick grid with the empty symbol with the dimensions of the brick.
     brick_grid = [[[const.GRID_OUTSIDE for w in range(grid_width)] for h in range(grid_height)] for d in range(grid_depth)]
 
-    if total_definitions == 0:
+    if total_definitions < 1:
         # Write the default brick grid.
         for d in range(grid_depth):
             for h in range(grid_height):
@@ -2053,109 +2073,120 @@ def __process_grid_definitions(properties, blb_data, bounds_data, definition_obj
     return brick_grid
 
 
-def __process_collision_definitions(properties, bounds_data, definition_objects,):
+def __process_collision_definitions(properties, blb_data, bounds_data, definition_objects):
     """Processes the specified collision definitions.
 
     Args:
         properties (DerivateProperties): An object containing user properties.
+        blb_data (BLBData): A BLBData object containing all the necessary data for writing a BLB file.
         bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
         definition_objects (a sequence of Blender object): A sequence of Blender objects representing collision definitions.
 
     Returns:
-        A sequence of tuples : [ (center coordinates in the local space of the brick, collision cuboid dimensions), ]
+        A sequence of tuples: [ (center coordinates in the local space of the brick, collision cuboid dimensions), ]
+        Sequence can be empty.
     """
     collisions = []
     processed = 0
 
-    if len(definition_objects) > 10:
-        logger.error("{} collision boxes defined but 10 is the maximum. Only the first 10 will be processed.".format(len(definition_objects)), 1)
+    if properties.blendprop.custom_collision:
+        if len(definition_objects) > const.MAX_BRICK_COLLISION_CUBOIDS:
+            logger.error("IOBLBE003", "{0} collision cuboids defined but {1} is the maximum. Only the first {1} will be processed.".format(
+                len(definition_objects), const.MAX_BRICK_COLLISION_CUBOIDS), 1)
 
-    for obj in definition_objects:
-        # Break the loop as soon as 10 definitions have been processed.
-        if processed > 9:
-            break
+        for obj in definition_objects[:const.MAX_BRICK_COLLISION_CUBOIDS]:
+            vert_count = len(obj.data.vertices)
 
-        vert_count = len(obj.data.vertices)
-
-        # At least two vertices are required for a valid bounding box.
-        if vert_count < 2:
-            logger.error("Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name), 1)
-            # Skip the rest of the loop and return to the beginning.
-            continue
-        elif vert_count > 8:
-            logger.warning(
-                "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(obj.name), 1)
-            # The mesh is still valid.
-
-        # Find the minimum and maximum coordinates for the collision object.
-        col_min, col_max = __get_world_min_max(obj)
-
-        # ROUND & CAST
-        # USER SCALE: Multiply by user defined scale.
-        col_min = __multiply_sequence(properties.scale, __to_decimal(col_min))
-        col_max = __multiply_sequence(properties.scale, __to_decimal(col_max))
-
-        # Recenter the coordinates to the bounds. (Also rounds the values.)
-        col_min = __world_to_local(col_min, bounds_data.world_center)
-        col_max = __world_to_local(col_max, bounds_data.world_center)
-
-        # Technically collision outside brick bounds is not invalid but the collision is also horribly broken and as such is not allowed.
-        if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
-            if not __has_volume(col_min, col_max):
-                logger.error("Collision definition object '{}' has no volume. Definition ignored.".format(obj.name), 1)
-                # Skip the rest of the loop.
+            # At least two vertices are required for a valid bounding box.
+            if vert_count < 2:
+                logger.error("IOBLBE004", "Collision definition object '{}' has less than 2 vertices. Definition ignored.".format(obj.name), 1)
+                # Skip the rest of the loop and return to the beginning.
                 continue
+            elif vert_count > 8:
+                logger.info(
+                    "Collision definition object '{}' has more than 8 vertices suggesting a shape other than a cuboid. The bounding box of this mesh will be used.".format(
+                        obj.name),
+                    1)
+                # The mesh is still valid.
 
-            center = []
-            dimensions = []
-
-            # Find the center coordinates and dimensions of the cuboid.
-            for index, value in enumerate(col_max):
-                center.append((value + col_min[index]) * const.DECIMAL_HALF)
-                dimensions.append(value - col_min[index])
-
-            processed += 1
+            # Find the minimum and maximum coordinates for the collision object.
+            col_min, col_max = __get_world_min_max(obj)
 
             # ROUND & CAST
-            # Add the center and dimensions to the definition data as a tuple.
-            # The coordinates and dimensions are in plates.
-            collisions.append((__sequence_z_to_plates(center, properties.plate_height), __sequence_z_to_plates(dimensions, properties.plate_height)))
-        else:
-            if bounds_data.object_name is None:
-                logger.error("Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(obj.name), 1)
-            else:
-                logger.error("Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
-                    obj.name, bounds_data.object_name), 1)
+            # USER SCALE: Multiply by user defined scale.
+            col_min = __multiply_sequence(properties.scale, __to_decimal(col_min))
+            col_max = __multiply_sequence(properties.scale, __to_decimal(col_max))
 
-    defcount = len(definition_objects)
-    # Log messages for collision definitions.
-    if defcount == 0:
-        if properties.blendprop.calculate_collision:
-            logger.warning("No collision definitions found. Calculating full brick collision.", 1)
-        else:
-            logger.warning("No collision definitions found. Brick will have no collision.", 1)
-    elif defcount == 1:
-        if processed == 0:
-            if properties.blendprop.calculate_collision:
-                logger.warning(
-                    "{} collision definition found but was not processed. Calculating full brick collision.".format(defcount), 1)
-            else:
-                logger.warning(
-                    "{} collision definition found but was not processed. Brick will have no collision.".format(defcount), 1)
+            # Recenter the coordinates to the bounds. (Also rounds the values.)
+            col_min = __world_to_local(col_min, bounds_data.world_center)
+            col_max = __world_to_local(col_max, bounds_data.world_center)
 
-        else:
-            logger.info("Processed {} of {} collision definition.".format(processed, defcount), 1)
-    else:
-        # Found more than one.
-        if processed == 0:
-            if properties.blendprop.calculate_collision:
-                logger.warning(
-                    "{} collision definitions found but were not processed. Calculating full brick collision.".format(defcount), 1)
+            # Technically collision outside brick bounds is not invalid but the collision is also horribly broken and as such is not allowed.
+            if __all_within_bounds(col_min, bounds_data.dimensions) and __all_within_bounds(col_max, bounds_data.dimensions):
+                if not __has_volume(col_min, col_max):
+                    logger.error("IOBLBE005", "Collision definition object '{}' has no volume. Definition ignored.".format(obj.name), 1)
+                    # Skip the rest of the loop.
+                    continue
+
+                center = []
+                dimensions = []
+
+                # Find the center coordinates and dimensions of the cuboid.
+                for index, value in enumerate(col_max):
+                    center.append((value + col_min[index]) * const.DECIMAL_HALF)
+                    dimensions.append(value - col_min[index])
+
+                # ROUND & CAST
+                # Add the center and dimensions to the definition data as a tuple.
+                # The center coordinates and dimensions are in plate coordinates.
+                collisions.append((__sequence_z_to_plates(center, properties.plate_height), __sequence_z_to_plates(dimensions, properties.plate_height)))
+
+                processed += 1
             else:
-                logger.warning(
-                    "{} collision definitions found but were not processed. Brick will have no collision.".format(defcount), 1)
+                if bounds_data.object_name is None:
+                    logger.error(
+                        "IOBLBE006",
+                        "Collision definition object '{}' has vertices outside the calculated brick bounds. Definition ignored.".format(
+                            obj.name),
+                        1)
+                else:
+                    logger.error("IOBLBE007", "Collision definition object '{}' has vertices outside the bounds definition object '{}'. Definition ignored.".format(
+                        obj.name, bounds_data.object_name), 1)
+
+        defcount = len(definition_objects)
+
+        # Log messages for collision definitions.
+        if defcount < 1:
+            logger.info("No custom collision definitions found.", 1)
+        elif defcount == 1:
+            if processed < 1:
+                logger.warning("IOBLBW006", "{} collision definition found but was not processed.".format(defcount), 1)
+            else:
+                logger.info("Processed {} of {} collision definition.".format(processed, defcount), 1)
         else:
-            logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
+            # Found more than one.
+            if processed < 1:
+                logger.warning("IOBLBW006", "{} collision definitions found but were not processed.".format(defcount), 1)
+            else:
+                logger.info("Processed {} of {} collision definitions.".format(processed, defcount), 1)
+
+    if processed < 1:
+        # No custom collision definitions.
+        if properties.blendprop.fallback_collision == "BOUNDS":
+            logger.info("Using bounds as the collision cuboid.", 1)
+            # Center of the full brick collision cuboid is at the middle of the brick.
+            # The size of the cuboid is the size of the bounds.
+            collisions.append(([0, 0, 0], blb_data.brick_size))
+        else:
+            # properties.blendprop.default_collision == "AABB"
+            logger.info("Using the axis-aligned bounding box of visual meshes as the collision cuboid.", 1)
+            collisions.append(
+                (__world_to_local(
+                    bounds_data.aabb_world_center,
+                    bounds_data.world_center),
+                 __sequence_z_to_plates(
+                     bounds_data.aabb_dimensions,
+                     properties.plate_height)))
 
     return collisions
 
@@ -2181,6 +2212,21 @@ def __process_definition_objects(properties, objects):
             2. A sequence of mesh objects that will be exported as visible 3D models.
         Or an error message to be displayed to the user.
     """
+    def calculate_aabb(bounds_data, min_world_coord, max_world_coord):
+        """Calculates the axis-aligned bounding box data for the specified minimum and maximum world coordinates of visual meshes and stores them to the specified bounds_data object.
+
+        Args:
+            bounds_data (BrickBounds): A BrickBounds object containing the bounds data.
+            min_coords (sequence of numbers): The minimum coordinates as a sequence: [X, Y, Z]
+            max_coords (sequence of numbers): The maximum coordinates as a sequence: [X, Y, Z]
+        """
+        min_coord = __multiply_sequence(properties.scale, __to_decimal(min_world_coord))
+        max_coord = __multiply_sequence(properties.scale, __to_decimal(max_world_coord))
+
+        bounds_data.aabb_dimensions = __calculate_bounding_box_size(min_coord, max_coord)
+        bounds_data.aabb_world_center = __calculate_center(min_coord, bounds_data.aabb_dimensions)
+        # print("Calculated AABB. Min:", min_coord, "Max:", max_coord, "Size:", bounds_data.aabb_dimensions, "Center:", bounds_data.aabb_world_center)
+
     blb_data = BLBData()
     bounds_data = None
     collision_objects = []
@@ -2212,11 +2258,11 @@ def __process_definition_objects(properties, objects):
         # Ignore non-mesh objects
         if obj.type != "MESH":
             if obj_name.upper().startswith(properties.deftokens.bounds):
-                logger.warning("Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
+                logger.error("IOBLBE008", "Object '{}' cannot be used to define bounds, must be a mesh.".format(obj_name), 1)
             elif obj_name.upper().startswith(properties.grid_def_obj_token_priority):
-                logger.warning("Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
+                logger.error("IOBLBE009", "Object '{}' cannot be used to define brick grid, must be a mesh.".format(obj_name), 1)
             elif obj_name.upper().startswith(properties.deftokens.collision):
-                logger.warning("Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
+                logger.error("IOBLBE010", "Object '{}' cannot be used to define collision, must be a mesh.".format(obj_name), 1)
 
             # Skip the rest of the if.
             continue
@@ -2245,7 +2291,7 @@ def __process_definition_objects(properties, objects):
                                                                                                     "", bricks, (" brick", " bricks")),
                                                                                                 logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
             else:
-                logger.warning("Multiple bounds definitions found. '{}' definition ignored.".format(obj_name), 1)
+                logger.error("IOBLBE011", "Bounds already defined by '{}', bounds definition '{}' ignored.".format(bounds_data.object_name, obj_name), 1)
                 continue
 
         # Is the current object a collision definition object?
@@ -2256,7 +2302,7 @@ def __process_definition_objects(properties, objects):
         # Is the current object a brick grid definition object?
         elif len(object_grid_definitions) > 0:
             if len(object_grid_definitions) > 1:
-                logger.warning("Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
+                logger.error("IOBLBE012", "Multiple brick grid definitions in object '{}', only the first one is used.".format(obj_name), 1)
 
             # Get the priority index of this grid definition.
             index = properties.grid_def_obj_token_priority.index(object_grid_definitions[0])
@@ -2265,19 +2311,16 @@ def __process_definition_objects(properties, objects):
             # Append the current definition object into the appropriate list.
             brick_grid_objects[index].append(obj)
 
-        # Else the object must be a regular mesh that is exported as a 3D model.
+        # Else the object must be a regular visible mesh that is exported as a 3D model.
         else:
             mesh_objects.append(obj)
 
-            # If no bounds object has been defined.
-            if bounds_data is None:
-                # Record min/max world coordinates for calculating the bounds.
-                min_world_coordinates, max_world_coordinates = __get_world_min_max(obj, min_world_coordinates, max_world_coordinates)
-            # Else a bounds object has been defined, recording the min/max coordinates is pointless.
+            # Record min/max world coordinates for calculating the axis-aligned bounding box.
+            min_world_coordinates, max_world_coordinates = __get_world_min_max(obj, min_world_coordinates, max_world_coordinates)
 
     # No manually created bounds object was found, calculate brick bounds based on the minimum and maximum recorded mesh vertex positions.
     if bounds_data is None:
-        logger.warning("No brick bounds definition found. Automatically calculated brick size may be undesirable.", 1)
+        logger.warning("IOBLBW007", "No brick bounds definition found. Calculated brick size may be undesirable.", 1)
 
         # ROUND & CAST
         bounds_data = __calculate_bounds(properties.scale, __to_decimal(min_world_coordinates), __to_decimal(max_world_coordinates))
@@ -2301,28 +2344,34 @@ def __process_definition_objects(properties, objects):
                                                                                        blb_data.brick_size[Y],
                                                                                        logger.build_countable_message("", bricks, (" brick", " bricks")),
                                                                                        logger.build_countable_message("", blb_data.brick_size[Z] - bricks * 3, (" plate", " plates"))), 1)
+    elif len(mesh_objects) > 0:
+        # Manually defined bounds found, store the axis-aligned bounding box of the visible meshes, provided there are any.
+        calculate_aabb(bounds_data, min_world_coordinates, max_world_coordinates)
 
     # Bounds have been defined, check that brick size is within the limits.
     if blb_data.brick_size[X] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[
             Y] <= const.MAX_BRICK_HORIZONTAL_PLATES and blb_data.brick_size[Z] <= const.MAX_BRICK_VERTICAL_PLATES:
+        # Multiply the dimensions of the bounding box together: if any dimension is 0.0 the product is 0.0.
         if __sequence_product(blb_data.brick_size) < 1.0:
+            # TODO: Actually test this.
+            # TODO: Round 0 brick size up to 1?
             # RETURN ON ERROR
-            return "Brick has no volume, brick could not be rendered in-game."
+            return "IOBLBF003 Brick has no volume, brick could not be rendered in-game."
         else:
             # Process brick grid and collision definitions now that a bounds definition exists.
             blb_data.brick_grid = __process_grid_definitions(properties, blb_data, bounds_data, brick_grid_objects)
-            blb_data.collision = __process_collision_definitions(properties, bounds_data, collision_objects)
+            blb_data.collision = __process_collision_definitions(properties, blb_data, bounds_data, collision_objects)
 
             # Return the data.
             return (blb_data, bounds_data, mesh_objects)
     else:
         # RETURN ON ERROR
         # The formatter fails miserably if this return is on one line so I've broken it in two.
-        msg = "Brick size ({0}x{1}x{2}) exceeds the maximum brick size of {3} wide {3} deep and {4} plates tall.".format(blb_data.brick_size[X],
-                                                                                                                         blb_data.brick_size[Y],
-                                                                                                                         blb_data.brick_size[Z],
-                                                                                                                         const.MAX_BRICK_HORIZONTAL_PLATES,
-                                                                                                                         const.MAX_BRICK_VERTICAL_PLATES)
+        msg = "IOBLBF004 Brick size ({0}x{1}x{2}) exceeds the maximum brick size of {3} wide {3} deep and {4} plates tall.".format(blb_data.brick_size[X],
+                                                                                                                                   blb_data.brick_size[Y],
+                                                                                                                                   blb_data.brick_size[Z],
+                                                                                                                                   const.MAX_BRICK_HORIZONTAL_PLATES,
+                                                                                                                                   const.MAX_BRICK_VERTICAL_PLATES)
         return "{}\nThe exported brick would not be loaded by the game.".format(msg)
 
 
@@ -2372,25 +2421,25 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             if properties.deftokens.color in tokens:
                 # Parse floats from the expected color values.
                 floats = __get_color_values(tokens[tokens.index(properties.deftokens.color) + 1:])
-                size = len(floats)
+                num_count = len(floats)
 
                 # Did user define at least 4 numerical values?
-                if size >= 4:
-                    if size > 4:
-                        logger.info("More than 4 colors defined for colored object '{}', only the first four values were used.".format(object_name), 2)
+                if num_count >= 4:
+                    if num_count > 4:
+                        logger.error("IOBLBE013", "More than 4 color values defined for object '{}', only the first 4 values (RGBA) are used.".format(object_name), 2)
 
                         # We're only interested in the first 4 values: R G B A
                         floats = floats[:4]
 
                     # Add the RGBA values to the colors, 4 vertices per quad.
                     colors = ([tuple(floats)] * 4)
-                elif size > 0:
+                elif num_count > 0:
                     logger.info(
-                        "Object '{}' is named as if it were colored but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
+                        "Object '{}' is named as if it has custom color but it was ignored because all 4 values (red green blue alpha) were not defined.".format(object_name), 2)
 
         # Vertex color layer message.
         if len(current_mesh.vertex_colors) > 1:
-            logger.warning("Object '{}' has {} vertex color layers, only using the first.".format(
+            logger.warning("IOBLBW008", "Object '{}' has {} vertex color layers, only using the first.".format(
                 object_name, len(current_mesh.vertex_colors)), 2)
 
         # ===================
@@ -2406,7 +2455,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         if section_count >= 1:
             section = const.BLBQuadSection(properties.quad_sort_definitions.index(quad_sections[0]))
             if section_count > 1:
-                logger.warning("Object '{}' has {} section definitions, only one is allowed. Using the first one: {}".format(
+                logger.error("IOBLBE014", "Object '{}' has {} section definitions, only using the first one: {}".format(
                     object_name, section_count, section), 2)
 
             # TODO: Do forward axis rotation of section in the format_blb_data function?
@@ -2485,9 +2534,9 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 # Does the user want to round normals?
                 if properties.blendprop.round_normals:
                     # ROUND & CAST
-                    normals = [__to_decimal(__loop_index_to_normal_vector(obj, mesh, vert_idx)) for vert_idx in reversed(loop_vert_idxs)]
+                    normals = [__to_decimal(__loop_index_to_normal_vector(obj, mesh, vert_idx)) for vert_idx in loop_vert_idxs]
                 else:
-                    normals = [__loop_index_to_normal_vector(obj, mesh, vert_idx) for vert_idx in reversed(loop_vert_idxs)]
+                    normals = [__loop_index_to_normal_vector(obj, mesh, vert_idx) for vert_idx in loop_vert_idxs]
             else:
                 # Flat shading: every vertex in this loop has the same normal.
                 # A tuple cannot be used because the values are changed afterwards when the brick is rotated.
@@ -2515,7 +2564,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     brick_texture = const.BrickTexture[texnames[0]]
 
                     if texcount > 1:
-                        logger.info("More than one brick texture name found in material '{}', only the first one is used.".format(matname), 2)
+                        logger.error("IOBLBE015", "More than one brick texture name found in material '{}', only using the first one.".format(matname), 2)
             # else: No material name or a brick texture was not specified. Keep None to skip automatic UV generation.
 
             # ===
@@ -2555,7 +2604,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     if brick_texture is None:
                         # Fall back to SIDE texture if nothing was specified.
                         brick_texture = const.BrickTexture.SIDE
-                        logger.warning("Please specify a brick texture if also specifying UV coordinates, using SIDE by default.", 2)
+                        logger.warning("IOBLBW009", "Face has UV coordinates but no brick texture was set in the material name, using SIDE by default.", 2)
 
                     # Do we have UV coordinates for a tri?
                     if len(uvs) == 3:
@@ -2622,8 +2671,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 if len(current_mesh.vertex_colors) != 0:
                     colors = []
 
-                    # Blender vertex winding order (CCW) is reversed compared to Blockland.
-                    for index in reversed(loop_vert_idxs):
+                    for index in loop_vert_idxs:
                         # Only use the first color layer.
                         # color_layer.data[index] may contain more than 4 values.
                         loop_color = current_mesh.vertex_colors[0].data[index]
@@ -2645,10 +2693,11 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                         # The game can actually render per-vertex alpha but it doesn't seem to stick for longer than a second for whatever reason.
                         name = common.to_float_or_none(" ".join(tokens))
 
+                        # Only log the vertex alpha message once per object: vertex color layers are per-object.
                         if vertex_color_alpha is None:
                             if name is None:
                                 vertex_color_alpha = 1.0
-                                logger.warning("No alpha value set in vertex color layer name, using 1.0.", 2)
+                                logger.warning("IOBLBW010", "No alpha value set in vertex color layer name, using 1.0.", 2)
                             else:
                                 vertex_color_alpha = name
                                 logger.info("Vertex color layer alpha set to {}.".format(vertex_color_alpha), 2)
@@ -2665,16 +2714,16 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
 
             # Sanity check.
             if not len(positions) is len(normals) is len(uvs) is 4:
-                # RETURN ON ERROR
-                return "Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
+                # EXCEPTION
+                raise ValueError("Vertex positions ({}), normals ({}), or UV coordinates ({}) did not contain data for all 4 vertices.".format(
                     len(positions),
                     len(normals),
-                    len(uvs))
+                    len(uvs)))
 
             if colors is not None:
                 if len(colors) is not 4:
-                    # RETURN ON ERROR
-                    return "Quad color data only defined for {} vertices, 4 required.".format(len(colors))
+                    # EXCEPTION
+                    raise ValueError("Quad color data only defined for {} vertices, 4 required.".format(len(colors)))
 
                 # ROUND & CAST: Color values.
                 colors = __to_decimal(colors)
@@ -2692,16 +2741,17 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         bpy.data.meshes.remove(mesh)
 
         if count_tris > 0:
-            logger.warning("{} triangles degenerated to quads.".format(count_tris), 2)
+            logger.warning("IOBLBW011", "{} triangles converted to quads.".format(count_tris), 2)
 
         if count_ngon > 0:
-            logger.warning("{} n-gons skipped.".format(count_ngon), 2)
+            logger.warning("IOBLBW012", "{} n-gons skipped.".format(count_ngon), 2)
 
     count_quads = sum([len(sec) for sec in quads])
 
-    if count_quads == 0:
+    if count_quads < 1:
+        # TODO: Test if an invisible brick works and remove this error.
         # RETURN ON ERROR
-        return "No faces to export."
+        return "IOBLBF005 No faces to export."
     else:
         logger.info("Brick quads: {}".format(count_quads), 1)
 
@@ -2718,6 +2768,9 @@ def __format_blb_data(blb_data, forward_axis):
     Returns:
         The formatted and rotated BLB data ready for writing.
     """
+    # The exporter internally seems to work with +Y being forward because that makes the most sense to me.
+    # The standard conversion from +Y forward (exporter) to +X forward (Blockland) is to swizzle X Y Z ("abc") to Y X Z ("bac").
+
     # Size
 
     # Swizzle the values according to the forward axis.
@@ -2728,12 +2781,19 @@ def __format_blb_data(blb_data, forward_axis):
     # Collision
 
     for index, (center, dimensions) in enumerate(blb_data.collision):
-        # Mirror center according to the forward axis. No idea why, but it works.
-        # Swizzle the values according to the forward axis.
-        if forward_axis is Axis3D.POS_Y or forward_axis is Axis3D.NEG_Y:
+        # Swizzle and rotate the values according to the forward axis.
+        # Collisions are defined by:
+        #    - a center point coordinate in the coordinate space of the brick,
+        #    - and the dimensions of the cuboid in plates.
+        if forward_axis is Axis3D.POS_Y:
+            # Still not entirely sure why I need to mirror the X coordinate here.
             blb_data.collision[index] = (common.swizzle(__mirror(center, forward_axis), "bac"), common.swizzle(dimensions, "bac"))
+        elif forward_axis is Axis3D.NEG_Y:
+            blb_data.collision[index] = (common.rotate(center, forward_axis), common.swizzle(dimensions, "bac"))
+        elif forward_axis is Axis3D.POS_X:
+            blb_data.collision[index] = (center, dimensions)
         else:
-            blb_data.collision[index] = (__mirror(center, forward_axis), dimensions)
+            blb_data.collision[index] = (common.rotate(center, forward_axis), dimensions)
 
     # Quads
 
@@ -2807,4 +2867,4 @@ def process_blender_data(context, properties, objects):
             return __format_blb_data(blb_data, properties.forward_axis)
     else:
         # RETURN ON ERROR
-        return "No objects to export."
+        return "IOBLBF006 No objects to export."

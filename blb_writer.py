@@ -25,33 +25,34 @@ A module for writing data into a BLB file.
 from . import const
 
 
-def __write_sequence(file, sequence, new_line=True, decimal_digits=const.MAX_FP_DECIMALS_TO_WRITE):
+def __get_sequence_string(sequence, pretty_print, decimal_digits=const.MAX_FP_DECIMALS_TO_WRITE, new_line=True):
     """Writes the values of the specified sequence separated with spaces into the specified file.
     An optional new line character is added at the end of the line by default.
 
     Args:
-        file (object): The file to be written to.
         sequence (sequence): A sequence of data to be written.
-        new_line (bool): Add a newline character at the end of the line? (Default: True)
         decimal_digits (int): The number of decimal digits to write if the sequence contains floating point values or None to ignore. (Default: const.MAX_FP_DECIMALS_TO_WRITE)
                               The default value prevents very small values from being written in scientific notation, which the game does not understand.
+        new_line (bool): Add a newline character at the end of the line? (Default: True)
     """
+    parts = []
+
     for index, value in enumerate(sequence):
         if index != 0:
-            # Write a space before each value except the first one.
-            file.write(" ")
-        if value == 0:
-            # Handle zeros.
-            file.write("0")
+            # Add a space before each value except the first one.
+            parts.append(" ")
+
+        # Format the value into string.
+        if pretty_print and decimal_digits != 0:
+            # Remove all zeros from the end (if any), then remove all periods from the end (if any).
+            parts.append("{0:.{1}f}".format(value, decimal_digits).rstrip("0").rstrip("."))
         else:
-            # Format the value into string, remove all zeros from the end (if any), then remove all periods from the end (if any).
-            if decimal_digits is None:
-                file.write("{}".format(value).rstrip("0").rstrip("."))
-            else:
-                file.write("{0:.{1}f}".format(value, decimal_digits).rstrip("0").rstrip("."))
+            parts.append("{0:.{1}f}".format(value, decimal_digits))
     if new_line:
-        # Write a new line after all values.
-        file.write("\n")
+        # Add a new line after all values.
+        parts.append("\n")
+
+    return "".join(parts)
 
 
 def write_file(properties, filepath, blb_data):
@@ -62,95 +63,90 @@ def write_file(properties, filepath, blb_data):
         filepath (string): Path to the BLB file to be written.
         blb_data (BLBData): A BLBData object containing the data to be written.
     """
+    lines = []
+
+    # ----------
+    # Brick Size
+    # ----------
+    lines.append(__get_sequence_string(blb_data.brick_size, False, 0))
+
+    # ----------
+    # Brick Type
+    # ----------
+    lines.append("{}\n\n".format(const.BLB_BRICK_TYPE_SPECIAL))
+
+    # ----------
+    # Brick Grid
+    # ----------
+    for axis_slice in blb_data.brick_grid:
+        for row in axis_slice:
+            # Join each Y-axis of data without a separator.
+            lines.append("".join(row) + "\n")
+
+        # A new line after each axis slice.
+        lines.append("\n")
+
+    # ---------
+    # Collision
+    # ---------
+    if len(blb_data.collision) < 1:
+        # No collision.
+        lines.append("0\n")
+    else:
+        # Write the number of collision cuboids.
+        lines.append("{}\n".format(str(len(blb_data.collision))))
+
+        # Write the defined collision cuboids.
+        for (center, dimensions) in blb_data.collision:
+            lines.append("\n")
+            lines.append(__get_sequence_string(center, properties.blendprop.pretty_print, properties.decimal_digits))
+            lines.append(__get_sequence_string(dimensions, properties.blendprop.pretty_print, properties.decimal_digits))
+
+    # --------
+    # Coverage
+    # --------
+    # Only skip writing coverage if terse mode is True and coverage is False.
+    if not (properties.blendprop.terse_mode and not properties.blendprop.calculate_coverage):
+        lines.append("{}\n".format(const.BLB_HEADER_COVERAGE))
+        for (hide_adjacent, plate_count) in blb_data.coverage:
+            lines.append("{} : {}\n".format(str(int(hide_adjacent)), str(plate_count)))
+
+    # -----
+    # Quads
+    # -----
+    for section_name, section in const.BLBQuadSection.__members__.items():
+        # Write section name.
+        lines.append("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_SECTION_SEPARATOR.format(section_name)))
+
+        # Write section length.
+        lines.append("{}\n".format(str(len(blb_data.quads[section.value]))))
+
+        for (positions, normals, uvs, colors, texture_name) in blb_data.quads[section.value]:
+            # Face texture name.
+            lines.append("\n{}{}\n".format(const.BLB_PREFIX_TEXTURE, texture_name))
+
+            # Vertex positions.
+            lines.append("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_POSITION))
+
+            for position in positions:
+                lines.append(__get_sequence_string(position, properties.blendprop.pretty_print, properties.decimal_digits))
+
+            # Face UV coordinates.
+            lines.append("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_UV))
+            for uv_pair in uvs:
+                lines.append(__get_sequence_string(uv_pair, properties.blendprop.pretty_print, properties.decimal_digits))
+
+            # Vertex colors, if any.
+            if colors is not None:
+                lines.append("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_COLORS))
+                for color in colors:
+                    lines.append(__get_sequence_string(color, properties.blendprop.pretty_print, properties.decimal_digits))
+
+            # Vertex normals.
+            lines.append("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_NORMALS))
+            for normal in normals:
+                lines.append(__get_sequence_string(normal, properties.blendprop.pretty_print, properties.decimal_digits))
+
     with open(filepath, "w") as file:
-        # ----------
-        # Brick Size
-        # ----------
-        __write_sequence(file, blb_data.brick_size)
-
-        # ----------
-        # Brick Type
-        # ----------
-        file.write("{}\n\n".format(const.BLB_BRICK_TYPE_SPECIAL))
-
-        # ----------
-        # Brick Grid
-        # ----------
-        for axis_slice in blb_data.brick_grid:
-            for row in axis_slice:
-                # Join each Y-axis of data without a separator.
-                file.write("".join(row) + "\n")
-
-            # A new line after each axis slice.
-            file.write("\n")
-
-        # ---------
-        # Collision
-        # ---------
-        if len(blb_data.collision) == 0:
-            # TODO: Move to blb_processor.
-            if properties.blendprop.calculate_collision:
-                # Write default collision.
-                # Center of the cuboid is at the middle of the brick.
-                file.write("1\n\n0 0 0\n")
-
-                # The size of the cuboid is the size of the bounds.
-                __write_sequence(file, blb_data.brick_size)
-            else:
-                # No collision.
-                file.write("0\n")
-        else:
-            # Write defined collisions.
-
-            # Write the number of collision cuboids.
-            file.write("{}\n".format(str(len(blb_data.collision))))
-
-            for (center, dimensions) in blb_data.collision:
-                file.write("\n")
-                __write_sequence(file, center)
-                __write_sequence(file, dimensions)
-
-        # --------
-        # Coverage
-        # --------
-        # Only skip writing coverage if terse mode is True and coverage is False.
-        if not (properties.blendprop.terse_mode and not properties.blendprop.calculate_coverage):
-            file.write("{}\n".format(const.BLB_HEADER_COVERAGE))
-            for (hide_adjacent, plate_count) in blb_data.coverage:
-                file.write("{} : {}\n".format(str(int(hide_adjacent)), str(plate_count)))
-
-        # -----
-        # Quads
-        # -----
-        for section_name, section in const.BLBQuadSection.__members__.items():
-            # Write section name.
-            file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_SECTION_SEPARATOR.format(section_name)))
-
-            # Write section length.
-            file.write("{}\n".format(str(len(blb_data.quads[section.value]))))
-
-            for (positions, normals, uvs, colors, texture_name) in blb_data.quads[section.value]:
-                # Face texture name.
-                file.write("\n{}{}\n".format(const.BLB_PREFIX_TEXTURE, texture_name))
-
-                # Vertex positions.
-                file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_POSITION))
-
-                for position in positions:
-                    __write_sequence(file, position)
-
-                # Face UV coordinates.
-                file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_UV))
-                for uv_pair in uvs:
-                    __write_sequence(file, uv_pair)
-
-                # Vertex colors, if any.
-                if colors is not None:
-                    file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_COLORS))
-                    for color in colors:
-                        __write_sequence(file, color)
-
-                # Vertex normals.
-                file.write("{}\n".format("" if properties.blendprop.terse_mode else const.BLB_HEADER_NORMALS))
-                for normal in normals:
-                    __write_sequence(file, normal)
+        for line in lines:
+            file.write(line)

@@ -30,8 +30,8 @@ def swizzle(sequence, order):
 
     Args:
         sequence (sequence): A sequence of objects.
-        order (sequence or string): The new order of the sequence as string or a sequence of lower case Latin letters.
-                                    Sequence indices are represented using lower case letters a-z of the Latin alphabet.
+        order (sequence or string): The new order of the sequence as string or a sequence of lowercase Latin letters.
+                                    Sequence indices are represented using lowercase letters a-z of the Latin alphabet.
                                     I.e. "a" signifies the index 0 and "z" stands for index 25.
                                     Duplicating elements is possible by specifying the the same letter multiple times.
     Returns:
