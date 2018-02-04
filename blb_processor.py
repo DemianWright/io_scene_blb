@@ -1973,9 +1973,11 @@ def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
     bm_uv_layer = bm.loops.layers.uv.get(layer_name)
 
     # RETURN ON ERROR
-    for vert_idx, uv_pair in enumerate(uvs):
+    # BLBs only store quads but a Blender face can be a tri.
+    # Loop through each vertex in the Blender face and ignore any additional UVs in the BLB UV sequence.
+    for vert_idx in range(0, len(bm.faces[poly_index].verts)):
         try:
-            bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uv_pair
+            bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uvs[vert_idx]
         except AttributeError:
             return error_string
     try:
