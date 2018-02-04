@@ -487,6 +487,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     )
 
     # ---------
+    # Square SIDE UVs
+    # ---------
+    square_side_uvs = BoolProperty(
+        name="Square Side UVs",
+        description="Use a square that takes up the whole UV space as UVs for all SIDE material faces",
+        default=False,
+    )
+
+    # ---------
     # Store UVs
     # ---------
     store_uvs = BoolProperty(
@@ -873,19 +882,23 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: UVs
         row = layout.row()
-        split = row.split(percentage=0.53)
-        col = split.column()
-        col.prop(self, "calculate_uvs")
-
-        # Property: Store UVs
-        split = split.split()
-        split.enabled = self.calculate_uvs
+        #split = row.split(percentage=0.53)
+        #col = split.column()
+        row.prop(self, "calculate_uvs")
 
         if not self.calculate_uvs:
+            self.square_side_uvs = False
             self.store_uvs = False
 
-        col = split.column()
-        col.prop(self, "store_uvs")
+        # Property: Square SIDE UVs
+        row = layout.row()
+        row.enabled = self.calculate_uvs
+        row.prop(self, "square_side_uvs")
+
+        # Property: Store UVs
+        row = layout.row()
+        row.enabled = self.calculate_uvs
+        row.prop(self, "store_uvs")
 
         # Property: Round Normals
         layout.prop(self, "round_normals")
