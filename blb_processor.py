@@ -1656,6 +1656,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
         Args:
             length (number): The length of an edge.
+                             Must be greater than 0.
 
         Returns:
             The U or V component to use with SIDE texture UVs as a Decimal.
@@ -1731,6 +1732,13 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
     best_quad_size = __calculate_quad_width_height(len_top, len_right, len_bottom, len_left)
 
+    # print("__calculate_uvs | Lengths:")
+    # print("\tbest:", best_quad_size)
+    # print("\tt", len_top)
+    # print("\tr", len_right)
+    # print("\tb", len_bottom)
+    # print("\tl", len_left)
+
     # For clarity.
     # Width.
     w = best_quad_size[0]
@@ -1781,10 +1789,10 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
         # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each side.
         # Calculate the UV components for top, left, right, and bottom edges of the quad.
         # If the quad is rectangular then the components of opposing sides are equal.
-        u_t = get_side_uv(len_top)
-        v_r = get_side_uv(len_right)
-        u_b = get_side_uv(len_bottom)
-        v_l = get_side_uv(len_left)
+        u_t = 0.5 if len_top == 0.0 else get_side_uv(len_top)
+        v_r = 0.5 if len_right == 0.0 else get_side_uv(len_right)
+        u_b = 0.5 if len_bottom == 0.0 else get_side_uv(len_bottom)
+        v_l = 0.5 if len_left == 0.0 else get_side_uv(len_left)
 
         # print("__calculate_uvs | Lengths:")
         # print("\tt", u_t, len_top)
