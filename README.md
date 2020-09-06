@@ -45,6 +45,7 @@ The add-on does not support importing .BLB files yet.
       1. [Use Vertex Colors](#use-vertex-colors)
       1. [Parse Object Colors](#parse-object-colors)
       1. [Calculate UVs](#calculate-uvs)
+      1. [Square Side UVs](#square-side-uvs)
       1. [Store UVs](#store-uvs)
       1. [Round Normals](#round-normals)
       1. [Precision](#precision)
@@ -594,6 +595,12 @@ Assign [face](#def-face) colors from [object](#def-object) names.
 Automatically calculate correct UV coordinates based on the brick texture name specified in the material name.
 See [UV Mapping](#uv-mapping) for more information.
 (Default: `True`)
+
+#### Square Side UVs ####
+Instead of attempting to calculate the appropriate UV coordinates for a face with the SIDE texture, use a square that takes up the full UV space instead.
+The UVs will be identical to that of the PRINT texture.
+Sometimes when the automatic side UV calculation fails miserably this option may produce a better result.
+(Default: `False`)
 
 #### Store UVs ####
 Write calculated UVs into Blender [objects](#def-object).

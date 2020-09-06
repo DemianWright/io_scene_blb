@@ -1635,11 +1635,12 @@ def __calc_quad_max_edge_len_idx(sorted_verts):
     return (max_len, max_len_idx)
 
 
-def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
+def __calculate_uvs(properties, brick_texture, vert_coords, normal, forward_axis):
     """Calculates the UV coordinates for the specified texture and quad containing the specified vertices.
     In unsupported cases, default UVs are returned.
 
     Args:
+        properties (DerivateProperties): An object containing user properties.
         brick_texture (BrickTexture): A value from the BrickTexture enum.
         vert_coords (sequence of coordinates): A sequence of 4 local space coordinates of a face in CW order.
                                               The vertex order must be the same that is written to the BLB file.
@@ -1656,6 +1657,7 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
         Args:
             length (number): The length of an edge.
+                             Must be greater than 0.
 
         Returns:
             The U or V component to use with SIDE texture UVs as a Decimal.
@@ -1731,6 +1733,13 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
 
     best_quad_size = __calculate_quad_width_height(len_top, len_right, len_bottom, len_left)
 
+    # print("__calculate_uvs | Lengths:")
+    # print("\tbest:", best_quad_size)
+    # print("\tt", len_top)
+    # print("\tr", len_right)
+    # print("\tb", len_bottom)
+    # print("\tl", len_left)
+
     # For clarity.
     # Width.
     w = best_quad_size[0]
@@ -1778,25 +1787,32 @@ def __calculate_uvs(brick_texture, vert_coords, normal, forward_axis):
                            (0, w))
 
     elif brick_texture is const.BrickTexture.SIDE:
-        # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each side.
-        # Calculate the UV components for top, left, right, and bottom edges of the quad.
-        # If the quad is rectangular then the components of opposing sides are equal.
-        u_t = get_side_uv(len_top)
-        v_r = get_side_uv(len_right)
-        u_b = get_side_uv(len_bottom)
-        v_l = get_side_uv(len_left)
+        if properties.blendprop.square_side_uvs:
+            # Use PRINT texture UVs.
+            uvs_sorted = ((0, 0),
+                          (1, 0),
+                          (1, 1),
+                          (0, 1))
+        else:
+            # To calculate the UV coordinates for a non-rectangular quad, the and U and V components must be calculated separately for each side.
+            # Calculate the UV components for top, left, right, and bottom edges of the quad.
+            # If the quad is rectangular then the components of opposing sides are equal.
+            u_t = 0.5 if len_top == 0.0 else get_side_uv(len_top)
+            v_r = 0.5 if len_right == 0.0 else get_side_uv(len_right)
+            u_b = 0.5 if len_bottom == 0.0 else get_side_uv(len_bottom)
+            v_l = 0.5 if len_left == 0.0 else get_side_uv(len_left)
 
-        # print("__calculate_uvs | Lengths:")
-        # print("\tt", u_t, len_top)
-        # print("\tr", v_r, len_right)
-        # print("\tb", u_b, len_bottom)
-        # print("\tl", v_l, len_left)
+            # print("__calculate_uvs | Lengths:")
+            # print("\tt", u_t, len_top)
+            # print("\tr", v_r, len_right)
+            # print("\tb", u_b, len_bottom)
+            # print("\tl", v_l, len_left)
 
-        # Subtracting from 1 mirrors the coordinate.
-        uvs_sorted = ((u_t, v_l),
-                      (1 - u_t, v_r),
-                      (1 - u_b, 1 - v_r),
-                      (u_b, 1 - v_l))
+            # Subtracting from 1 mirrors the coordinate.
+            uvs_sorted = ((u_t, v_l),
+                          (1 - u_t, v_r),
+                          (1 - u_b, 1 - v_r),
+                          (u_b, 1 - v_l))
     elif brick_texture is const.BrickTexture.BOTTOMEDGE:
         # Bottom edge is a special case where the average width/height does not work and the top left may not be what was determined by the sorting algorithm above.
         # We need the length of the longest edge in the quad, the direction it is pointing, and the index of the first vertex of the longest edge (CW order).
@@ -1965,9 +1981,11 @@ def __store_uvs_in_mesh(poly_index, mesh, uvs, layer_name):
     bm_uv_layer = bm.loops.layers.uv.get(layer_name)
 
     # RETURN ON ERROR
-    for vert_idx, uv_pair in enumerate(uvs):
+    # BLBs only store quads but a Blender face can be a tri.
+    # Loop through each vertex in the Blender face and ignore any additional UVs in the BLB UV sequence.
+    for vert_idx in range(0, len(bm.faces[poly_index].verts)):
         try:
-            bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uv_pair
+            bm.faces[poly_index].loops[vert_idx][bm_uv_layer].uv = uvs[vert_idx]
         except AttributeError:
             return error_string
     try:
@@ -2616,7 +2634,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
             if uvs is None:
                 # Calculating UVs and a brick texture was specified
                 if properties.blendprop.calculate_uvs and brick_texture is not None:
-                    uvs = __calculate_uvs(brick_texture, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
+                    uvs = __calculate_uvs(properties, brick_texture, poly_vertex_obj_coords, poly_normal_normalized, forward_axis)
 
                     if properties.blendprop.store_uvs:
                         if uvs[1] is not None:

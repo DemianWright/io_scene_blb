@@ -21,8 +21,9 @@ Handles registering the add-on into Blender and drawing properties to the UI.
 @author: Demian Wright
 """
 
-import bpy
 import os
+
+import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, FloatProperty
 from bpy_extras.io_utils import ExportHelper
 
@@ -32,7 +33,7 @@ from . import export_blb, const, logger
 bl_info = {
     "name": "Export: Blockland Brick (.blb)",
     "author": "Demian Wright & Nick Smith",
-    "version": (2, 0, 0),
+    "version": (2, 1, 0),
     "blender": (2, 67, 0),
     "location": "File > Export > Blockland Brick (.blb)",
     "description": "Export Blockland brick format",
@@ -487,6 +488,15 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
     )
 
     # ---------
+    # Square SIDE UVs
+    # ---------
+    square_side_uvs = BoolProperty(
+        name="Square Side UVs",
+        description="Use a square that takes up the whole UV space as UVs for all SIDE material faces",
+        default=False,
+    )
+
+    # ---------
     # Store UVs
     # ---------
     store_uvs = BoolProperty(
@@ -697,7 +707,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         if self.custom_definitions:
             box = layout.box()
-            box.label("Definition Tokens", icon="EDIT_VEC")
+            box.label("Definition Tokens", icon="SORTALPHA")
             box.enabled = self.custom_definitions
 
             def draw_definition_property(label_text, prop_name):
@@ -873,19 +883,23 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: UVs
         row = layout.row()
-        split = row.split(percentage=0.53)
-        col = split.column()
-        col.prop(self, "calculate_uvs")
-
-        # Property: Store UVs
-        split = split.split()
-        split.enabled = self.calculate_uvs
+        # split = row.split(percentage=0.53)
+        # col = split.column()
+        row.prop(self, "calculate_uvs")
 
         if not self.calculate_uvs:
+            self.square_side_uvs = False
             self.store_uvs = False
 
-        col = split.column()
-        col.prop(self, "store_uvs")
+        # Property: Square SIDE UVs
+        row = layout.row()
+        row.enabled = self.calculate_uvs
+        row.prop(self, "square_side_uvs")
+
+        # Property: Store UVs
+        row = layout.row()
+        row.enabled = self.calculate_uvs
+        row.prop(self, "store_uvs")
 
         # Property: Round Normals
         layout.prop(self, "round_normals")
