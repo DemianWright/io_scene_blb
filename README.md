@@ -325,6 +325,8 @@ Default Token | Section
 
 :exclamation: Sorting quads in this manner is pointless unless the [Coverage](#coverage) property in the export dialog is enabled and at least one option is enabled.
 
+:exclamation: Due to how Blockland handles .blb files, ensure that north is assigned to faces facing the +Y direction, east is assigned to faces facing the +X direction, with south and west corresponding to -Y and -X respectively.
+
 In the export dialog [Coverage](#coverage) properties there are two options for each section/side of the brick:
 
 Option | Description
