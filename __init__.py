@@ -21,8 +21,9 @@ Handles registering the add-on into Blender and drawing properties to the UI.
 @author: Demian Wright
 """
 
-import bpy
 import os
+
+import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty, FloatProperty
 from bpy_extras.io_utils import ExportHelper
 
@@ -706,7 +707,7 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         if self.custom_definitions:
             box = layout.box()
-            box.label("Definition Tokens", icon="EDIT_VEC")
+            box.label("Definition Tokens", icon="SORTALPHA")
             box.enabled = self.custom_definitions
 
             def draw_definition_property(label_text, prop_name):
@@ -882,8 +883,8 @@ class ExportBLB(bpy.types.Operator, ExportHelper):
 
         # Property: UVs
         row = layout.row()
-        #split = row.split(percentage=0.53)
-        #col = split.column()
+        # split = row.split(percentage=0.53)
+        # col = split.column()
         row.prop(self, "calculate_uvs")
 
         if not self.calculate_uvs:
