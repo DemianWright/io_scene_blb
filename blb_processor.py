@@ -2663,21 +2663,26 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 if len(obj.material_slots) > 0:
                     material = obj.material_slots[poly.material_index].material
                     tokens = __split_object_string_to_tokens(material.name)
+                    shadeless = material.use_shadeless
+
+                    rcolor = material.diffuse_color.r + 1 if shadeless else material.diffuse_color.r
+                    gcolor = material.diffuse_color.g + 1 if shadeless else material.diffuse_color.g
+                    bcolor = material.diffuse_color.b + 1 if shadeless else material.diffuse_color.b
 
                     if material is not None:
                         if properties.deftokens.color_add in tokens:
                             # Negative alpha.
-                            colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, -material.alpha)] * 4)
+                            colors = ([(rcolor, gcolor, bcolor, -material.alpha)] * 4)
                         elif properties.deftokens.color_sub in tokens:
                             # Negative everything.
-                            colors = ([(-material.diffuse_color.r, -material.diffuse_color.g, -material.diffuse_color.b, -material.alpha)] * 4)
+                            colors = ([(-rcolor, -gcolor, -bcolor, -material.alpha)] * 4)
                         elif properties.deftokens.color_blank in tokens:
                             # If the material name is "blank", use the spray can color by not defining any color for this quad.
                             # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
                             colors = None
                         else:
                             # 4 vertices per quad.
-                            colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
+                            colors = ([(rcolor, gcolor, bcolor, material.alpha)] * 4)
 
             # =============
             # Vertex Colors
