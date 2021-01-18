@@ -2422,6 +2422,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         vertex_color_alpha = None
 
         logger.info("Exporting object: {}".format(object_name), 1)
+        shadeless_materials = {}
 
         # PROCESS TOKENS
 
@@ -2665,9 +2666,16 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                     tokens = __split_object_string_to_tokens(material.name)
                     shadeless = material.use_shadeless
 
-                    rcolor = material.diffuse_color.r + 1 if shadeless else material.diffuse_color.r
-                    gcolor = material.diffuse_color.g + 1 if shadeless else material.diffuse_color.g
-                    bcolor = material.diffuse_color.b + 1 if shadeless else material.diffuse_color.b
+                    def get_shadeless_color(val):
+                        return val + 1 if val >= 0.5 else val
+
+                    rcolor = get_shadeless_color(material.diffuse_color.r) if shadeless else material.diffuse_color.r
+                    gcolor = get_shadeless_color(material.diffuse_color.g) if shadeless else material.diffuse_color.g
+                    bcolor = get_shadeless_color(material.diffuse_color.b) if shadeless else material.diffuse_color.b
+
+                    if shadeless and shadeless_materials.get(material.name, None) is None:
+                        shadeless_materials[material.name] = str((rcolor, gcolor, bcolor))
+                        logger.info("Exporting shadeless color material {}.".format(shadeless_materials[material.name]), 2)
 
                     if material is not None:
                         if properties.deftokens.color_add in tokens:
