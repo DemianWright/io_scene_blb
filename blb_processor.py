@@ -2422,6 +2422,7 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
         vertex_color_alpha = None
 
         logger.info("Exporting object: {}".format(object_name), 1)
+        shadeless_materials = {}
 
         # PROCESS TOKENS
 
@@ -2663,21 +2664,33 @@ def __process_mesh_data(context, properties, bounds_data, mesh_objects, forward_
                 if len(obj.material_slots) > 0:
                     material = obj.material_slots[poly.material_index].material
                     tokens = __split_object_string_to_tokens(material.name)
+                    shadeless = material.use_shadeless
+
+                    def get_shadeless_color(val):
+                        return val + 1 if val >= 0.5 else val
+
+                    rcolor = get_shadeless_color(material.diffuse_color.r) if shadeless else material.diffuse_color.r
+                    gcolor = get_shadeless_color(material.diffuse_color.g) if shadeless else material.diffuse_color.g
+                    bcolor = get_shadeless_color(material.diffuse_color.b) if shadeless else material.diffuse_color.b
+
+                    if shadeless and shadeless_materials.get(material.name, None) is None:
+                        shadeless_materials[material.name] = str((rcolor, gcolor, bcolor))
+                        logger.info("Exporting shadeless color material {}.".format(shadeless_materials[material.name]), 2)
 
                     if material is not None:
                         if properties.deftokens.color_add in tokens:
                             # Negative alpha.
-                            colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, -material.alpha)] * 4)
+                            colors = ([(rcolor, gcolor, bcolor, -material.alpha)] * 4)
                         elif properties.deftokens.color_sub in tokens:
                             # Negative everything.
-                            colors = ([(-material.diffuse_color.r, -material.diffuse_color.g, -material.diffuse_color.b, -material.alpha)] * 4)
+                            colors = ([(-rcolor, -gcolor, -bcolor, -material.alpha)] * 4)
                         elif properties.deftokens.color_blank in tokens:
                             # If the material name is "blank", use the spray can color by not defining any color for this quad.
                             # This is how quads that can change color (by colorshifting) in DTS meshes (which Blockland uses) are defined.
                             colors = None
                         else:
                             # 4 vertices per quad.
-                            colors = ([(material.diffuse_color.r, material.diffuse_color.g, material.diffuse_color.b, material.alpha)] * 4)
+                            colors = ([(rcolor, gcolor, bcolor, material.alpha)] * 4)
 
             # =============
             # Vertex Colors
